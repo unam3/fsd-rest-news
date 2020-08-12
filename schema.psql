@@ -1,0 +1,99 @@
+drop table if exists authors cascade;
+drop table if exists users cascade;
+drop table if exists categories cascade;
+drop table if exists tags cascade;
+drop table if exists news cascade;
+drop table if exists news_tags cascade;
+drop table if exists news_comments cascade;
+
+begin;
+
+create table users (
+    user_id         integer primary key,
+    name            varchar(80) not null,
+    surname         varchar(80) not null,
+
+    --avatar          varchar(80) not null,
+    
+    creation_date   date not null,
+    is_admin        boolean not null
+);
+
+INSERT INTO users VALUES (1, 'n', 's', '2010-12-12', false);
+INSERT INTO users VALUES (2, 'n1', 's1', '2010-12-12', false);
+
+create table authors (
+    user_id         integer primary key references users,
+    description     text not null
+);
+
+INSERT INTO authors VALUES (2, 'short description');
+
+-- how to create possible parental relations between rows?
+create table categories (
+    name            varchar(80) primary key
+);
+
+INSERT INTO categories VALUES ('cat');
+INSERT INTO categories VALUES ('cat1');
+
+create table tags (
+    name            varchar(80) primary key
+);
+
+INSERT INTO tags VALUES ('tag');
+INSERT INTO tags VALUES ('tag1');
+INSERT INTO tags VALUES ('tag2');
+
+create table news (
+    news_id             integer generated always as identity,
+    name                varchar(80) not null,
+    creation_date       date not null,
+    author              integer references authors (user_id),
+    category            varchar(80) references categories,
+    text                text not null,
+    is_published        boolean not null,
+    primary key (news_id)
+
+    --main_photo          photos not null, -- !
+    --additional_photos   photos not null -- !
+);
+
+--create table news_drafts (
+--    news_id         integer references news (news_id)
+--);
+
+--create table news_published (
+--    news_id         integer references news (news_id)
+--);
+
+INSERT INTO news (name, creation_date, author, category, text, is_published) VALUES
+    ('nn', '2010-12-30', 2, 'cat1', 'txt', true),
+    ('nn', '2010-12-30', 2, 'cat1', 'txt', true);
+
+create table news_tags (
+    tag             varchar(80) references tags (name),
+    news_id         integer references news (news_id),
+    primary key (tag, news_id)
+);
+
+INSERT INTO news_tags (tag, news_id) VALUES
+    ('tag', 1),
+    ('tag2', 1),
+    ('tag1', 2);
+
+create table news_comments (
+    news_id         integer references news (news_id),
+    comment_text    text not null
+);
+
+INSERT INTO news_comments (news_id, comment_text) VALUES
+    (1, 'kek'),
+    (1, 'pluh'),
+    (2, 'meh');
+
+commit;
+
+select * from news;
+select * from news_tags;
+select * from news_comments;
