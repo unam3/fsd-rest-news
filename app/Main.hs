@@ -1,6 +1,6 @@
 module Main where
 
-import RestNews (runWarp)
+import RestNews (runWarpWithLogger)
 
 main :: IO ()
-main = runWarp
+main = runWarpWithLogger
