@@ -23,7 +23,7 @@ import System.Log.Logger (Priority (DEBUG, ERROR), debugM, setLevel, traplogging
 -- https://hackage.haskell.org/package/hasql-1.4.4
 -- https://github.com/nikita-volkov/hasql-tutorial1
 
-selectTest :: Session (Int64)
+selectTest :: Session Int64
 selectTest = Session.statement ()
     [TH.singletonStatement|
         select ((2 :: int8) + (2 :: int8)) :: int8
@@ -31,12 +31,15 @@ selectTest = Session.statement ()
 
 dbCall :: IO ()
 dbCall = let {
-    connectionSettings = Connection.settings "localhost" 5432 "" "" "yay";
+    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
 } in do
-    connectionAcquired <- Connection.acquire connectionSettings
-    void . print $ case connectionAcquired of
-        Right connection -> Session.run selectTest connection
-        Left connectionError -> connectionError
+    --connectionAcquired <- Connection.acquire connectionSettings
+    --(print $ case connectionAcquired of
+    --    Right connection -> Session.run selectTest connection
+    --    Left connectionError -> pure $ connectionError)
+    Right connection <- Connection.acquire connectionSettings
+    results <- Session.run selectTest connection
+    print results
 
 restAPI :: Application;
 restAPI request respond = bracket_
