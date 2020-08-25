@@ -29,6 +29,7 @@ dependencies:
 - postgresql-syntax
 - fast-builder
 - headed-megaparsec
+- utf8-string
 
 ghc-options:
 - -Wall

@@ -7,6 +7,7 @@ module RestNews
 
 import Control.Exception (bracket_)
 import Control.Monad (void)
+import Data.ByteString.Lazy.UTF8 (fromString)
 import Data.Int (Int64)
 import qualified Hasql.Connection as Connection
 --import qualified Hasql.Decoders as Decoders
@@ -45,7 +46,7 @@ restAPI :: Application;
 restAPI request respond = bracket_
     (debugM "rest-news" "Allocating scarce resource")
     (debugM "rest-news" "Cleaning up")
-    (respond $ responseLBS H.status200 [] "Hello World")
+    (respond $ responseLBS H.status200 [] (fromString $ show request))
 
 runWarp :: IO ()
 runWarp = let {
@@ -53,4 +54,4 @@ runWarp = let {
 } in run port restAPI
 
 runWarpWithLogger :: IO ()
-runWarpWithLogger = dbCall
+runWarpWithLogger = runWarp

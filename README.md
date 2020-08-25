@@ -4,7 +4,8 @@
 
 Install:
 
-- PostgresSQL 12.3 and `libpq-dev` (`postgresql-libpq-0.9.4.2` dependency): `apt install postgresql-12 libpq-dev`
+- PostgresSQL 12.3 and `libpq-dev` (`postgresql-libpq-0.9.4.2` dependency):
+```apt install postgresql-12 libpq-dev```
 - [stack](https://docs.haskellstack.org/en/stable/README/#how-to-install)
 
 Run from the terminal from project directory: 
