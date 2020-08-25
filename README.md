@@ -15,9 +15,9 @@ su postgres
 createuser -d -P rest-news-user
 # enter password "rest" twice
 createdb rest-news-db
-^D
+psql -h 0.0.0.0 -W -f schema.psql rest-news-db rest-news-user
 
-psql -d rest-news-db -f schema.psql
+^D
 
 # build package
 stack build

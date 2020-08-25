@@ -1,5 +1,3 @@
-GRANT ALL PRIVILEGES ON DATABASE "rest-news-db" to "rest-news-user";
-
 drop table if exists authors cascade;
 drop table if exists users cascade;
 drop table if exists categories cascade;
