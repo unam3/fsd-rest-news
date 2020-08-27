@@ -29,8 +29,8 @@ import System.Log.Logger (Priority (DEBUG, ERROR), debugM, setLevel, traplogging
 -- *Main RestNews> dbCall
 -- Left (QueryError "INSERT INTO users VALUES (5, 'n', 's', '2010-12-12', FALSE)" [] (ResultError (ServerError "23505" "duplicate key value violates unique constraint \"users_pkey\"" (Just "Key (user_id)=(5) already exists.") Nothing)))
 
-selectTest :: Session ()
-selectTest = Session.statement ()
+createUserSt :: Statement () ()
+createUserSt = 
     [TH.singletonStatement|
         insert into users (name, surname, creation_date, is_admin) values
             (
@@ -45,14 +45,8 @@ dbCall :: IO (Either Session.QueryError ())
 dbCall = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
 } in do
-    --connectionAcquired <- Connection.acquire connectionSettings
-    --(print $ case connectionAcquired of
-    --    Right connection -> Session.run selectTest connection
-    --    Left connectionError -> pure $ connectionError)
     Right connection <- Connection.acquire connectionSettings
-    --results <- Session.run selectTest connection
-    -- ? fromLeft $ Session.run selectTest connection
-    Session.run selectTest connection
+    Session.run (Session.statement () createUserSt) connection
 
 endpoints :: [Text]
 endpoints = ["authors", "tags", "drafts", "users", "comments"]
