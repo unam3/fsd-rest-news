@@ -10,6 +10,7 @@ import qualified HasqlSessions as HSS
 import Control.Exception (bracket_)
 import Data.Aeson (decode)
 import Data.ByteString.Lazy.UTF8 (fromString)
+import Data.ByteString.Char8 (pack)
 --import Data.ByteString.Lazy (fromStrict)
 import Data.Maybe (fromJust)
 import Data.Text (Text)
@@ -36,26 +37,29 @@ restAPI request respond = let {
             requestBody <- strictRequestBody request
             print requestBody
 
-            let {
+            errorOrSessionName <- let {
                 maybeCreateUserRequestJSON = decode requestBody :: Maybe CreateUserRequest;
-                status = if isPathHasEndpoint
-                    then case maybeCreateUserRequestJSON of
-                        Nothing -> H.status503
-                        _ -> H.status200
-                    else H.status404;
-                IO (Left createUserError) = HSS.createUser $ fromJust maybeCreateUserRequestJSON;
-                dbReturnsOk = (Session.ResultError (Session.UnexpectedResult "Unexpected result status: CommandOk"));
-                response = if isPathHasEndpoint
+            } in pure (
+                if isPathHasEndpoint
                     then fromString $ case head pathTextChunks of
                         "authors" -> case requestMethod request of
                             methodPost -> case maybeCreateUserRequestJSON of
-                                Just createUserRequest -> case createUserError of
-                                    (Session.QueryError _ _ dbReturnsOk) -> "k"
-                                    _ -> "<error>"
+                                Just createUserRequest -> "createUser"
+                                --Just createUserRequest -> case createUserError of
+                                --    (Session.QueryError _ _ dbReturnsOk) -> "k"
+                                --    _ -> "<error>"
                                 Nothing -> "Wrong parameters/values"
                         _ -> show pathTextChunks
-                    else "No such endpoint";
-            } in respond $ responseLBS status [] response)
+                    else "No such endpoint")
+
+            maybeCreateUserError <- if errorOrSessionName == "createUser"
+                then HSS.createUser $ fromJust (decode requestBody :: Maybe CreateUserRequest)
+                else pure . Left $
+                    Session.QueryError (pack "foo") ["pluh"] (Session.ClientError Nothing)
+            --    dbReturnsOk = (Session.ResultError (Session.UnexpectedResult "Unexpected result status: CommandOk"));
+            --respond $ responseLBS H.status200 [] errorOrSessionName)
+            respond $ responseLBS H.status200 [] (fromString $ show maybeCreateUserError))
+
 
 runWarp :: IO ()
 runWarp = let {
