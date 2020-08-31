@@ -1,79 +1,66 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE OverloadedStrings  #-}
 
 module RestNews
-    ( runWarpWithLogger,
-    dbCall
+    ( runWarpWithLogger
     ) where
 
+import AesonDefinitions (CreateUserRequest)
+import qualified HasqlSessions as HSS
+
 import Control.Exception (bracket_)
+import Data.Aeson (decode)
 import Data.ByteString.Lazy.UTF8 (fromString)
-import qualified Hasql.Connection as Connection
---import qualified Hasql.Decoders as Decoders
---import qualified Hasql.Encoders as Encoders
+--import Data.ByteString.Lazy (fromStrict)
+import Data.Maybe (fromJust)
 import Data.Text (Text)
-import Hasql.Session (Session)
-import Hasql.Statement (Statement(..))
 import qualified Hasql.Session as Session
-import qualified Hasql.TH as TH
 import qualified Network.HTTP.Types as H
-import Network.Wai (Application, pathInfo, responseLBS)
+-- https://hackage.haskell.org/package/http-types-0.12.3/docs/Network-HTTP-Types-Method.html#t:Method
+import Network.HTTP.Types.Method (methodPost)
+import Network.Wai (Application, pathInfo, requestMethod, responseLBS, strictRequestBody)
 import Network.Wai.Handler.Warp (Port, run)
 import System.Log.Logger (Priority (DEBUG, ERROR), debugM, setLevel, traplogging, updateGlobalLogger)
 
--- https://hackage.haskell.org/package/hasql-1.4.4
--- https://github.com/nikita-volkov/hasql-tutorial1
-
--- *Main RestNews> dbCall
--- Left (QueryError "INSERT INTO users VALUES (5, 'n', 's', '2010-12-12', FALSE)" [] (ResultError (UnexpectedResult "Unexpected result status: CommandOk")))
--- *Main RestNews> dbCall
--- Left (QueryError "INSERT INTO users VALUES (5, 'n', 's', '2010-12-12', FALSE)" [] (ResultError (ServerError "23505" "duplicate key value violates unique constraint \"users_pkey\"" (Just "Key (user_id)=(5) already exists.") Nothing)))
-
-createUserSt :: Statement (Text, Text, Bool) ()
-createUserSt = 
-    [TH.singletonStatement|
-        insert into users (name, surname, is_admin) values
-            (
-                $1 :: text,
-                $2 :: text,
-                $3 :: bool
-                )
-        |]
-
-dbCall :: IO (Either Session.QueryError ())
-dbCall = let {
-    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
-    testInput = ("test user name", "test user surname", False);
-} in do
-    Right connection <- Connection.acquire connectionSettings
-    Session.run (Session.statement testInput createUserSt) connection
-
-endpoints :: [Text]
-endpoints = ["authors", "tags", "drafts", "users", "comments"]
-
+--type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
 restAPI :: Application;
 restAPI request respond = let {
         pathTextChunks = pathInfo request;
-        isPathEndpoint = (not (null pathTextChunks)) && elem (head pathTextChunks) endpoints;
-        status = if isPathEndpoint
-            then H.status200
-            else H.status404;
-        response = if isPathEndpoint
-            then fromString $ show pathTextChunks
-            else "";
+        -- use lists instead of list elements
+        pathHeadChunk = head pathTextChunks;
+        isPathHasEndpoint = (not $ null pathTextChunks) && elem pathHeadChunk endpoints;
+        endpoints = ["authors", "tags", "drafts", "users", "comments"]
     } in bracket_
         (debugM "rest-news" "Allocating scarce resource")
         (debugM "rest-news" "Cleaning up")
-        --(respond $ responseLBS H.status200 [] (fromString $ show $ request))
+        (do
+            requestBody <- strictRequestBody request
+            print requestBody
 
-        -- http://0.0.0.0:8081/heh/hah/wah -> ["heh","hah","wah"]
-        --(respond $ responseLBS status [] (fromString $ show pathTextChunks))
-        (respond $ responseLBS status [] response)
+            let {
+                maybeCreateUserRequestJSON = decode requestBody :: Maybe CreateUserRequest;
+                status = if isPathHasEndpoint
+                    then case maybeCreateUserRequestJSON of
+                        Nothing -> H.status503
+                        _ -> H.status200
+                    else H.status404;
+                IO (Left createUserError) = HSS.createUser $ fromJust maybeCreateUserRequestJSON;
+                dbReturnsOk = (Session.ResultError (Session.UnexpectedResult "Unexpected result status: CommandOk"));
+                response = if isPathHasEndpoint
+                    then fromString $ case head pathTextChunks of
+                        "authors" -> case requestMethod request of
+                            methodPost -> case maybeCreateUserRequestJSON of
+                                Just createUserRequest -> case createUserError of
+                                    (Session.QueryError _ _ dbReturnsOk) -> "k"
+                                    _ -> "<error>"
+                                Nothing -> "Wrong parameters/values"
+                        _ -> show pathTextChunks
+                    else "No such endpoint";
+            } in respond $ responseLBS status [] response)
 
 runWarp :: IO ()
 runWarp = let {
     port = 8081 :: Port;
-} in run port restAPI
+} in run port restAPI >> pure ()
 
 runWarpWithLogger :: IO ()
 runWarpWithLogger = runWarp
