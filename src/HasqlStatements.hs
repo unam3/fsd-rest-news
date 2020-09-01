@@ -1,9 +1,11 @@
 {-# LANGUAGE QuasiQuotes        #-}
 
 module HasqlStatements (
-    createUser
+    createUser,
+    getUser
     ) where
 
+import Data.Int (Int16)
 import Data.Text (Text)
 import qualified Hasql.TH as TH
 import Hasql.Statement (Statement(..))
@@ -16,5 +18,14 @@ createUser =
                 $1 :: text,
                 $2 :: text,
                 $3 :: bool
+                )
+        |]
+
+getUser :: Statement (Int16) ()
+getUser = 
+    [TH.singletonStatement|
+        insert into users (user_id) values
+            (
+                $1 :: int2
                 )
         |]

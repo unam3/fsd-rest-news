@@ -4,7 +4,7 @@ module RestNews
     ( runWarpWithLogger
     ) where
 
-import AesonDefinitions (CreateUserRequest)
+import AesonDefinitions (CreateUserRequest, GetUserRequest)
 import qualified HasqlSessions as HSS
 
 import Control.Exception (bracket_)
@@ -13,11 +13,10 @@ import Data.ByteString.Lazy.UTF8 (fromString)
 import Data.ByteString.Char8 (pack)
 --import Data.ByteString.Lazy (fromStrict)
 import Data.Maybe (fromJust)
-import Data.Text (Text)
 import qualified Hasql.Session as Session
 import qualified Network.HTTP.Types as H
 -- https://hackage.haskell.org/package/http-types-0.12.3/docs/Network-HTTP-Types-Method.html#t:Method
-import Network.HTTP.Types.Method (methodPost)
+import Network.HTTP.Types.Method (methodGet, methodPost)
 import Network.Wai (Application, pathInfo, requestMethod, responseLBS, strictRequestBody)
 import Network.Wai.Handler.Warp (Port, run)
 import System.Log.Logger (Priority (DEBUG, ERROR), debugM, setLevel, traplogging, updateGlobalLogger)
@@ -39,26 +38,28 @@ restAPI request respond = let {
 
             errorOrSessionName <- let {
                 maybeCreateUserRequestJSON = decode requestBody :: Maybe CreateUserRequest;
+                maybeGetUserRequestJSON = decode requestBody :: Maybe GetUserRequest;
             } in pure (
                 if isPathHasEndpoint
-                    then fromString $ case head pathTextChunks of
+                    then (case pathHeadChunk of
                         "authors" -> case requestMethod request of
                             methodPost -> case maybeCreateUserRequestJSON of
                                 Just createUserRequest -> "createUser"
-                                --Just createUserRequest -> case createUserError of
-                                --    (Session.QueryError _ _ dbReturnsOk) -> "k"
-                                --    _ -> "<error>"
                                 Nothing -> "Wrong parameters/values"
-                        _ -> show pathTextChunks
+                            methodGet -> case maybeGetUserRequestJSON of
+                                Just getUserRequest -> "getUser"
+                                Nothing -> "Wrong parameters/values"
+                        _ -> show pathTextChunks)
                     else "No such endpoint")
 
-            maybeCreateUserError <- if errorOrSessionName == "createUser"
-                then HSS.createUser $ fromJust (decode requestBody :: Maybe CreateUserRequest)
-                else pure . Left $
+            results <- case errorOrSessionName of
+                "createUser" -> HSS.createUser $ fromJust (decode requestBody :: Maybe CreateUserRequest)
+                "getUser" -> HSS.getUser $ fromJust (decode requestBody :: Maybe GetUserRequest)
+                _ -> pure . Left $
                     Session.QueryError (pack "foo") ["pluh"] (Session.ClientError Nothing)
             --    dbReturnsOk = (Session.ResultError (Session.UnexpectedResult "Unexpected result status: CommandOk"));
             --respond $ responseLBS H.status200 [] errorOrSessionName)
-            respond $ responseLBS H.status200 [] (fromString $ show maybeCreateUserError))
+            respond $ responseLBS H.status200 [] (fromString $ show results))
 
 
 runWarp :: IO ()

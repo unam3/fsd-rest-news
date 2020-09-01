@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings  #-}
 
 module HasqlSessions (
-    createUser
+    createUser,
+    getUser
     ) where
 
 import qualified Hasql.Connection as Connection
@@ -25,3 +26,11 @@ createUser createUserRequest = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     Session.run (Session.statement params HST.createUser) connection
+
+getUser :: GetUserRequest -> IO (Either Session.QueryError ())
+getUser getUserRequest = let {
+    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
+    params = (user_id getUserRequest);
+} in do
+    Right connection <- Connection.acquire connectionSettings
+    Session.run (Session.statement params HST.getUser) connection
