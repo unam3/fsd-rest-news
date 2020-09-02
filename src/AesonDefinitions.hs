@@ -2,7 +2,7 @@
 
 module AesonDefinitions (
     CreateUserRequest(..),
-    GetUserRequest(..)
+    UserIdRequest(..)
     ) where
 
 import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), decode, defaultOptions, fieldLabelModifier, genericParseJSON, genericToJSON)
@@ -18,8 +18,9 @@ data CreateUserRequest = CreateUserRequest {
 
 instance FromJSON CreateUserRequest
 
-data GetUserRequest = GetUserRequest {
+
+data UserIdRequest = UserIdRequest {
     user_id :: Int16
 } deriving (Show, Generic)
 
-instance FromJSON GetUserRequest
+instance FromJSON UserIdRequest

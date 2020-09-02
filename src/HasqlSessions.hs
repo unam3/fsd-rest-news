@@ -2,9 +2,11 @@
 
 module HasqlSessions (
     createUser,
+    deleteUser,
     getUser
     ) where
 
+import Data.Text (Text)
 import qualified Hasql.Connection as Connection
 import qualified Hasql.Session as Session
 
@@ -27,7 +29,15 @@ createUser createUserRequest = let {
     Right connection <- Connection.acquire connectionSettings
     Session.run (Session.statement params HST.createUser) connection
 
-getUser :: GetUserRequest -> IO (Either Session.QueryError ())
+deleteUser :: UserIdRequest -> IO (Either Session.QueryError ())
+deleteUser deleteUserRequest = let {
+    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
+    params = (user_id deleteUserRequest);
+} in do
+    Right connection <- Connection.acquire connectionSettings
+    Session.run (Session.statement params HST.deleteUser) connection
+
+getUser :: UserIdRequest -> IO (Either Session.QueryError (Text, Text, Bool))
 getUser getUserRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (user_id getUserRequest);
