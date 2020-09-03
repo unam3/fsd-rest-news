@@ -69,7 +69,7 @@ restAPI request respond = let {
                 "deleteUser" -> do
                     sessionResults <- HSS.deleteUser $ fromJust (decode requestBody :: Maybe UserIdRequest)
                     pure . fromStrict . pack $ show sessionResults
-                _ -> pure "no such method"
+                nonMatched -> pure . fromStrict . pack $ nonMatched
             --respond $ responseLBS H.status200 [] errorOrSessionName)
             let {
                 httpStatus = case errorOrSessionName of
