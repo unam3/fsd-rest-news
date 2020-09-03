@@ -24,7 +24,7 @@ import qualified HasqlStatements as HST
 createUser :: CreateUserRequest -> IO (Either Session.QueryError ())
 createUser createUserRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
-    params = (name createUserRequest, surname createUserRequest, is_admin createUserRequest);
+    params = (name createUserRequest, surname createUserRequest, avatar createUserRequest, is_admin createUserRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
     Session.run (Session.statement params HST.createUser) connection
@@ -37,7 +37,7 @@ deleteUser deleteUserRequest = let {
     Right connection <- Connection.acquire connectionSettings
     Session.run (Session.statement params HST.deleteUser) connection
 
-getUser :: UserIdRequest -> IO (Either Session.QueryError (Text, Text, Bool))
+getUser :: UserIdRequest -> IO (Either Session.QueryError (Text, Text, Text, Bool))
 getUser getUserRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (user_id getUserRequest);

@@ -13,6 +13,7 @@ import GHC.Generics (Generic)
 data CreateUserRequest = CreateUserRequest {
     name :: Text,
     surname :: Text,
+    avatar :: Text,
     is_admin :: Bool
 } deriving (Show, Generic)
 
