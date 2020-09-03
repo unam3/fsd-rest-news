@@ -32,11 +32,16 @@ INSERT INTO authors VALUES (2, 'short description');
 
 -- how to create possible parental relations between rows?
 create table categories (
-    name            varchar(80) primary key
+    category_id     integer generated always as identity primary key,
+    name            varchar(80) not null,
+    parent_id       integer references categories
 );
 
-INSERT INTO categories VALUES ('cat');
-INSERT INTO categories VALUES ('cat1');
+INSERT INTO categories (name, parent_id) VALUES
+    ('cat', null),
+    ('cat1', 1),
+    ('cat2', 1),
+    ('cat3', 2);
 
 create table tags (
     name            varchar(80) primary key
@@ -51,7 +56,7 @@ create table news (
     name                varchar(80) not null,
     creation_date       date not null,
     author              integer references authors (user_id),
-    category            varchar(80) references categories,
+    category_id         integer references categories,
     text                text not null,
     is_published        boolean not null,
     primary key (news_id)
@@ -68,9 +73,9 @@ create table news (
 --    news_id         integer references news (news_id)
 --);
 
-INSERT INTO news (name, creation_date, author, category, text, is_published) VALUES
-    ('nn', '2010-12-30', 2, 'cat1', 'txt', true),
-    ('nn', '2010-12-30', 2, 'cat1', 'txt', true);
+INSERT INTO news (name, creation_date, author, category_id, text, is_published) VALUES
+    ('nn', '2010-12-30', 2, 1, 'txt', true),
+    ('nn', '2010-12-30', 2, 2, 'txt', true);
 
 create table news_tags (
     tag             varchar(80) references tags (name),
@@ -96,6 +101,7 @@ INSERT INTO news_comments (news_id, comment_text) VALUES
 commit;
 
 select * from users;
+select * from categories;
 select * from news;
 select * from news_tags;
 select * from news_comments;
