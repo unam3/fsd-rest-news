@@ -37,7 +37,7 @@ deleteUser deleteUserRequest = let {
     Right connection <- Connection.acquire connectionSettings
     Session.run (Session.statement params HST.deleteUser) connection
 
-getUser :: UserIdRequest -> IO (Either Session.QueryError (Text, Text, Text, Bool))
+getUser :: UserIdRequest -> IO (Either Session.QueryError (Text, Text, Text, Text, Bool))
 getUser getUserRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (user_id getUserRequest);

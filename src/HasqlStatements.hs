@@ -32,10 +32,10 @@ deleteUser =
         where user_id = $1 :: int2
         |]
 
-getUser :: Statement (Int16) (Text, Text, Text, Bool)
+getUser :: Statement (Int16) (Text, Text, Text, Text, Bool)
 getUser = 
     [TH.singletonStatement|
-        select name :: text, surname :: text, avatar :: text, is_admin :: bool
+        select name :: text, surname :: text, avatar :: text, creation_date :: text, is_admin :: bool
         from users
         where user_id = $1 :: int2
         |]
