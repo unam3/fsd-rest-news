@@ -4,7 +4,7 @@ module RestNews
     ( runWarpWithLogger
     ) where
 
-import AesonDefinitions (CreateUserRequest, UserIdRequest)
+import AesonDefinitions (CreateUserRequest, UserIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest)
 import qualified HasqlSessions as HSS
 
 import Control.Exception (bracket_)
@@ -23,10 +23,8 @@ import System.Log.Logger (Priority (DEBUG, ERROR), debugM, setLevel, traplogging
 restAPI :: Application;
 restAPI request respond = let {
         pathTextChunks = pathInfo request;
-        -- use lists instead of list elements
+        isRequestPathNotEmpty = (not $ null pathTextChunks);
         pathHeadChunk = head pathTextChunks;
-        isPathHasEndpoint = (not $ null pathTextChunks) && elem pathHeadChunk endpoints;
-        endpoints = ["authors", "tags", "drafts", "users", "comments"];
     } in bracket_
         (debugM "rest-news" "Allocating scarce resource")
         (debugM "rest-news" "Cleaning up")
@@ -37,8 +35,11 @@ restAPI request respond = let {
             errorOrSessionName <- let {
                 maybeCreateUserRequestJSON = decode requestBody :: Maybe CreateUserRequest;
                 maybeUserIdRequestJSON = decode requestBody :: Maybe UserIdRequest;
+                maybeCreateTagRequestJSON = decode requestBody :: Maybe CreateTagRequest;
+                maybeEditTagRequestJSON = decode requestBody :: Maybe EditTagRequest;
+                maybeTagIdRequestJSON = decode requestBody :: Maybe TagIdRequest;
             } in pure (
-                if isPathHasEndpoint
+                if isRequestPathNotEmpty
                     then (case pathHeadChunk of
                         "authors" -> case requestMethod request of
                             "POST" -> case maybeCreateUserRequestJSON of
@@ -51,8 +52,22 @@ restAPI request respond = let {
                                 Just _ -> "deleteUser"
                                 Nothing -> "Wrong parameters/parameters values"
                             _ -> "Method is not implemented"
-                        _ -> show pathTextChunks)
-                    else "No such endpoint")
+                        "tags" -> case requestMethod request of
+                            "POST" -> case maybeCreateTagRequestJSON of
+                                Just _ -> "createTag"
+                                Nothing -> "Wrong parameters/parameters values"
+                            "PATCH" -> case maybeEditTagRequestJSON of
+                                Just _ -> "editTag"
+                                Nothing -> "Wrong parameters/parameters values"
+                            "GET" -> case maybeTagIdRequestJSON of
+                                Just _ -> "getTag"
+                                Nothing -> "Wrong parameters/parameters values"
+                            "DELETE" -> case maybeTagIdRequestJSON of
+                                Just _ -> "deleteTag"
+                                Nothing -> "Wrong parameters/parameters values"
+                            _ -> "Method is not implemented"
+                        _ -> "No such endpoint")
+                    else "Endpoint needed")
 
             results <- case errorOrSessionName of
                 "createUser" -> do
@@ -69,10 +84,23 @@ restAPI request respond = let {
                 "deleteUser" -> do
                     sessionResults <- HSS.deleteUser $ fromJust (decode requestBody :: Maybe UserIdRequest)
                     pure . fromStrict . pack $ show sessionResults
+                "createTag" -> do
+                    sessionResults <- HSS.createTag $ fromJust (decode requestBody :: Maybe CreateTagRequest)
+                    pure . fromStrict . pack $ show sessionResults
+                "editTag" -> do
+                    sessionResults <- HSS.editTag $ fromJust (decode requestBody :: Maybe EditTagRequest)
+                    pure . fromStrict . pack $ show sessionResults
+                "getTag" -> do
+                    sessionResults <- HSS.getTag $ fromJust (decode requestBody :: Maybe TagIdRequest)
+                    pure . fromStrict . pack $ show sessionResults
+                "deleteTag" -> do
+                    sessionResults <- HSS.deleteTag $ fromJust (decode requestBody :: Maybe TagIdRequest)
+                    pure . fromStrict . pack $ show sessionResults
                 nonMatched -> pure . fromStrict . pack $ nonMatched
             --respond $ responseLBS H.status200 [] errorOrSessionName)
             let {
                 httpStatus = case errorOrSessionName of
+                    "Endpoint needed" -> H.status404
                     "No such endpoint" -> H.status404
                     "Wrong parameters/parameters values" -> H.status400
                     "Method is not implemented" -> H.status501

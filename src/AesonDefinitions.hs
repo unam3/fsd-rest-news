@@ -1,11 +1,15 @@
+{-# LANGUAGE DuplicateRecordFields  #-}
 {-# LANGUAGE DeriveGeneric      #-}
 
 module AesonDefinitions (
     CreateUserRequest(..),
-    UserIdRequest(..)
+    UserIdRequest(..),
+    CreateTagRequest(..),
+    EditTagRequest(..),
+    TagIdRequest(..)
     ) where
 
-import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), decode, defaultOptions, fieldLabelModifier, genericParseJSON, genericToJSON)
+import Data.Aeson (FromJSON)
 import Data.Int (Int16)
 import Data.Text (Text)
 import GHC.Generics (Generic)
@@ -25,3 +29,27 @@ data UserIdRequest = UserIdRequest {
 } deriving (Show, Generic)
 
 instance FromJSON UserIdRequest
+
+
+
+data CreateTagRequest = CreateTagRequest {
+    tag_name :: Text
+} deriving (Show, Generic)
+
+instance FromJSON CreateTagRequest
+
+
+data EditTagRequest = EditTagRequest {
+    tag_id :: Int16,
+    tag_name :: Text
+} deriving (Show, Generic)
+
+instance FromJSON EditTagRequest
+
+
+data TagIdRequest = TagIdRequest {
+    tag_id :: Int16
+} deriving (Show, Generic)
+
+instance FromJSON TagIdRequest
+

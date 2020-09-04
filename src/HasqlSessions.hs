@@ -1,9 +1,14 @@
+{-# LANGUAGE DuplicateRecordFields  #-}
 {-# LANGUAGE OverloadedStrings  #-}
 
 module HasqlSessions (
     createUser,
     deleteUser,
-    getUser
+    getUser,
+    createTag,
+    editTag,
+    deleteTag,
+    getTag
     ) where
 
 import Data.Text (Text)
@@ -44,3 +49,40 @@ getUser getUserRequest = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     Session.run (Session.statement params HST.getUser) connection
+
+
+createTag :: CreateTagRequest -> IO (Either Session.QueryError ())
+createTag createTagRequest = let {
+    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
+    params = (tag_name (createTagRequest :: CreateTagRequest));
+} in do
+    Right connection <- Connection.acquire connectionSettings
+    Session.run (Session.statement params HST.createTag) connection
+
+editTag :: EditTagRequest -> IO (Either Session.QueryError ())
+editTag editTagRequest = let {
+    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
+    params = (tag_id (editTagRequest :: EditTagRequest), tag_name (editTagRequest :: EditTagRequest));
+} in do
+    Right connection <- Connection.acquire connectionSettings
+    Session.run (Session.statement params HST.editTag) connection
+
+deleteTag :: TagIdRequest -> IO (Either Session.QueryError ())
+deleteTag deleteTagRequest = let {
+    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
+    params = (tag_id (deleteTagRequest :: TagIdRequest));
+} in do
+    Right connection <- Connection.acquire connectionSettings
+    Session.run (Session.statement params HST.deleteTag) connection
+
+getTag :: TagIdRequest -> IO (Either Session.QueryError (Text))
+getTag getTagRequest = let {
+    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
+    params = (tag_id (getTagRequest :: TagIdRequest));
+} in do
+    --acquireResults <- Connection.acquire connectionSettings
+    --case acquireResults of
+    --    Left connectionError -> error $ show connectionError
+    --    Right connection -> Connection.acquire connectionSettings
+    Right connection <- Connection.acquire connectionSettings
+    Session.run (Session.statement params HST.getTag) connection

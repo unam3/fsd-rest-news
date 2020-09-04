@@ -44,12 +44,14 @@ INSERT INTO categories (name, parent_id) VALUES
     ('cat3', 2);
 
 create table tags (
-    name            varchar(80) primary key
+    tag_id          integer generated always as identity primary key,
+    tag_name        varchar(80) not null
 );
 
-INSERT INTO tags VALUES ('tag');
-INSERT INTO tags VALUES ('tag1');
-INSERT INTO tags VALUES ('tag2');
+INSERT INTO tags (tag_name) VALUES
+    ('tag'),
+    ('tag1'),
+    ('tag2');
 
 create table news (
     news_id             integer generated always as identity,
@@ -78,15 +80,15 @@ INSERT INTO news (name, creation_date, author, category_id, text, is_published) 
     ('nn', '2010-12-30', 2, 2, 'txt', true);
 
 create table news_tags (
-    tag             varchar(80) references tags (name),
+    tag_id          integer references tags (tag_id),
     news_id         integer references news (news_id),
-    primary key (tag, news_id)
+    primary key (tag_id, news_id)
 );
 
-INSERT INTO news_tags (tag, news_id) VALUES
-    ('tag', 1),
-    ('tag2', 1),
-    ('tag1', 2);
+INSERT INTO news_tags (tag_id, news_id) VALUES
+    (1, 1),
+    (2, 1),
+    (2, 2);
 
 create table news_comments (
     news_id         integer references news (news_id),
