@@ -37,7 +37,7 @@ createUser createUserRequest = let {
 deleteUser :: UserIdRequest -> IO (Either Session.QueryError ())
 deleteUser deleteUserRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
-    params = (user_id deleteUserRequest);
+    params = user_id deleteUserRequest;
 } in do
     Right connection <- Connection.acquire connectionSettings
     Session.run (Session.statement params HST.deleteUser) connection
@@ -45,7 +45,7 @@ deleteUser deleteUserRequest = let {
 getUser :: UserIdRequest -> IO (Either Session.QueryError (Text, Text, Text, Text, Bool))
 getUser getUserRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
-    params = (user_id getUserRequest);
+    params = user_id getUserRequest;
 } in do
     Right connection <- Connection.acquire connectionSettings
     Session.run (Session.statement params HST.getUser) connection
@@ -54,7 +54,7 @@ getUser getUserRequest = let {
 createTag :: CreateTagRequest -> IO (Either Session.QueryError ())
 createTag createTagRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
-    params = (tag_name (createTagRequest :: CreateTagRequest));
+    params = tag_name (createTagRequest :: CreateTagRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
     Session.run (Session.statement params HST.createTag) connection
@@ -70,15 +70,15 @@ editTag editTagRequest = let {
 deleteTag :: TagIdRequest -> IO (Either Session.QueryError ())
 deleteTag deleteTagRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
-    params = (tag_id (deleteTagRequest :: TagIdRequest));
+    params = tag_id (deleteTagRequest :: TagIdRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
     Session.run (Session.statement params HST.deleteTag) connection
 
-getTag :: TagIdRequest -> IO (Either Session.QueryError (Text))
+getTag :: TagIdRequest -> IO (Either Session.QueryError Text)
 getTag getTagRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
-    params = (tag_id (getTagRequest :: TagIdRequest));
+    params = tag_id (getTagRequest :: TagIdRequest);
 } in do
     --acquireResults <- Connection.acquire connectionSettings
     --case acquireResults of

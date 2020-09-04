@@ -28,7 +28,7 @@ createUser =
                 )
         |]
 
-deleteUser :: Statement (Int16) ()
+deleteUser :: Statement Int16 ()
 deleteUser =
     [TH.singletonStatement|
         delete
@@ -36,7 +36,7 @@ deleteUser =
         where user_id = $1 :: int2
         |]
 
-getUser :: Statement (Int16) (Text, Text, Text, Text, Bool)
+getUser :: Statement Int16 (Text, Text, Text, Text, Bool)
 getUser =
     [TH.singletonStatement|
         select name :: text, surname :: text, avatar :: text, creation_date :: text, is_admin :: bool
@@ -45,7 +45,7 @@ getUser =
         |]
 
 
-createTag :: Statement (Text) ()
+createTag :: Statement Text ()
 createTag =
     [TH.singletonStatement|
         insert
@@ -63,7 +63,7 @@ editTag =
         where tag_id = $1 :: int2
         |]
 
-deleteTag :: Statement (Int16) ()
+deleteTag :: Statement Int16 ()
 deleteTag =
     [TH.singletonStatement|
         delete
@@ -71,7 +71,7 @@ deleteTag =
         where tag_id = $1 :: int2
         |]
 
-getTag :: Statement (Int16) (Text)
+getTag :: Statement Int16 Text
 getTag =
     [TH.singletonStatement|
         select tag_name :: text

@@ -24,7 +24,7 @@ data CreateUserRequest = CreateUserRequest {
 instance FromJSON CreateUserRequest
 
 
-data UserIdRequest = UserIdRequest {
+newtype UserIdRequest = UserIdRequest {
     user_id :: Int16
 } deriving (Show, Generic)
 
@@ -32,7 +32,7 @@ instance FromJSON UserIdRequest
 
 
 
-data CreateTagRequest = CreateTagRequest {
+newtype CreateTagRequest = CreateTagRequest {
     tag_name :: Text
 } deriving (Show, Generic)
 
@@ -47,7 +47,7 @@ data EditTagRequest = EditTagRequest {
 instance FromJSON EditTagRequest
 
 
-data TagIdRequest = TagIdRequest {
+newtype TagIdRequest = TagIdRequest {
     tag_id :: Int16
 } deriving (Show, Generic)
 
