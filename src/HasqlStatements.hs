@@ -4,6 +4,7 @@ module HasqlStatements (
     createUser,
     deleteUser,
     getUser,
+    createCategory,
     createTag,
     editTag,
     getTag,
@@ -43,6 +44,20 @@ getUser =
         from users
         where user_id = $1 :: int2
         |]
+
+
+-- resquest's parent_id may be omitted or set to "null"
+createCategory :: Statement (Text, Maybe Int16) ()
+createCategory =
+    [TH.singletonStatement|
+        insert
+        into categories (name, parent_id)
+            values (
+                $1 :: text,
+                $2 :: int2?
+                )
+        |]
+
 
 
 createTag :: Statement Text ()

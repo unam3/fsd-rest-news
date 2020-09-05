@@ -5,6 +5,7 @@ module HasqlSessions (
     createUser,
     deleteUser,
     getUser,
+    createCategory,
     createTag,
     editTag,
     deleteTag,
@@ -29,7 +30,7 @@ import qualified HasqlStatements as HST
 createUser :: CreateUserRequest -> IO (Either Session.QueryError ())
 createUser createUserRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
-    params = (name createUserRequest, surname createUserRequest, avatar createUserRequest, is_admin createUserRequest);
+    params = (name (createUserRequest :: CreateUserRequest), surname createUserRequest, avatar createUserRequest, is_admin createUserRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
     Session.run (Session.statement params HST.createUser) connection
@@ -49,6 +50,18 @@ getUser getUserRequest = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     Session.run (Session.statement params HST.getUser) connection
+
+
+createCategory :: CreateCategoryRequest -> IO (Either Session.QueryError ())
+createCategory createCategoryRequest = let {
+    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
+    params = (
+        name (createCategoryRequest :: CreateCategoryRequest),
+        parent_id (createCategoryRequest :: CreateCategoryRequest)
+        );
+} in do
+    Right connection <- Connection.acquire connectionSettings
+    Session.run (Session.statement params HST.createCategory) connection
 
 
 createTag :: CreateTagRequest -> IO (Either Session.QueryError ())

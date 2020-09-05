@@ -4,7 +4,7 @@ module RestNews
     ( runWarpWithLogger
     ) where
 
-import AesonDefinitions (CreateUserRequest, UserIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest)
+import AesonDefinitions (CreateUserRequest, UserIdRequest, CreateCategoryRequest, CreateTagRequest, EditTagRequest, TagIdRequest)
 import qualified HasqlSessions as HSS
 
 import Control.Exception (bracket_)
@@ -35,6 +35,7 @@ restAPI request respond = let {
             errorOrSessionName <- let {
                 maybeCreateUserRequestJSON = decode requestBody :: Maybe CreateUserRequest;
                 maybeUserIdRequestJSON = decode requestBody :: Maybe UserIdRequest;
+                maybeCreateCategoryRequestJSON = decode requestBody :: Maybe CreateCategoryRequest;
                 maybeCreateTagRequestJSON = decode requestBody :: Maybe CreateTagRequest;
                 maybeEditTagRequestJSON = decode requestBody :: Maybe EditTagRequest;
                 maybeTagIdRequestJSON = decode requestBody :: Maybe TagIdRequest;
@@ -50,6 +51,11 @@ restAPI request respond = let {
                                 Nothing -> "Wrong parameters/parameters values"
                             "DELETE" -> case maybeUserIdRequestJSON of
                                 Just _ -> "deleteUser"
+                                Nothing -> "Wrong parameters/parameters values"
+                            _ -> "Method is not implemented"
+                        "categories" -> case requestMethod request of
+                            "POST" -> case maybeCreateCategoryRequestJSON of
+                                Just _ -> "createCategory"
                                 Nothing -> "Wrong parameters/parameters values"
                             _ -> "Method is not implemented"
                         "tags" -> case requestMethod request of
@@ -83,6 +89,9 @@ restAPI request respond = let {
                     pure . fromStrict . pack $ show sessionResults
                 "deleteUser" -> do
                     sessionResults <- HSS.deleteUser $ fromJust (decode requestBody :: Maybe UserIdRequest)
+                    pure . fromStrict . pack $ show sessionResults
+                "createCategory" -> do
+                    sessionResults <- HSS.createCategory $ fromJust (decode requestBody :: Maybe CreateCategoryRequest)
                     pure . fromStrict . pack $ show sessionResults
                 "createTag" -> do
                     sessionResults <- HSS.createTag $ fromJust (decode requestBody :: Maybe CreateTagRequest)
