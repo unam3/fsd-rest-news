@@ -7,6 +7,12 @@ curl -i -X DELETE -d '{"user_id": 3}' http://0.0.0.0:8081/authors
 
 curl -i -X POST -d '{"name": "pluh", "parent_id": null}' http://0.0.0.0:8081/categories
 
+curl -i -X PATCH -d '{"category_id": 1, "name": "pluh_pattched", "parent_id": null}' http://0.0.0.0:8081/categories
+
+curl -i -X GET -d '{"category_id": 1}' http://0.0.0.0:8081/categories
+
+curl -i -X DELETE -d '{"category_id": 10}' http://0.0.0.0:8081/categories
+
 
 curl -i -X POST -d '{"tag_name": "pluh"}' http://0.0.0.0:8081/tags
 

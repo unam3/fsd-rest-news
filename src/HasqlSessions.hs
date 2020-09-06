@@ -6,12 +6,16 @@ module HasqlSessions (
     deleteUser,
     getUser,
     createCategory,
+    updateCategory,
+    getCategory,
+    deleteCategory,
     createTag,
     editTag,
     deleteTag,
     getTag
     ) where
 
+import Data.Int (Int16)
 import Data.Text (Text)
 import qualified Hasql.Connection as Connection
 import qualified Hasql.Session as Session
@@ -62,6 +66,34 @@ createCategory createCategoryRequest = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     Session.run (Session.statement params HST.createCategory) connection
+
+updateCategory :: UpdateCategoryRequest -> IO (Either Session.QueryError ())
+updateCategory updateCategoryRequest = let {
+    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
+    params = (
+        category_id (updateCategoryRequest :: UpdateCategoryRequest),
+        name (updateCategoryRequest :: UpdateCategoryRequest),
+        parent_id (updateCategoryRequest :: UpdateCategoryRequest)
+        );
+} in do
+    Right connection <- Connection.acquire connectionSettings
+    Session.run (Session.statement params HST.updateCategory) connection
+
+getCategory :: CategoryIdRequest -> IO (Either Session.QueryError (Text, Maybe Int16))
+getCategory categoryIdRequest = let {
+    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
+    params = category_id (categoryIdRequest :: CategoryIdRequest);
+} in do
+    Right connection <- Connection.acquire connectionSettings
+    Session.run (Session.statement params HST.getCategory) connection
+
+deleteCategory :: CategoryIdRequest -> IO (Either Session.QueryError ())
+deleteCategory categoryIdRequest = let {
+    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
+    params = category_id (categoryIdRequest :: CategoryIdRequest);
+} in do
+    Right connection <- Connection.acquire connectionSettings
+    Session.run (Session.statement params HST.deleteCategory) connection
 
 
 createTag :: CreateTagRequest -> IO (Either Session.QueryError ())

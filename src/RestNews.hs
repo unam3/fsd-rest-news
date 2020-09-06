@@ -4,7 +4,7 @@ module RestNews
     ( runWarpWithLogger
     ) where
 
-import AesonDefinitions (CreateUserRequest, UserIdRequest, CreateCategoryRequest, CreateTagRequest, EditTagRequest, TagIdRequest)
+import AesonDefinitions (CreateUserRequest, UserIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest)
 import qualified HasqlSessions as HSS
 
 import Control.Exception (bracket_)
@@ -18,6 +18,8 @@ import qualified Network.HTTP.Types as H
 import Network.Wai (Application, pathInfo, requestMethod, responseLBS, strictRequestBody)
 import Network.Wai.Handler.Warp (Port, run)
 import System.Log.Logger (Priority (DEBUG, ERROR), debugM, setLevel, traplogging, updateGlobalLogger)
+
+--ifValidRequest request sessionName = maybe "Wrong parameters/parameters values" (const sessionName)
 
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
 restAPI :: Application;
@@ -36,6 +38,8 @@ restAPI request respond = let {
                 maybeCreateUserRequestJSON = decode requestBody :: Maybe CreateUserRequest;
                 maybeUserIdRequestJSON = decode requestBody :: Maybe UserIdRequest;
                 maybeCreateCategoryRequestJSON = decode requestBody :: Maybe CreateCategoryRequest;
+                maybeUpdateCategoryRequestJSON = decode requestBody :: Maybe UpdateCategoryRequest;
+                maybeCategoryIdRequestJSON = decode requestBody :: Maybe CategoryIdRequest;
                 maybeCreateTagRequestJSON = decode requestBody :: Maybe CreateTagRequest;
                 maybeEditTagRequestJSON = decode requestBody :: Maybe EditTagRequest;
                 maybeTagIdRequestJSON = decode requestBody :: Maybe TagIdRequest;
@@ -56,6 +60,15 @@ restAPI request respond = let {
                         "categories" -> case requestMethod request of
                             "POST" -> case maybeCreateCategoryRequestJSON of
                                 Just _ -> "createCategory"
+                                Nothing -> "Wrong parameters/parameters values"
+                            "PATCH" -> case maybeUpdateCategoryRequestJSON of
+                                Just _ -> "updateCategory"
+                                Nothing -> "Wrong parameters/parameters values"
+                            "GET" -> case maybeCategoryIdRequestJSON of
+                                Just _ -> "getCategory"
+                                Nothing -> "Wrong parameters/parameters values"
+                            "DELETE" -> case maybeCategoryIdRequestJSON of
+                                Just _ -> "deleteCategory"
                                 Nothing -> "Wrong parameters/parameters values"
                             _ -> "Method is not implemented"
                         "tags" -> case requestMethod request of
@@ -92,6 +105,15 @@ restAPI request respond = let {
                     pure . fromStrict . pack $ show sessionResults
                 "createCategory" -> do
                     sessionResults <- HSS.createCategory $ fromJust (decode requestBody :: Maybe CreateCategoryRequest)
+                    pure . fromStrict . pack $ show sessionResults
+                "updateCategory" -> do
+                    sessionResults <- HSS.updateCategory $ fromJust (decode requestBody :: Maybe UpdateCategoryRequest)
+                    pure . fromStrict . pack $ show sessionResults
+                "getCategory" -> do
+                    sessionResults <- HSS.getCategory $ fromJust (decode requestBody :: Maybe CategoryIdRequest)
+                    pure . fromStrict . pack $ show sessionResults
+                "deleteCategory" -> do
+                    sessionResults <- HSS.deleteCategory $ fromJust (decode requestBody :: Maybe CategoryIdRequest)
                     pure . fromStrict . pack $ show sessionResults
                 "createTag" -> do
                     sessionResults <- HSS.createTag $ fromJust (decode requestBody :: Maybe CreateTagRequest)

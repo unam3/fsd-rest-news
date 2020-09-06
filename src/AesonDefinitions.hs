@@ -5,6 +5,8 @@ module AesonDefinitions (
     CreateUserRequest(..),
     UserIdRequest(..),
     CreateCategoryRequest(..),
+    UpdateCategoryRequest(..),
+    CategoryIdRequest(..),
     CreateTagRequest(..),
     EditTagRequest(..),
     TagIdRequest(..)
@@ -39,6 +41,22 @@ data CreateCategoryRequest = CreateCategoryRequest {
 } deriving (Show, Generic)
 
 instance FromJSON CreateCategoryRequest
+
+
+data UpdateCategoryRequest = UpdateCategoryRequest {
+    category_id :: Int16,
+    name :: Text,
+    parent_id :: Maybe Int16
+} deriving (Show, Generic)
+
+instance FromJSON UpdateCategoryRequest
+
+
+data CategoryIdRequest = CategoryIdRequest {
+    category_id :: Int16
+} deriving (Show, Generic)
+
+instance FromJSON CategoryIdRequest
 
 
 

@@ -5,6 +5,9 @@ module HasqlStatements (
     deleteUser,
     getUser,
     createCategory,
+    updateCategory,
+    getCategory,
+    deleteCategory,
     createTag,
     editTag,
     getTag,
@@ -56,6 +59,30 @@ createCategory =
                 $1 :: text,
                 $2 :: int2?
                 )
+        |]
+
+updateCategory :: Statement (Int16, Text, Maybe Int16) ()
+updateCategory =
+    [TH.singletonStatement|
+        update categories
+        set name = $2 :: text, parent_id = $3 :: int2?
+        where category_id = $1 :: int2
+        |]
+
+getCategory :: Statement Int16 (Text, Maybe Int16)
+getCategory =
+    [TH.singletonStatement|
+        select name :: text, parent_id :: int2?
+        from categories
+        where category_id = $1 :: int2
+        |]
+
+deleteCategory :: Statement (Int16) ()
+deleteCategory =
+    [TH.singletonStatement|
+        delete
+        from categories
+        where category_id = $1 :: int2
         |]
 
 
