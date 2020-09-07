@@ -14,6 +14,13 @@ curl -i -X GET -d '{"category_id": 1}' http://0.0.0.0:8081/categories
 curl -i -X DELETE -d '{"category_id": 10}' http://0.0.0.0:8081/categories
 
 
+curl -i -X POST -d '{"news_id": 2, "comment_text": "bluasd!"}' http://0.0.0.0:8081/comments
+
+curl -i -X GET -d '{"news_id": 2}' http://0.0.0.0:8081/comments
+
+curl -i -X DELETE -d '{"news_id": 4}' http://0.0.0.0:8081/comments
+
+
 curl -i -X POST -d '{"tag_name": "pluh"}' http://0.0.0.0:8081/tags
 
 curl -i -X PATCH -d '{"tag_id": 2, "tag_name": "pluh_patched"}' http://0.0.0.0:8081/tags

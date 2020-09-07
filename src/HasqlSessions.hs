@@ -12,7 +12,10 @@ module HasqlSessions (
     createTag,
     editTag,
     deleteTag,
-    getTag
+    getTag,
+    createComment,
+    deleteComment,
+    getArticleComments
     ) where
 
 import Data.Int (Int16)
@@ -131,3 +134,31 @@ getTag getTagRequest = let {
     --    Right connection -> Connection.acquire connectionSettings
     Right connection <- Connection.acquire connectionSettings
     Session.run (Session.statement params HST.getTag) connection
+
+
+createComment :: CreateCommentRequest -> IO (Either Session.QueryError ())
+createComment createCommentRequest = let {
+    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
+    params = (
+        news_id (createCommentRequest :: CreateCommentRequest),
+        comment_text (createCommentRequest :: CreateCommentRequest)
+        );
+} in do
+    Right connection <- Connection.acquire connectionSettings
+    Session.run (Session.statement params HST.createComment) connection
+
+deleteComment :: CommentIdRequest -> IO (Either Session.QueryError ())
+deleteComment deleteCommentRequest = let {
+    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
+    params = comment_id (deleteCommentRequest :: CommentIdRequest);
+} in do
+    Right connection <- Connection.acquire connectionSettings
+    Session.run (Session.statement params HST.deleteComment) connection
+
+getArticleComments :: ArticleCommentsRequest -> IO (Either Session.QueryError (Int16, Text))
+getArticleComments articleCommentsRequest = let {
+    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
+    params = news_id (articleCommentsRequest :: ArticleCommentsRequest);
+} in do
+    Right connection <- Connection.acquire connectionSettings
+    Session.run (Session.statement params HST.getArticleComments) connection

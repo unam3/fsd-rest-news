@@ -4,7 +4,7 @@ module RestNews
     ( runWarpWithLogger
     ) where
 
-import AesonDefinitions (CreateUserRequest, UserIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest)
+import AesonDefinitions (CreateUserRequest, UserIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest, CreateCommentRequest, CreateCommentRequest, CommentIdRequest, ArticleCommentsRequest)
 import qualified HasqlSessions as HSS
 
 import Control.Exception (bracket_)
@@ -43,6 +43,9 @@ restAPI request respond = let {
                 maybeCreateTagRequestJSON = decode requestBody :: Maybe CreateTagRequest;
                 maybeEditTagRequestJSON = decode requestBody :: Maybe EditTagRequest;
                 maybeTagIdRequestJSON = decode requestBody :: Maybe TagIdRequest;
+                maybeCreateCommentRequestJSON = decode requestBody :: Maybe CreateCommentRequest;
+                maybeCommentIdRequestJSON = decode requestBody :: Maybe CommentIdRequest;
+                maybeArticleCommentsRequestJSON = decode requestBody :: Maybe ArticleCommentsRequest;
             } in pure (
                 if isRequestPathNotEmpty
                     then (case pathHeadChunk of
@@ -83,6 +86,17 @@ restAPI request respond = let {
                                 Nothing -> "Wrong parameters/parameters values"
                             "DELETE" -> case maybeTagIdRequestJSON of
                                 Just _ -> "deleteTag"
+                                Nothing -> "Wrong parameters/parameters values"
+                            _ -> "Method is not implemented"
+                        "comments" -> case requestMethod request of
+                            "POST" -> case maybeCreateCommentRequestJSON of
+                                Just _ -> "createComment"
+                                Nothing -> "Wrong parameters/parameters values"
+                            "GET" -> case maybeArticleCommentsRequestJSON of
+                                Just _ -> "getArticleComments"
+                                Nothing -> "Wrong parameters/parameters values"
+                            "DELETE" -> case maybeCommentIdRequestJSON of
+                                Just _ -> "deleteComment"
                                 Nothing -> "Wrong parameters/parameters values"
                             _ -> "Method is not implemented"
                         _ -> "No such endpoint")
@@ -126,6 +140,15 @@ restAPI request respond = let {
                     pure . fromStrict . pack $ show sessionResults
                 "deleteTag" -> do
                     sessionResults <- HSS.deleteTag $ fromJust (decode requestBody :: Maybe TagIdRequest)
+                    pure . fromStrict . pack $ show sessionResults
+                "createComment" -> do
+                    sessionResults <- HSS.createComment $ fromJust (decode requestBody :: Maybe CreateCommentRequest)
+                    pure . fromStrict . pack $ show sessionResults
+                "deleteComment" -> do
+                    sessionResults <- HSS.deleteComment $ fromJust (decode requestBody :: Maybe CommentIdRequest)
+                    pure . fromStrict . pack $ show sessionResults
+                "getArticleComments" -> do
+                    sessionResults <- HSS.getArticleComments $ fromJust (decode requestBody :: Maybe ArticleCommentsRequest)
                     pure . fromStrict . pack $ show sessionResults
                 nonMatched -> pure . fromStrict . pack $ nonMatched
             --respond $ responseLBS H.status200 [] errorOrSessionName)

@@ -11,7 +11,10 @@ module HasqlStatements (
     createTag,
     editTag,
     getTag,
-    deleteTag
+    deleteTag,
+    createComment,
+    deleteComment,
+    getArticleComments
     ) where
 
 import Data.Int (Int16)
@@ -119,4 +122,33 @@ getTag =
         select tag_name :: text
         from tags
         where tag_id = $1 :: int2
+        |]
+
+
+
+createComment :: Statement (Int16, Text) ()
+createComment =
+    [TH.singletonStatement|
+        insert
+        into news_comments (news_id, comment_text)
+            values (
+                $1 :: int2,
+                $2 :: text
+                )
+        |]
+
+deleteComment :: Statement Int16 ()
+deleteComment =
+    [TH.singletonStatement|
+        delete
+        from news_comments
+        where comment_id = $1 :: int2
+        |]
+
+getArticleComments :: Statement Int16 (Int16, Text)
+getArticleComments =
+    [TH.singletonStatement|
+        select comment_id :: int2, comment_text :: text
+        from news_comments
+        where news_id = $1 :: int2
         |]
