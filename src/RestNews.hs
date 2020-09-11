@@ -19,7 +19,8 @@ import Network.Wai (Application, pathInfo, requestMethod, responseLBS, strictReq
 import Network.Wai.Handler.Warp (Port, run)
 import System.Log.Logger (Priority (DEBUG, ERROR), debugM, setLevel, traplogging, updateGlobalLogger)
 
---ifValidRequest request sessionName = maybe "Wrong parameters/parameters values" (const sessionName)
+ifValidRequest :: String -> Maybe a -> String
+ifValidRequest sessionName = maybe "Wrong parameters/parameters values" (const sessionName)
 
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
 restAPI :: Application;
@@ -50,54 +51,26 @@ restAPI request respond = let {
                 if isRequestPathNotEmpty
                     then (case pathHeadChunk of
                         "authors" -> case requestMethod request of
-                            "POST" -> case maybeCreateUserRequestJSON of
-                                Just _ -> "createUser"
-                                Nothing -> "Wrong parameters/parameters values"
-                            "GET" -> case maybeUserIdRequestJSON of
-                                Just _ -> "getUser"
-                                Nothing -> "Wrong parameters/parameters values"
-                            "DELETE" -> case maybeUserIdRequestJSON of
-                                Just _ -> "deleteUser"
-                                Nothing -> "Wrong parameters/parameters values"
+                            "POST"      -> ifValidRequest "createUser" maybeCreateUserRequestJSON
+                            "GET"       -> ifValidRequest "getUser" maybeUserIdRequestJSON
+                            "DELETE"    -> ifValidRequest "deleteUser" maybeUserIdRequestJSON
                             _ -> "Method is not implemented"
                         "categories" -> case requestMethod request of
-                            "POST" -> case maybeCreateCategoryRequestJSON of
-                                Just _ -> "createCategory"
-                                Nothing -> "Wrong parameters/parameters values"
-                            "PATCH" -> case maybeUpdateCategoryRequestJSON of
-                                Just _ -> "updateCategory"
-                                Nothing -> "Wrong parameters/parameters values"
-                            "GET" -> case maybeCategoryIdRequestJSON of
-                                Just _ -> "getCategory"
-                                Nothing -> "Wrong parameters/parameters values"
-                            "DELETE" -> case maybeCategoryIdRequestJSON of
-                                Just _ -> "deleteCategory"
-                                Nothing -> "Wrong parameters/parameters values"
+                            "POST"      -> ifValidRequest "createCategory" maybeCreateCategoryRequestJSON
+                            "PATCH"     -> ifValidRequest "updateCategory" maybeUpdateCategoryRequestJSON
+                            "GET"       -> ifValidRequest "getCategory" maybeCategoryIdRequestJSON
+                            "DELETE"    -> ifValidRequest "deleteCategory" maybeCategoryIdRequestJSON
                             _ -> "Method is not implemented"
                         "tags" -> case requestMethod request of
-                            "POST" -> case maybeCreateTagRequestJSON of
-                                Just _ -> "createTag"
-                                Nothing -> "Wrong parameters/parameters values"
-                            "PATCH" -> case maybeEditTagRequestJSON of
-                                Just _ -> "editTag"
-                                Nothing -> "Wrong parameters/parameters values"
-                            "GET" -> case maybeTagIdRequestJSON of
-                                Just _ -> "getTag"
-                                Nothing -> "Wrong parameters/parameters values"
-                            "DELETE" -> case maybeTagIdRequestJSON of
-                                Just _ -> "deleteTag"
-                                Nothing -> "Wrong parameters/parameters values"
+                            "POST"      -> ifValidRequest "createTag" maybeCreateTagRequestJSON
+                            "PATCH"     -> ifValidRequest "editTag" maybeEditTagRequestJSON
+                            "GET"       -> ifValidRequest "getTag" maybeTagIdRequestJSON
+                            "DELETE"    -> ifValidRequest "deleteTag" maybeTagIdRequestJSON
                             _ -> "Method is not implemented"
                         "comments" -> case requestMethod request of
-                            "POST" -> case maybeCreateCommentRequestJSON of
-                                Just _ -> "createComment"
-                                Nothing -> "Wrong parameters/parameters values"
-                            "GET" -> case maybeArticleCommentsRequestJSON of
-                                Just _ -> "getArticleComments"
-                                Nothing -> "Wrong parameters/parameters values"
-                            "DELETE" -> case maybeCommentIdRequestJSON of
-                                Just _ -> "deleteComment"
-                                Nothing -> "Wrong parameters/parameters values"
+                            "POST"      -> ifValidRequest "createComment" maybeCreateCommentRequestJSON
+                            "GET"       -> ifValidRequest "getArticleComments" maybeArticleCommentsRequestJSON
+                            "DELETE"    -> ifValidRequest "deleteComment" maybeCommentIdRequestJSON
                             _ -> "Method is not implemented"
                         _ -> "No such endpoint")
                     else "Endpoint needed")
