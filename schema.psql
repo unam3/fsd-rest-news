@@ -38,10 +38,24 @@ create table categories (
 );
 
 INSERT INTO categories (name, parent_id) VALUES
-    ('cat', null),
-    ('cat1', 1),
+    ('cat1', null),
     ('cat2', 1),
-    ('cat3', 2);
+    ('cat3', 1),
+    ('cat4', 2),
+    ('cat5', 3),
+    ('cat6', 5),
+    ('cat7', 4);
+
+--WITH RECURSIVE categories_recursive(category_id, name, parent_id) AS (
+--      SELECT category_id, name, parent_id
+--      FROM categories
+--      WHERE category_id = 5
+--UNION ALL
+--      SELECT categories.category_id, categories.name, categories.parent_id
+--      FROM categories_recursive, categories
+--      WHERE categories_recursive.parent_id = categories.category_id
+--    )
+--SELECT category_id, name, parent_id FROM categories_recursive;
 
 create table tags (
     tag_id          integer generated always as identity primary key,
