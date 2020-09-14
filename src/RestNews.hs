@@ -50,7 +50,7 @@ restAPI request respond = let {
             } in pure (
                 if isRequestPathNotEmpty
                     then (case pathHeadChunk of
-                        "authors" -> case requestMethod request of
+                        "users" -> case requestMethod request of
                             "POST"      -> ifValidRequest "createUser" maybeCreateUserRequestJSON
                             "GET"       -> ifValidRequest "getUser" maybeUserIdRequestJSON
                             "DELETE"    -> ifValidRequest "deleteUser" maybeUserIdRequestJSON
