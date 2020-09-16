@@ -24,11 +24,12 @@ INSERT INTO users (name, surname, avatar, is_admin) VALUES
     ('n1', 's1', 'http://pluh/meh.jpg', false);
 
 create table authors (
+    author_id       integer generated always as identity,
     user_id         integer primary key references users,
     description     text not null
 );
 
-INSERT INTO authors VALUES (2, 'short description');
+INSERT INTO authors (user_id, description) VALUES (2, 'short description');
 
 -- how to create possible parental relations between rows?
 create table categories (

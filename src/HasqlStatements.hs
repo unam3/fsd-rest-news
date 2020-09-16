@@ -4,6 +4,9 @@ module HasqlStatements (
     createUser,
     deleteUser,
     getUser,
+    promoteUserToAuthor,
+    getAuthor,
+    deleteAuthorRole,
     createCategory,
     updateCategory,
     getCategory,
@@ -37,7 +40,7 @@ createUser =
 
 deleteUser :: Statement Int16 ()
 deleteUser =
-    [TH.singletonStatement|
+    [TH.resultlessStatement|
         delete
         from users
         where user_id = $1 :: int2
@@ -49,6 +52,35 @@ getUser =
         select name :: text, surname :: text, avatar :: text, creation_date :: text, is_admin :: bool
         from users
         where user_id = $1 :: int2
+        |]
+
+
+getAuthor :: Statement Int16 (Int16, Int16, Text)
+getAuthor =
+    [TH.singletonStatement|
+        select author_id :: int2, user_id :: int2, description :: text
+        from authors
+        where author_id = $1 :: int2
+        |]
+
+deleteAuthorRole :: Statement Int16 ()
+deleteAuthorRole =
+    [TH.resultlessStatement|
+        delete
+        from authors
+        where author_id = $1 :: int2
+        |]
+
+promoteUserToAuthor :: Statement (Int16, Text) Int16
+promoteUserToAuthor =
+    [TH.singletonStatement|
+        insert
+        into authors (user_id, description)
+            values (
+                $1 :: int2,
+                $2 :: text
+                )
+            returning (author_id :: int2)
         |]
 
 
@@ -80,9 +112,9 @@ getCategory =
         where category_id = $1 :: int2
         |]
 
-deleteCategory :: Statement (Int16) ()
+deleteCategory :: Statement Int16 ()
 deleteCategory =
-    [TH.singletonStatement|
+    [TH.resultlessStatement|
         delete
         from categories
         where category_id = $1 :: int2
@@ -110,7 +142,7 @@ editTag =
 
 deleteTag :: Statement Int16 ()
 deleteTag =
-    [TH.singletonStatement|
+    [TH.resultlessStatement|
         delete
         from tags
         where tag_id = $1 :: int2
@@ -139,7 +171,7 @@ createComment =
 
 deleteComment :: Statement Int16 ()
 deleteComment =
-    [TH.singletonStatement|
+    [TH.resultlessStatement|
         delete
         from news_comments
         where comment_id = $1 :: int2

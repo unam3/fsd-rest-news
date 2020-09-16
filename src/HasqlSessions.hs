@@ -5,6 +5,9 @@ module HasqlSessions (
     createUser,
     deleteUser,
     getUser,
+    promoteUserToAuthor,
+    getAuthor,
+    deleteAuthorRole,
     createCategory,
     updateCategory,
     getCategory,
@@ -45,7 +48,7 @@ createUser createUserRequest = let {
 deleteUser :: UserIdRequest -> IO (Either Session.QueryError ())
 deleteUser deleteUserRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
-    params = user_id deleteUserRequest;
+    params = user_id (deleteUserRequest :: UserIdRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
     Session.run (Session.statement params HST.deleteUser) connection
@@ -53,11 +56,37 @@ deleteUser deleteUserRequest = let {
 getUser :: UserIdRequest -> IO (Either Session.QueryError (Text, Text, Text, Text, Bool))
 getUser getUserRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
-    params = user_id getUserRequest;
+    params = user_id (getUserRequest :: UserIdRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
     Session.run (Session.statement params HST.getUser) connection
 
+
+promoteUserToAuthor :: PromoteUserToAuthorRequest -> IO (Either Session.QueryError (Int16))
+promoteUserToAuthor promoteUserToAuthorRequest = let {
+    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
+    params = (
+        user_id (promoteUserToAuthorRequest :: PromoteUserToAuthorRequest),
+        description promoteUserToAuthorRequest);
+} in do
+    Right connection <- Connection.acquire connectionSettings
+    Session.run (Session.statement params HST.promoteUserToAuthor) connection
+
+getAuthor :: AuthorIdRequest -> IO (Either Session.QueryError (Int16, Int16, Text))
+getAuthor authorIdRequest = let {
+    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
+    params = author_id (authorIdRequest :: AuthorIdRequest);
+} in do
+    Right connection <- Connection.acquire connectionSettings
+    Session.run (Session.statement params HST.getAuthor) connection
+
+deleteAuthorRole :: AuthorIdRequest -> IO (Either Session.QueryError ())
+deleteAuthorRole authorIdRequest = let {
+    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
+    params = author_id (authorIdRequest :: AuthorIdRequest);
+} in do
+    Right connection <- Connection.acquire connectionSettings
+    Session.run (Session.statement params HST.deleteAuthorRole) connection
 
 createCategory :: CreateCategoryRequest -> IO (Either Session.QueryError ())
 createCategory createCategoryRequest = let {

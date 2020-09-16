@@ -25,3 +25,7 @@ stack build
 # run it
 stack exec rest-news-exe
 ```
+
+## Known limitations
+
+- Deletion of inexistent entity will return response with 200 HTTP status code.

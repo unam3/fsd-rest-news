@@ -4,7 +4,7 @@ module RestNews
     ( runWarpWithLogger
     ) where
 
-import AesonDefinitions (CreateUserRequest, UserIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest, CreateCommentRequest, CreateCommentRequest, CommentIdRequest, ArticleCommentsRequest)
+import AesonDefinitions (CreateUserRequest, UserIdRequest, PromoteUserToAuthorRequest, AuthorIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest, CreateCommentRequest, CreateCommentRequest, CommentIdRequest, ArticleCommentsRequest)
 import qualified HasqlSessions as HSS
 
 import Control.Exception (bracket_)
@@ -38,6 +38,8 @@ restAPI request respond = let {
             errorOrSessionName <- let {
                 maybeCreateUserRequestJSON = decode requestBody :: Maybe CreateUserRequest;
                 maybeUserIdRequestJSON = decode requestBody :: Maybe UserIdRequest;
+                maybePromoteUserToAuthorRequestJSON = decode requestBody :: Maybe PromoteUserToAuthorRequest;
+                maybeAuthorIdRequestJSON = decode requestBody :: Maybe AuthorIdRequest;
                 maybeCreateCategoryRequestJSON = decode requestBody :: Maybe CreateCategoryRequest;
                 maybeUpdateCategoryRequestJSON = decode requestBody :: Maybe UpdateCategoryRequest;
                 maybeCategoryIdRequestJSON = decode requestBody :: Maybe CategoryIdRequest;
@@ -54,6 +56,11 @@ restAPI request respond = let {
                             "POST"      -> ifValidRequest "createUser" maybeCreateUserRequestJSON
                             "GET"       -> ifValidRequest "getUser" maybeUserIdRequestJSON
                             "DELETE"    -> ifValidRequest "deleteUser" maybeUserIdRequestJSON
+                            _ -> "Method is not implemented"
+                        "authors" -> case requestMethod request of
+                            "POST"      -> ifValidRequest "promoteUserToAuthor" maybePromoteUserToAuthorRequestJSON
+                            "GET"       -> ifValidRequest "getAuthor" maybeAuthorIdRequestJSON
+                            "DELETE"    -> ifValidRequest "deleteAuthorRole" maybeUserIdRequestJSON
                             _ -> "Method is not implemented"
                         "categories" -> case requestMethod request of
                             "POST"      -> ifValidRequest "createCategory" maybeCreateCategoryRequestJSON
@@ -89,6 +96,15 @@ restAPI request respond = let {
                     pure . fromStrict . pack $ show sessionResults
                 "deleteUser" -> do
                     sessionResults <- HSS.deleteUser $ fromJust (decode requestBody :: Maybe UserIdRequest)
+                    pure . fromStrict . pack $ show sessionResults
+                "promoteUserToAuthor" -> do
+                    sessionResults <- HSS.promoteUserToAuthor $ fromJust (decode requestBody :: Maybe PromoteUserToAuthorRequest)
+                    pure . fromStrict . pack $ show sessionResults
+                "getAuthor" -> do
+                    sessionResults <- HSS.getAuthor $ fromJust (decode requestBody :: Maybe AuthorIdRequest)
+                    pure . fromStrict . pack $ show sessionResults
+                "deleteAuthorRole" -> do
+                    sessionResults <- HSS.deleteAuthorRole $ fromJust (decode requestBody :: Maybe AuthorIdRequest)
                     pure . fromStrict . pack $ show sessionResults
                 "createCategory" -> do
                     sessionResults <- HSS.createCategory $ fromJust (decode requestBody :: Maybe CreateCategoryRequest)
