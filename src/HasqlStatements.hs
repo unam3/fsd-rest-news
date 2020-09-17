@@ -19,7 +19,8 @@ module HasqlStatements (
     createComment,
     deleteComment,
     getArticleComments,
-    createArticleDraft
+    createArticleDraft,
+    publishArticleDraft
     ) where
 
 import Data.Int (Int16)
@@ -209,4 +210,13 @@ createArticleDraft =
                 False :: bool
                 )
         returning article_id :: int2
+        |]
+
+publishArticleDraft :: Statement Int16 ()
+publishArticleDraft =
+    [TH.resultlessStatement|
+        update
+        articles
+        set is_published = True :: bool
+        where article_id = $1 :: int2
         |]
