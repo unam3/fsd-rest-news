@@ -2,9 +2,9 @@ drop table if exists authors cascade;
 drop table if exists users cascade;
 drop table if exists categories cascade;
 drop table if exists tags cascade;
-drop table if exists news cascade;
-drop table if exists news_tags cascade;
-drop table if exists news_comments cascade;
+drop table if exists articles cascade;
+drop table if exists articles_tags cascade;
+drop table if exists articles_comments cascade;
 
 begin;
 
@@ -68,50 +68,50 @@ INSERT INTO tags (tag_name) VALUES
     ('tag1'),
     ('tag2');
 
-create table news (
-    news_id             integer generated always as identity,
+create table articles (
+    article_id             integer generated always as identity,
     name                varchar(80) not null,
     creation_date       date not null,
     author              integer references authors (user_id),
     category_id         integer references categories,
     text                text not null,
     is_published        boolean not null,
-    primary key (news_id)
+    primary key (article_id)
 
     --main_photo          photos not null, -- !
     --additional_photos   photos not null -- !
 );
 
---create table news_drafts (
---    news_id         integer references news (news_id)
+--create table articles_drafts (
+--    article_id         integer references articles (article_id)
 --);
 
---create table news_published (
---    news_id         integer references news (news_id)
+--create table articles_published (
+--    article_id         integer references articles (article_id)
 --);
 
-INSERT INTO news (name, creation_date, author, category_id, text, is_published) VALUES
+INSERT INTO articles (name, creation_date, author, category_id, text, is_published) VALUES
     ('nn', '2010-12-30', 2, 1, 'txt', true),
     ('nn', '2010-12-30', 2, 2, 'txt', true);
 
-create table news_tags (
+create table articles_tags (
     tag_id          integer references tags (tag_id),
-    news_id         integer references news (news_id),
-    primary key (tag_id, news_id)
+    article_id      integer references articles (article_id),
+    primary key (tag_id, article_id)
 );
 
-INSERT INTO news_tags (tag_id, news_id) VALUES
+INSERT INTO articles_tags (tag_id, article_id) VALUES
     (1, 1),
     (2, 1),
     (2, 2);
 
-create table news_comments (
+create table articles_comments (
     comment_id      integer generated always as identity,
-    news_id         integer references news (news_id) not null,
+    article_id      integer references articles (article_id) not null,
     comment_text    text not null
 );
 
-INSERT INTO news_comments (news_id, comment_text) VALUES
+INSERT INTO articles_comments (article_id, comment_text) VALUES
     (1, 'kek'),
     (1, 'pluh'),
     (2, 'meh');
@@ -120,6 +120,6 @@ commit;
 
 select * from users;
 select * from categories;
-select * from news;
-select * from news_tags;
-select * from news_comments;
+select * from articles;
+select * from articles_tags;
+select * from articles_comments;

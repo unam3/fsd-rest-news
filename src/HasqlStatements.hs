@@ -171,7 +171,7 @@ createComment :: Statement (Int16, Text) ()
 createComment =
     [TH.singletonStatement|
         insert
-        into news_comments (news_id, comment_text)
+        into articles_comments (article_id, comment_text)
             values (
                 $1 :: int2,
                 $2 :: text
@@ -182,7 +182,7 @@ deleteComment :: Statement Int16 ()
 deleteComment =
     [TH.resultlessStatement|
         delete
-        from news_comments
+        from articles_comments
         where comment_id = $1 :: int2
         |]
 
@@ -190,6 +190,6 @@ getArticleComments :: Statement Int16 (Int16, Text)
 getArticleComments =
     [TH.singletonStatement|
         select comment_id :: int2, comment_text :: text
-        from news_comments
-        where news_id = $1 :: int2
+        from articles_comments
+        where article_id = $1 :: int2
         |]

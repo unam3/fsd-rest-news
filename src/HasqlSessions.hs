@@ -181,7 +181,7 @@ createComment :: CreateCommentRequest -> IO (Either Session.QueryError ())
 createComment createCommentRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (
-        news_id (createCommentRequest :: CreateCommentRequest),
+        article_id (createCommentRequest :: CreateCommentRequest),
         comment_text (createCommentRequest :: CreateCommentRequest)
         );
 } in do
@@ -199,7 +199,7 @@ deleteComment deleteCommentRequest = let {
 getArticleComments :: ArticleCommentsRequest -> IO (Either Session.QueryError (Int16, Text))
 getArticleComments articleCommentsRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
-    params = news_id (articleCommentsRequest :: ArticleCommentsRequest);
+    params = article_id (articleCommentsRequest :: ArticleCommentsRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
     Session.run (Session.statement params HST.getArticleComments) connection

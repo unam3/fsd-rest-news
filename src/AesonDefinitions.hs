@@ -115,7 +115,7 @@ instance FromJSON TagIdRequest
 
 
 data CreateCommentRequest = CreateCommentRequest {
-    news_id :: Int16,
+    article_id :: Int16,
     comment_text :: Text
 } deriving (Show, Generic)
 
@@ -130,7 +130,7 @@ instance FromJSON CommentIdRequest
 
 
 newtype ArticleCommentsRequest = ArticleCommentsRequest {
-    news_id :: Int16
+    article_id :: Int16
 } deriving (Show, Generic)
 
 instance FromJSON ArticleCommentsRequest
