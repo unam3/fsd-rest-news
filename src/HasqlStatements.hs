@@ -18,7 +18,8 @@ module HasqlStatements (
     deleteTag,
     createComment,
     deleteComment,
-    getArticleComments
+    getArticleComments,
+    createArticleDraft
     ) where
 
 import Data.Int (Int16)
@@ -192,4 +193,20 @@ getArticleComments =
         select comment_id :: int2, comment_text :: text
         from articles_comments
         where article_id = $1 :: int2
+        |]
+
+
+createArticleDraft :: Statement (Int16, Int16, Text, Text) Int16
+createArticleDraft =
+    [TH.singletonStatement|
+        insert
+        into articles (author, category_id, article_title, article_content, is_published)
+            values (
+                $1 :: int2,
+                $2 :: int2,
+                $3 :: text,
+                $4 :: text,
+                False :: bool
+                )
+        returning article_id :: int2
         |]

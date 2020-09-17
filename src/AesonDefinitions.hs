@@ -15,7 +15,8 @@ module AesonDefinitions (
     TagIdRequest(..),
     CreateCommentRequest(..),
     CommentIdRequest(..),
-    ArticleCommentsRequest(..)
+    ArticleCommentsRequest(..),
+    ArticleDraftRequest(..)
     ) where
 
 import Data.Aeson (FromJSON)
@@ -134,3 +135,16 @@ newtype ArticleCommentsRequest = ArticleCommentsRequest {
 } deriving (Show, Generic)
 
 instance FromJSON ArticleCommentsRequest
+
+
+
+data ArticleDraftRequest = ArticleDraftRequest {
+    author :: Int16,
+    category_id :: Int16,
+    --tags :: Text,
+    article_title :: Text,
+    article_content :: Text
+} deriving (Show, Generic)
+
+instance FromJSON ArticleDraftRequest
+

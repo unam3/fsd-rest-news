@@ -24,8 +24,8 @@ INSERT INTO users (name, surname, avatar, is_admin) VALUES
     ('n1', 's1', 'http://pluh/meh.jpg', false);
 
 create table authors (
-    author_id       integer generated always as identity,
-    user_id         integer primary key references users,
+    author_id       integer generated always as identity primary key,
+    user_id         integer references users,
     description     text not null
 );
 
@@ -69,12 +69,13 @@ INSERT INTO tags (tag_name) VALUES
     ('tag2');
 
 create table articles (
-    article_id             integer generated always as identity,
-    name                varchar(80) not null,
-    creation_date       date not null,
-    author              integer references authors (user_id),
+    article_id          integer generated always as identity,
+    article_title       varchar(80) not null,
+    creation_date       timestamp DEFAULT current_timestamp,
+    author              integer references authors (author_id),
     category_id         integer references categories,
-    text                text not null,
+    tags                integer references tags,
+    article_content     text not null,
     is_published        boolean not null,
     primary key (article_id)
 
@@ -90,9 +91,9 @@ create table articles (
 --    article_id         integer references articles (article_id)
 --);
 
-INSERT INTO articles (name, creation_date, author, category_id, text, is_published) VALUES
-    ('nn', '2010-12-30', 2, 1, 'txt', true),
-    ('nn', '2010-12-30', 2, 2, 'txt', true);
+INSERT INTO articles (author, category_id, tags, article_title, article_content, is_published) VALUES
+    (1, 1, null, '1n', '1xt', true),
+    (1, 2, null, '2n', 't2t', false);
 
 create table articles_tags (
     tag_id          integer references tags (tag_id),

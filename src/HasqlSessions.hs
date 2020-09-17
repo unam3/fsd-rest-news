@@ -19,7 +19,8 @@ module HasqlSessions (
     getTag,
     createComment,
     deleteComment,
-    getArticleComments
+    getArticleComments,
+    createArticleDraft
     ) where
 
 import Data.Int (Int16)
@@ -203,3 +204,17 @@ getArticleComments articleCommentsRequest = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     Session.run (Session.statement params HST.getArticleComments) connection
+
+
+createArticleDraft :: ArticleDraftRequest -> IO (Either Session.QueryError Int16)
+createArticleDraft articleDraftRequest = let {
+    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
+    params = (
+        author (articleDraftRequest :: ArticleDraftRequest),
+        category_id (articleDraftRequest :: ArticleDraftRequest),
+        article_title (articleDraftRequest :: ArticleDraftRequest),
+        article_content (articleDraftRequest :: ArticleDraftRequest)
+        );
+} in do
+    Right connection <- Connection.acquire connectionSettings
+    Session.run (Session.statement params HST.createArticleDraft) connection
