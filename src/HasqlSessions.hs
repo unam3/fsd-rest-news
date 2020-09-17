@@ -6,6 +6,7 @@ module HasqlSessions (
     deleteUser,
     getUser,
     promoteUserToAuthor,
+    editAuthor,
     getAuthor,
     deleteAuthorRole,
     createCategory,
@@ -67,10 +68,21 @@ promoteUserToAuthor promoteUserToAuthorRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (
         user_id (promoteUserToAuthorRequest :: PromoteUserToAuthorRequest),
-        description promoteUserToAuthorRequest);
+        description (promoteUserToAuthorRequest :: PromoteUserToAuthorRequest));
 } in do
     Right connection <- Connection.acquire connectionSettings
     Session.run (Session.statement params HST.promoteUserToAuthor) connection
+
+editAuthor :: EditAuthorRequest -> IO (Either Session.QueryError ())
+editAuthor editAuthorRequest = let {
+    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
+    params = (
+        author_id (editAuthorRequest :: EditAuthorRequest),
+        user_id (editAuthorRequest :: EditAuthorRequest),
+        description (editAuthorRequest :: EditAuthorRequest));
+} in do
+    Right connection <- Connection.acquire connectionSettings
+    Session.run (Session.statement params HST.editAuthor) connection
 
 getAuthor :: AuthorIdRequest -> IO (Either Session.QueryError (Int16, Int16, Text))
 getAuthor authorIdRequest = let {

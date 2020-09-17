@@ -5,6 +5,7 @@ module AesonDefinitions (
     CreateUserRequest(..),
     UserIdRequest(..),
     PromoteUserToAuthorRequest(..),
+    EditAuthorRequest(..),
     AuthorIdRequest(..),
     CreateCategoryRequest(..),
     UpdateCategoryRequest(..),
@@ -46,6 +47,15 @@ data PromoteUserToAuthorRequest = PromoteUserToAuthorRequest {
 } deriving (Show, Generic)
 
 instance FromJSON PromoteUserToAuthorRequest
+
+
+data EditAuthorRequest = EditAuthorRequest {
+    author_id :: Int16,
+    user_id :: Int16,
+    description :: Text
+} deriving (Show, Generic)
+
+instance FromJSON EditAuthorRequest
 
 
 data AuthorIdRequest = AuthorIdRequest {

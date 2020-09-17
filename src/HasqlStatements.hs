@@ -5,6 +5,7 @@ module HasqlStatements (
     deleteUser,
     getUser,
     promoteUserToAuthor,
+    editAuthor,
     getAuthor,
     deleteAuthorRole,
     createCategory,
@@ -81,6 +82,14 @@ promoteUserToAuthor =
                 $2 :: text
                 )
             returning (author_id :: int2)
+        |]
+
+editAuthor :: Statement (Int16, Int16, Text) ()
+editAuthor =
+    [TH.resultlessStatement|
+        update authors
+        set user_id = $2 :: int2, description = $3 :: Text
+        where author_id = $1 :: int2
         |]
 
 

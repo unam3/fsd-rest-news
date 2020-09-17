@@ -7,6 +7,8 @@ curl -i -X DELETE -d '{"user_id": 3}' http://0.0.0.0:8081/users
 
 curl -i -X POST -d '{"user_id": 3, "description": "blob deccas"}' http://0.0.0.0:8081/authors
 
+curl -i -X PATCH -d '{"author_id": 4, "user_id": 1, "description": "patched"}' http://0.0.0.0:8081/authors
+
 curl -i -X GET -d '{"author_id": 1}' http://0.0.0.0:8081/authors
 
 curl -i -X DELETE -d '{"author_id": 2}' http://0.0.0.0:8081/authors

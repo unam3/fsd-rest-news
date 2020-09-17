@@ -4,7 +4,7 @@ module RestNews
     ( runWarpWithLogger
     ) where
 
-import AesonDefinitions (CreateUserRequest, UserIdRequest, PromoteUserToAuthorRequest, AuthorIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest, CreateCommentRequest, CreateCommentRequest, CommentIdRequest, ArticleCommentsRequest)
+import AesonDefinitions (CreateUserRequest, UserIdRequest, PromoteUserToAuthorRequest, EditAuthorRequest, AuthorIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest, CreateCommentRequest, CreateCommentRequest, CommentIdRequest, ArticleCommentsRequest)
 import qualified HasqlSessions as HSS
 
 import Control.Exception (bracket_)
@@ -39,6 +39,7 @@ restAPI request respond = let {
                 maybeCreateUserRequestJSON = decode requestBody :: Maybe CreateUserRequest;
                 maybeUserIdRequestJSON = decode requestBody :: Maybe UserIdRequest;
                 maybePromoteUserToAuthorRequestJSON = decode requestBody :: Maybe PromoteUserToAuthorRequest;
+                maybeEditAuthorRequestJSON = decode requestBody :: Maybe EditAuthorRequest;
                 maybeAuthorIdRequestJSON = decode requestBody :: Maybe AuthorIdRequest;
                 maybeCreateCategoryRequestJSON = decode requestBody :: Maybe CreateCategoryRequest;
                 maybeUpdateCategoryRequestJSON = decode requestBody :: Maybe UpdateCategoryRequest;
@@ -59,6 +60,7 @@ restAPI request respond = let {
                             _ -> "Method is not implemented"
                         "authors" -> case requestMethod request of
                             "POST"      -> ifValidRequest "promoteUserToAuthor" maybePromoteUserToAuthorRequestJSON
+                            "PATCH"     -> ifValidRequest "editAuthor" maybeEditAuthorRequestJSON
                             "GET"       -> ifValidRequest "getAuthor" maybeAuthorIdRequestJSON
                             "DELETE"    -> ifValidRequest "deleteAuthorRole" maybeUserIdRequestJSON
                             _ -> "Method is not implemented"
@@ -99,6 +101,9 @@ restAPI request respond = let {
                     pure . fromStrict . pack $ show sessionResults
                 "promoteUserToAuthor" -> do
                     sessionResults <- HSS.promoteUserToAuthor $ fromJust (decode requestBody :: Maybe PromoteUserToAuthorRequest)
+                    pure . fromStrict . pack $ show sessionResults
+                "editAuthor" -> do
+                    sessionResults <- HSS.editAuthor $ fromJust (decode requestBody :: Maybe EditAuthorRequest)
                     pure . fromStrict . pack $ show sessionResults
                 "getAuthor" -> do
                     sessionResults <- HSS.getAuthor $ fromJust (decode requestBody :: Maybe AuthorIdRequest)
