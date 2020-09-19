@@ -95,6 +95,9 @@ INSERT INTO articles (author, category_id, tags, article_title, article_content,
     (1, 1, null, '1n', '1xt', true),
     (1, 2, null, '2n', 't2t', false);
 
+-- json array of article rows
+--select json_agg (json_rows) from (select row_to_json(rows) from (select * from articles where author = 2) as rows) json_rows;
+
 create table articles_tags (
     tag_id          integer references tags (tag_id),
     article_id      integer references articles (article_id),

@@ -25,6 +25,7 @@ dependencies:
 - hslogger == 1.3.1.0
 - http-types == 0.12.3
 - text
+- time
 # to get text from pathInfo LBS
 - utf8-string
 - wai == 3.2.2.1

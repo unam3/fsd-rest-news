@@ -87,8 +87,7 @@ restAPI request respond = let {
                             "POST"      -> if isJust maybeArticleDraftRequestJSON
                                 then ifValidRequest "createArticleDraft" maybeArticleDraftRequestJSON
                                 else ifValidRequest "publishArticleDraft" maybeArticleDraftIdRequestJSON
-                            --"POST"      -> ifValidRequest "publishArticleDraft" maybeArticleDraftIdRequestJSON
-                            --"GET"       -> ifValidRequest "getArticleComments" maybeArticleCommentsRequestJSON
+                            "GET"       -> ifValidRequest "getArticleDraft" maybeArticleDraftIdRequestJSON
                             --"DELETE"    -> ifValidRequest "deleteComment" maybeCommentIdRequestJSON
                             _ -> "Method is not implemented"
                         _ -> "No such endpoint")
@@ -159,6 +158,9 @@ restAPI request respond = let {
                     pure . fromStrict . pack $ show sessionResults
                 "publishArticleDraft" -> do
                     sessionResults <- HSS.publishArticleDraft $ fromJust (decode requestBody :: Maybe ArticleDraftIdRequest)
+                    pure . fromStrict . pack $ show sessionResults
+                "getArticleDraft" -> do
+                    sessionResults <- HSS.getArticleDraft $ fromJust (decode requestBody :: Maybe ArticleDraftIdRequest)
                     pure . fromStrict . pack $ show sessionResults
                 nonMatched -> pure . fromStrict . pack $ nonMatched
             --respond $ responseLBS H.status200 [] errorOrSessionName)

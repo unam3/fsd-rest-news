@@ -21,11 +21,13 @@ module HasqlSessions (
     deleteComment,
     getArticleComments,
     createArticleDraft,
-    publishArticleDraft
+    publishArticleDraft,
+    getArticleDraft
     ) where
 
 import Data.Int (Int16)
 import Data.Text (Text)
+import Data.Time (Day)
 import qualified Hasql.Connection as Connection
 import qualified Hasql.Session as Session
 
@@ -229,3 +231,13 @@ publishArticleDraft articleDraftIdRequest = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     Session.run (Session.statement params HST.publishArticleDraft) connection
+
+getArticleDraft :: ArticleDraftIdRequest -> IO (Either Session.QueryError (Int16, Text, Text, Day, Int16))
+getArticleDraft articleDraftIdRequest = let {
+    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
+    params = (
+        article_id (articleDraftIdRequest :: ArticleDraftIdRequest)
+        );
+} in do
+    Right connection <- Connection.acquire connectionSettings
+    Session.run (Session.statement params HST.getArticleDraft) connection

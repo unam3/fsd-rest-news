@@ -20,11 +20,13 @@ module HasqlStatements (
     deleteComment,
     getArticleComments,
     createArticleDraft,
-    publishArticleDraft
+    publishArticleDraft,
+    getArticleDraft
     ) where
 
 import Data.Int (Int16)
 import Data.Text (Text)
+import Data.Time (Day)
 import qualified Hasql.TH as TH
 import Hasql.Statement (Statement(..))
 
@@ -218,5 +220,18 @@ publishArticleDraft =
         update
         articles
         set is_published = True :: bool
+        where article_id = $1 :: int2
+        |]
+
+getArticleDraft :: Statement Int16 (Int16, Text, Text, Day, Int16)
+getArticleDraft =
+    [TH.singletonStatement|
+        select
+            article_id      :: int2,
+            article_title   :: text,
+            article_content :: text,
+            creation_date   :: date,
+            category_id     :: int2
+        from articles
         where article_id = $1 :: int2
         |]
