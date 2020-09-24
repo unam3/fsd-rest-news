@@ -47,16 +47,18 @@ INSERT INTO categories (name, parent_id) VALUES
     ('cat6', 5),
     ('cat7', 4);
 
---WITH RECURSIVE categories_recursive(category_id, name, parent_id) AS (
---      SELECT category_id, name, parent_id
---      FROM categories
---      WHERE category_id = 5
---UNION ALL
---      SELECT categories.category_id, categories.name, categories.parent_id
---      FROM categories_recursive, categories
---      WHERE categories_recursive.parent_id = categories.category_id
---    )
---SELECT category_id, name, parent_id FROM categories_recursive;
+/*
+WITH RECURSIVE categories_recursive(category_id, name, parent_id) AS (
+      SELECT category_id, name, parent_id
+      FROM categories
+      WHERE category_id = 5
+UNION ALL
+      SELECT categories.category_id, categories.name, categories.parent_id
+      FROM categories_recursive, categories
+      WHERE categories_recursive.parent_id = categories.category_id
+    )
+SELECT category_id, name, parent_id FROM categories_recursive;
+*/
 
 create table tags (
     tag_id          integer generated always as identity primary key,
@@ -95,8 +97,54 @@ INSERT INTO articles (author, category_id, tags, article_title, article_content,
     (1, 1, null, '1n', '1xt', true),
     (1, 2, null, '2n', 't2t', false);
 
+/*
+-- json array of categories hierarchy
+WITH RECURSIVE categories_recursive(category_id, name, parent_id) AS (
+      SELECT category_id, name, parent_id
+      FROM categories
+      WHERE category_id = 5
+UNION ALL
+      SELECT categories.category_id, categories.name, categories.parent_id
+      FROM categories_recursive, categories
+      WHERE categories_recursive.parent_id = categories.category_id
+    )
+SELECT json_agg(row_to_json(subQA)) from articles as a, (
+        SELECT category_id, name, parent_id FROM categories_recursive
+    ) as subQA;
+
+
+--2 rows with json
+select row_to_json(rows) from (select * from articles where author = 1) as rows;
+
+
 -- json array of article rows
---select json_agg (json_rows) from (select row_to_json(rows) from (select * from articles where author = 2) as rows) json_rows;
+select json_agg(row_to_json(rows)) from (select * from articles where author = 1) as rows;
+
+
+-- select from two tables into virtual one
+select a.article_id, a.article_title, c.name from articles a, categories c where a.article_id = 1 and a.category_id = c.category_id;
+
+ article_id | article_title | name
+------------+---------------+------
+          1 | 1n            | cat1
+(1 row)
+
+
+select a.article_id, a.article_title, ss.json_agg as categories from articles a, (
+    WITH RECURSIVE categories_recursive(category_id, name, parent_id) AS (
+          SELECT category_id, name, parent_id
+          FROM categories
+          WHERE category_id = 5
+    UNION ALL
+          SELECT categories.category_id, categories.name, categories.parent_id
+          FROM categories_recursive, categories
+          WHERE categories_recursive.parent_id = categories.category_id
+        )
+    SELECT json_agg(row_to_json(categories_recursive.*)) FROM categories_recursive
+) as ss where a.article_id = 1;
+
+
+*/
 
 create table articles_tags (
     tag_id          integer references tags (tag_id),
