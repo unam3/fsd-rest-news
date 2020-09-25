@@ -26,7 +26,7 @@ module HasqlSessions (
     ) where
 
 import Data.ByteString.Lazy (ByteString)
-import Data.Aeson (encode)
+import Data.Aeson (Value, encode, toEncoding)
 import Data.Int (Int16)
 import Data.Text (Text)
 import qualified Hasql.Connection as Connection
@@ -243,3 +243,5 @@ getArticleDraft articleDraftIdRequest = let {
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- (Session.run (Session.statement params HST.getArticleDraft) connection)
     pure (fmap encode sessionResults)
+    --pure (fmap (encode :: (Value -> ArticleDraft)) sessionResults)
+    --pure (fmap toEncoding sessionResults)

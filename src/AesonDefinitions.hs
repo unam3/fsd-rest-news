@@ -17,10 +17,11 @@ module AesonDefinitions (
     CommentIdRequest(..),
     ArticleCommentsRequest(..),
     ArticleDraftRequest(..),
-    ArticleDraftIdRequest(..)
+    ArticleDraftIdRequest(..),
+    ArticleDraft(..)
     ) where
 
-import Data.Aeson (FromJSON)
+import Data.Aeson --(FromJSON, ToJSON)
 import Data.Int (Int16)
 import Data.Text (Text)
 import GHC.Generics (Generic)
@@ -156,3 +157,21 @@ data ArticleDraftIdRequest = ArticleDraftIdRequest {
 
 instance FromJSON ArticleDraftIdRequest
 
+
+data ArticleDraft = ArticleDraft {
+    article_id :: Int16,
+    article_title :: Text,
+    categories :: [Category]
+} deriving (Show, Generic)
+
+instance ToJSON ArticleDraft where
+    toEncoding = genericToEncoding defaultOptions
+
+data Category = Category {
+    category_id :: Int16,
+    parent_id :: Int16,
+    name :: Text
+} deriving (Show, Generic)
+
+instance ToJSON Category where
+    toEncoding = genericToEncoding defaultOptions
