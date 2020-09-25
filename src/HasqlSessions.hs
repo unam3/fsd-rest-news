@@ -26,9 +26,13 @@ module HasqlSessions (
     ) where
 
 import Data.ByteString.Lazy (ByteString)
-import Data.Aeson (Value, encode, toEncoding)
+import Data.Aeson (Value, decode, encode, toEncoding)
+import Data.Aeson.Encoding.Internal (Encoding' (..))
+import Data.Aeson.Types (Value (Null))
+import Data.Either (fromRight)
 import Data.Int (Int16)
 import Data.Text (Text)
+import Data.Typeable (cast, typeOf)
 import qualified Hasql.Connection as Connection
 import qualified Hasql.Session as Session
 
@@ -233,7 +237,8 @@ publishArticleDraft articleDraftIdRequest = let {
     Right connection <- Connection.acquire connectionSettings
     Session.run (Session.statement params HST.publishArticleDraft) connection
 
-getArticleDraft :: ArticleDraftIdRequest -> IO (Either Session.QueryError ByteString)
+getArticleDraft :: ArticleDraftIdRequest -> IO (Either Session.QueryError (Maybe ArticleDraft))
+--getArticleDraft :: ArticleDraftIdRequest -> IO (Either Session.QueryError ByteString)
 getArticleDraft articleDraftIdRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (
@@ -241,7 +246,20 @@ getArticleDraft articleDraftIdRequest = let {
         );
 } in do
     Right connection <- Connection.acquire connectionSettings
+    -- Either Session.QueryError (Maybe Value)
     sessionResults <- (Session.run (Session.statement params HST.getArticleDraft) connection)
-    pure (fmap encode sessionResults)
-    --pure (fmap (encode :: (Value -> ArticleDraft)) sessionResults)
+    --print sessionResults
+    print (typeOf $ fromRight Null sessionResults)
+    print ((cast :: Value ->  Maybe ArticleDraft) $ fromRight Null sessionResults)
+    print (fmap encode sessionResults)
+    --print (typeOf $ fmap encode sessionResults)
+    --pure (fmap encode sessionResults)
+
+    print (typeOf $ fmap toEncoding sessionResults)
+    -- Either QueryError (Encoding' Value)
     --pure (fmap toEncoding sessionResults)
+    --pure (fmap (cast :: Value -> Maybe ArticleDraft) sessionResults)
+    
+    --print (fmap (toEncoding :: Value -> Maybe ArticleDraft) sessionResults)
+    --pure (fmap ((cast :: Encoding' Value ->  Maybe ArticleDraft) . toEncoding) sessionResults)
+    pure (fmap (decode . encode) sessionResults)

@@ -164,14 +164,16 @@ data ArticleDraft = ArticleDraft {
     categories :: [Category]
 } deriving (Show, Generic)
 
+instance FromJSON ArticleDraft
 instance ToJSON ArticleDraft where
     toEncoding = genericToEncoding defaultOptions
 
 data Category = Category {
     category_id :: Int16,
-    parent_id :: Int16,
+    parent_id :: Maybe Int16,
     name :: Text
 } deriving (Show, Generic)
 
+instance FromJSON Category
 instance ToJSON Category where
     toEncoding = genericToEncoding defaultOptions

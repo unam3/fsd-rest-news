@@ -224,8 +224,8 @@ publishArticleDraft =
         where article_id = $1 :: int2
         |]
 
-getArticleDraft :: Statement Int16 (Maybe Value)
+getArticleDraft :: Statement Int16 (Value)
 getArticleDraft =
-    [TH.maybeStatement|
+    [TH.singletonStatement|
         select get_article($1 :: int2) :: json
         |]
