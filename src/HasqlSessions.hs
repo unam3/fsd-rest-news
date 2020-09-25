@@ -25,9 +25,10 @@ module HasqlSessions (
     getArticleDraft
     ) where
 
+import Data.ByteString.Lazy (ByteString)
+import Data.Aeson (encode)
 import Data.Int (Int16)
 import Data.Text (Text)
-import Data.Time (Day)
 import qualified Hasql.Connection as Connection
 import qualified Hasql.Session as Session
 
@@ -232,7 +233,7 @@ publishArticleDraft articleDraftIdRequest = let {
     Right connection <- Connection.acquire connectionSettings
     Session.run (Session.statement params HST.publishArticleDraft) connection
 
-getArticleDraft :: ArticleDraftIdRequest -> IO (Either Session.QueryError (Int16, Text, Text, Day, Int16))
+getArticleDraft :: ArticleDraftIdRequest -> IO (Either Session.QueryError ByteString)
 getArticleDraft articleDraftIdRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (
@@ -240,4 +241,5 @@ getArticleDraft articleDraftIdRequest = let {
         );
 } in do
     Right connection <- Connection.acquire connectionSettings
-    Session.run (Session.statement params HST.getArticleDraft) connection
+    sessionResults <- (Session.run (Session.statement params HST.getArticleDraft) connection)
+    pure (fmap encode sessionResults)

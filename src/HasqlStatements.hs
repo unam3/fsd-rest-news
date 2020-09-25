@@ -24,10 +24,11 @@ module HasqlStatements (
     getArticleDraft
     ) where
 
+import Data.Aeson (Value)
 import Data.Int (Int16)
 import Data.Text (Text)
-import Data.Time (Day)
 import qualified Hasql.TH as TH
+
 import Hasql.Statement (Statement(..))
 
 createUser :: Statement (Text, Text, Text, Bool) ()
@@ -223,15 +224,8 @@ publishArticleDraft =
         where article_id = $1 :: int2
         |]
 
-getArticleDraft :: Statement Int16 (Int16, Text, Text, Day, Int16)
+getArticleDraft :: Statement Int16 (Maybe Value)
 getArticleDraft =
-    [TH.singletonStatement|
-        select
-            article_id      :: int2,
-            article_title   :: text,
-            article_content :: text,
-            creation_date   :: date,
-            category_id     :: int2
-        from articles
-        where article_id = $1 :: int2
+    [TH.maybeStatement|
+        select get_article($1 :: int2) :: json
         |]
