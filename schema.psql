@@ -141,13 +141,18 @@ CREATE OR REPLACE FUNCTION public.get_article(art_id integer)
                 a.article_content,
                 a.creation_date,
                 categories_hierarchy.json_agg as categories,
-                aauthor as author
+                aauthor as author,
+                atags.json_agg as tags
             from
                 articles a,
                 (select * from authors where author_id = (
                         select author from articles where article_id = art_id
                     )
                 ) as aauthor,
+                (select json_agg(tags) from (
+                        select * from articles_tags where article_id = art_id
+                    ) as tags
+                ) as atags,
                 (
                     WITH RECURSIVE categories_recursive(category_id, name, parent_id) AS (
                         SELECT category_id, name, parent_id
