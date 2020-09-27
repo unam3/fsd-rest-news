@@ -21,7 +21,8 @@ module HasqlStatements (
     getArticleComments,
     createArticleDraft,
     publishArticleDraft,
-    getArticleDraft
+    getArticleDraft,
+    getArticlesByCategoryId
     ) where
 
 import Data.Aeson (Value)
@@ -228,4 +229,12 @@ getArticleDraft :: Statement Int16 (Maybe Value)
 getArticleDraft =
     [TH.maybeStatement|
         select get_article($1 :: int2) :: json
+        |]
+
+
+getArticlesByCategoryId :: Statement Int16 (Maybe Value)
+getArticlesByCategoryId =
+    [TH.maybeStatement|
+        select json_agg(aid.get_article) :: json from 
+            (select get_article(article_id) from articles where category_id = $1 :: int2) as aid
         |]

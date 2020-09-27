@@ -4,7 +4,7 @@ module RestNews
     ( runWarpWithLogger
     ) where
 
-import AesonDefinitions (CreateUserRequest, UserIdRequest, PromoteUserToAuthorRequest, EditAuthorRequest, AuthorIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest, CreateCommentRequest, CreateCommentRequest, CommentIdRequest, ArticleCommentsRequest, ArticleDraftRequest, ArticleDraftIdRequest)
+import AesonDefinitions (CreateUserRequest, UserIdRequest, PromoteUserToAuthorRequest, EditAuthorRequest, AuthorIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest, CreateCommentRequest, CreateCommentRequest, CommentIdRequest, ArticleCommentsRequest, ArticleDraftRequest, ArticleDraftIdRequest, ArticlesByCategoryIdRequest)
 import qualified HasqlSessions as HSS
 
 import Control.Exception (bracket_)
@@ -52,6 +52,7 @@ restAPI request respond = let {
                 maybeArticleCommentsRequestJSON = decode requestBody :: Maybe ArticleCommentsRequest;
                 maybeArticleDraftRequestJSON = decode requestBody :: Maybe ArticleDraftRequest;
                 maybeArticleDraftIdRequestJSON = decode requestBody :: Maybe ArticleDraftIdRequest;
+                maybeArticlesByCategoryIdRequest = decode requestBody :: Maybe ArticlesByCategoryIdRequest;
             } in pure (
                 if isRequestPathNotEmpty
                     then (case pathHeadChunk of
@@ -85,10 +86,11 @@ restAPI request respond = let {
                             _ -> "Method is not implemented"
                         "articles" -> case requestMethod request of
                             "POST"      -> if isJust maybeArticleDraftRequestJSON
-                                then ifValidRequest "createArticleDraft" maybeArticleDraftRequestJSON
+                                then "createArticleDraft"
                                 else ifValidRequest "publishArticleDraft" maybeArticleDraftIdRequestJSON
-                            "GET"       -> ifValidRequest "getArticleDraft" maybeArticleDraftIdRequestJSON
-                            --"DELETE"    -> ifValidRequest "deleteComment" maybeCommentIdRequestJSON
+                            "GET"       -> if isJust maybeArticleDraftIdRequestJSON
+                                then "getArticleDraft"
+                                else ifValidRequest "getArticlesByCategoryId" maybeArticlesByCategoryIdRequest
                             _ -> "Method is not implemented"
                         _ -> "No such endpoint")
                     else "Endpoint needed")
@@ -161,6 +163,9 @@ restAPI request respond = let {
                     pure . fromStrict . pack $ show sessionResults
                 "getArticleDraft" -> do
                     sessionResults <- HSS.getArticleDraft $ fromJust (decode requestBody :: Maybe ArticleDraftIdRequest)
+                    pure . fromStrict . pack $ show sessionResults
+                "getArticlesByCategoryId" -> do
+                    sessionResults <- HSS.getArticlesByCategoryId $ fromJust (decode requestBody :: Maybe ArticlesByCategoryIdRequest)
                     pure . fromStrict . pack $ show sessionResults
                 nonMatched -> pure . fromStrict . pack $ nonMatched
             --respond $ responseLBS H.status200 [] errorOrSessionName)

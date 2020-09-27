@@ -47,19 +47,6 @@ INSERT INTO categories (name, parent_id) VALUES
     ('cat6', 5),
     ('cat7', 4);
 
-/*
-WITH RECURSIVE categories_recursive(category_id, name, parent_id) AS (
-      SELECT category_id, name, parent_id
-      FROM categories
-      WHERE category_id = 5
-UNION ALL
-      SELECT categories.category_id, categories.name, categories.parent_id
-      FROM categories_recursive, categories
-      WHERE categories_recursive.parent_id = categories.category_id
-    )
-SELECT category_id, name, parent_id FROM categories_recursive;
-*/
-
 create table tags (
     tag_id          integer generated always as identity primary key,
     tag_name        varchar(80) not null
@@ -96,6 +83,8 @@ create table articles (
 INSERT INTO articles (author, category_id, tags, article_title, article_content, is_published) VALUES
     (1, 1, null, '1n', '1xt', true),
     (1, 2, null, '2n', 't2t', false);
+    --(1, 1, null, '5n', '5xt', true),
+    --(1, 1, null, '6n', 't6t', true);
 
 
 create table articles_tags (
@@ -133,7 +122,6 @@ CREATE OR REPLACE FUNCTION public.get_article(art_id integer)
        LANGUAGE sql
     AS $function$
         select row_to_json(as_row) from (
-            --tags                integer references tags,
             --is_published        boolean not null,
             select
                 a.article_id,

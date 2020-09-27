@@ -17,7 +17,8 @@ module AesonDefinitions (
     CommentIdRequest(..),
     ArticleCommentsRequest(..),
     ArticleDraftRequest(..),
-    ArticleDraftIdRequest(..)
+    ArticleDraftIdRequest(..),
+    ArticlesByCategoryIdRequest(..)
     ) where
 
 import Data.Aeson (FromJSON)
@@ -155,4 +156,13 @@ data ArticleDraftIdRequest = ArticleDraftIdRequest {
 } deriving (Show, Generic)
 
 instance FromJSON ArticleDraftIdRequest
+
+
+
+
+data ArticlesByCategoryIdRequest = ArticlesByCategoryIdRequest {
+    category_id :: Int16
+} deriving (Show, Generic)
+
+instance FromJSON ArticlesByCategoryIdRequest
 
