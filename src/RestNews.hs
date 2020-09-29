@@ -52,7 +52,7 @@ restAPI request respond = let {
                 maybeArticleCommentsRequestJSON = decode requestBody :: Maybe ArticleCommentsRequest;
                 maybeArticleDraftRequestJSON = decode requestBody :: Maybe ArticleDraftRequest;
                 maybeArticleDraftIdRequestJSON = decode requestBody :: Maybe ArticleDraftIdRequest;
-                maybeArticlesByCategoryIdRequest = decode requestBody :: Maybe ArticlesByCategoryIdRequest;
+                maybeArticlesByCategoryIdRequestJSON = decode requestBody :: Maybe ArticlesByCategoryIdRequest;
             } in pure (
                 if isRequestPathNotEmpty
                     then (case pathHeadChunk of
@@ -90,7 +90,9 @@ restAPI request respond = let {
                                 else ifValidRequest "publishArticleDraft" maybeArticleDraftIdRequestJSON
                             "GET"       -> if isJust maybeArticleDraftIdRequestJSON
                                 then "getArticleDraft"
-                                else ifValidRequest "getArticlesByCategoryId" maybeArticlesByCategoryIdRequest
+                                else if isJust maybeArticlesByCategoryIdRequestJSON
+                                then "getArticlesByCategoryId" 
+                                else ifValidRequest "getArticlesByTagId" maybeTagIdRequestJSON
                             _ -> "Method is not implemented"
                         _ -> "No such endpoint")
                     else "Endpoint needed")
@@ -166,6 +168,9 @@ restAPI request respond = let {
                     pure . fromStrict . pack $ show sessionResults
                 "getArticlesByCategoryId" -> do
                     sessionResults <- HSS.getArticlesByCategoryId $ fromJust (decode requestBody :: Maybe ArticlesByCategoryIdRequest)
+                    pure . fromStrict . pack $ show sessionResults
+                "getArticlesByTagId" -> do
+                    sessionResults <- HSS.getArticlesByTagId $ fromJust (decode requestBody :: Maybe TagIdRequest)
                     pure . fromStrict . pack $ show sessionResults
                 nonMatched -> pure . fromStrict . pack $ nonMatched
             --respond $ responseLBS H.status200 [] errorOrSessionName)

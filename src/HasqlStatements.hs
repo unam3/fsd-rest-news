@@ -22,7 +22,8 @@ module HasqlStatements (
     createArticleDraft,
     publishArticleDraft,
     getArticleDraft,
-    getArticlesByCategoryId
+    getArticlesByCategoryId,
+    getArticlesByTagId
     ) where
 
 import Data.Aeson (Value)
@@ -237,4 +238,17 @@ getArticlesByCategoryId =
     [TH.maybeStatement|
         select json_agg(aid.get_article) :: json from 
             (select get_article(article_id) from articles where category_id = $1 :: int2) as aid
+        |]
+
+
+--select article_ids.* from (select json_agg(get_article(article_id)) from articles_tags where tag_id = 2) as article_ids;
+
+-- doesn't work
+--select (articles_by_tag_id.*) :: json from
+--    (select json_agg(get_article(article_id)) from articles_tags where tag_id = $1 :: int2) as articles_by_tag_id
+getArticlesByTagId :: Statement Int16 (Maybe Value)
+getArticlesByTagId =
+    [TH.maybeStatement|
+        select json_agg(articles_by_tag_id.*) :: json from
+            (select get_article(article_id) from articles_tags where tag_id = $1 :: int2) as articles_by_tag_id
         |]

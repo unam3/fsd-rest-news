@@ -51,3 +51,5 @@ curl -i -X DELETE -d '{"article_id": 2}' http://0.0.0.0:8081/articles
 #filtering
 curl -i -X GET -d '{"category_id": 2}' http://0.0.0.0:8081/articles
 
+curl -i -X GET -d '{"tag_id": 2}' http://0.0.0.0:8081/articles/tag
+

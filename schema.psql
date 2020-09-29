@@ -63,7 +63,6 @@ create table articles (
     creation_date       timestamp DEFAULT current_timestamp,
     author              integer references authors (author_id),
     category_id         integer references categories,
-    tags                integer references tags,
     article_content     text not null,
     is_published        boolean not null,
     primary key (article_id)
@@ -80,11 +79,11 @@ create table articles (
 --    article_id         integer references articles (article_id)
 --);
 
-INSERT INTO articles (author, category_id, tags, article_title, article_content, is_published) VALUES
-    (1, 1, null, '1n', '1xt', true),
-    (1, 2, null, '2n', 't2t', false);
-    --(1, 1, null, '5n', '5xt', true),
-    --(1, 1, null, '6n', 't6t', true);
+INSERT INTO articles (author, category_id, article_title, article_content, is_published) VALUES
+    (1, 1, '1n', '1xt', true),
+    (1, 2, '2n', 't2t', false);
+    --(1, 1, '5n', '5xt', true),
+    --(1, 1, '6n', 't6t', true);
 
 
 create table articles_tags (

@@ -165,4 +165,3 @@ data ArticlesByCategoryIdRequest = ArticlesByCategoryIdRequest {
 } deriving (Show, Generic)
 
 instance FromJSON ArticlesByCategoryIdRequest
-
