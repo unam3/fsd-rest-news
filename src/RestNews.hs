@@ -4,7 +4,7 @@ module RestNews
     ( runWarpWithLogger
     ) where
 
-import AesonDefinitions (CreateUserRequest, UserIdRequest, PromoteUserToAuthorRequest, EditAuthorRequest, AuthorIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest, CreateCommentRequest, CreateCommentRequest, CommentIdRequest, ArticleCommentsRequest, ArticleDraftRequest, ArticleDraftIdRequest, ArticlesByCategoryIdRequest)
+import AesonDefinitions (CreateUserRequest, UserIdRequest, PromoteUserToAuthorRequest, EditAuthorRequest, AuthorIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest, CreateCommentRequest, CreateCommentRequest, CommentIdRequest, ArticleCommentsRequest, ArticleDraftRequest, ArticleDraftIdRequest, ArticlesByCategoryIdRequest, ArticlesByTagIdListRequest)
 import qualified HasqlSessions as HSS
 
 import Control.Exception (bracket_)
@@ -53,6 +53,7 @@ restAPI request respond = let {
                 maybeArticleDraftRequestJSON = decode requestBody :: Maybe ArticleDraftRequest;
                 maybeArticleDraftIdRequestJSON = decode requestBody :: Maybe ArticleDraftIdRequest;
                 maybeArticlesByCategoryIdRequestJSON = decode requestBody :: Maybe ArticlesByCategoryIdRequest;
+                maybeArticlesByTagIdListRequest = decode requestBody :: Maybe ArticlesByTagIdListRequest;
             } in pure (
                 if isRequestPathNotEmpty
                     then (case pathHeadChunk of
@@ -92,7 +93,10 @@ restAPI request respond = let {
                                 then "getArticleDraft"
                                 else if isJust maybeArticlesByCategoryIdRequestJSON
                                 then "getArticlesByCategoryId" 
-                                else ifValidRequest "getArticlesByTagId" maybeTagIdRequestJSON
+                                -- TODO: add second level patch chunks matching (tag, any_tag)
+                                else if isJust maybeTagIdRequestJSON
+                                then "getArticlesByTagId" 
+                                else ifValidRequest "getArticlesByAnyTagId" maybeArticlesByTagIdListRequest
                             _ -> "Method is not implemented"
                         _ -> "No such endpoint")
                     else "Endpoint needed")
@@ -171,6 +175,9 @@ restAPI request respond = let {
                     pure . fromStrict . pack $ show sessionResults
                 "getArticlesByTagId" -> do
                     sessionResults <- HSS.getArticlesByTagId $ fromJust (decode requestBody :: Maybe TagIdRequest)
+                    pure . fromStrict . pack $ show sessionResults
+                "getArticlesByAnyTagId" -> do
+                    sessionResults <- HSS.getArticlesByAnyTagId $ fromJust (decode requestBody :: Maybe ArticlesByTagIdListRequest)
                     pure . fromStrict . pack $ show sessionResults
                 nonMatched -> pure . fromStrict . pack $ nonMatched
             --respond $ responseLBS H.status200 [] errorOrSessionName)

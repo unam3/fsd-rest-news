@@ -23,12 +23,14 @@ module HasqlStatements (
     publishArticleDraft,
     getArticleDraft,
     getArticlesByCategoryId,
-    getArticlesByTagId
+    getArticlesByTagId,
+    getArticlesByAnyTagId
     ) where
 
 import Data.Aeson (Value)
 import Data.Int (Int16)
 import Data.Text (Text)
+import Data.Vector (Vector)
 import qualified Hasql.TH as TH
 
 import Hasql.Statement (Statement(..))
@@ -251,4 +253,13 @@ getArticlesByTagId =
     [TH.maybeStatement|
         select json_agg(articles_by_tag_id.*) :: json from
             (select get_article(article_id) from articles_tags where tag_id = $1 :: int2) as articles_by_tag_id
+        |]
+
+-- select article_id from articles_tags where article_id in (13,4,1) group by article_id;
+-- select get_article(article_id) from articles_tags where article_id in (13,4,1,2) group by article_id;
+getArticlesByAnyTagId :: Statement (Vector Int16) (Maybe Value)
+getArticlesByAnyTagId =
+    [TH.maybeStatement|
+        select json_agg(articles_ids.*) :: json from
+            (select get_article(article_id) from articles_tags where article_id in ($1 :: int2[]) group by article_id) as articles_ids
         |]

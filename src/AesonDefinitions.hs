@@ -18,12 +18,14 @@ module AesonDefinitions (
     ArticleCommentsRequest(..),
     ArticleDraftRequest(..),
     ArticleDraftIdRequest(..),
-    ArticlesByCategoryIdRequest(..)
+    ArticlesByCategoryIdRequest(..),
+    ArticlesByTagIdListRequest(..)
     ) where
 
 import Data.Aeson (FromJSON)
 import Data.Int (Int16)
 import Data.Text (Text)
+import Data.Vector (Vector)
 import GHC.Generics (Generic)
 
 data CreateUserRequest = CreateUserRequest {
@@ -165,3 +167,9 @@ data ArticlesByCategoryIdRequest = ArticlesByCategoryIdRequest {
 } deriving (Show, Generic)
 
 instance FromJSON ArticlesByCategoryIdRequest
+
+data ArticlesByTagIdListRequest = ArticlesByTagIdListRequest {
+    tags_ids_any :: Vector Int16
+} deriving (Show, Generic)
+
+instance FromJSON ArticlesByTagIdListRequest
