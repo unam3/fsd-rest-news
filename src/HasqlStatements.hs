@@ -260,5 +260,5 @@ getArticlesByAnyTagId :: Statement (Vector Int16) (Maybe Value)
 getArticlesByAnyTagId =
     [TH.maybeStatement|
         select json_agg(articles_ids.*) :: json from
-            (select get_article(article_id) from articles_tags where article_id = any ($1 :: int2[]) group by article_id) as articles_ids
+            (select get_article(article_id) from articles_tags where tag_id = any ($1 :: int2[]) group by article_id) as articles_ids
         |]
