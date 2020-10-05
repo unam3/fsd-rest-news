@@ -255,11 +255,10 @@ getArticlesByTagId =
             (select get_article(article_id) from articles_tags where tag_id = $1 :: int2) as articles_by_tag_id
         |]
 
--- select article_id from articles_tags where article_id in (13,4,1) group by article_id;
--- select get_article(article_id) from articles_tags where article_id in (13,4,1,2) group by article_id;
+-- select get_article(article_id) from articles_tags where article_id = any (array[4,1]::int[]) group by article_id;
 getArticlesByAnyTagId :: Statement (Vector Int16) (Maybe Value)
 getArticlesByAnyTagId =
     [TH.maybeStatement|
         select json_agg(articles_ids.*) :: json from
-            (select get_article(article_id) from articles_tags where article_id in ($1 :: int2[]) group by article_id) as articles_ids
+            (select get_article(article_id) from articles_tags where article_id = any ($1 :: int2[]) group by article_id) as articles_ids
         |]
