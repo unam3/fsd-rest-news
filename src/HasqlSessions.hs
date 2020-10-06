@@ -25,7 +25,8 @@ module HasqlSessions (
     getArticleDraft,
     getArticlesByCategoryId,
     getArticlesByTagId,
-    getArticlesByAnyTagId
+    getArticlesByAnyTagId,
+    getArticlesByAllTagId
     ) where
 
 import Data.ByteString.Lazy (ByteString)
@@ -275,9 +276,20 @@ getArticlesByAnyTagId :: ArticlesByTagIdListRequest -> IO (Either Session.QueryE
 getArticlesByAnyTagId tagIdsRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (
-        tags_ids_any (tagIdsRequest :: ArticlesByTagIdListRequest)
+        tags_ids (tagIdsRequest :: ArticlesByTagIdListRequest)
         );
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- (Session.run (Session.statement params HST.getArticlesByAnyTagId) connection)
+    pure (fmap encode sessionResults)
+
+getArticlesByAllTagId :: ArticlesByTagIdListRequest -> IO (Either Session.QueryError ByteString)
+getArticlesByAllTagId tagIdsRequest = let {
+    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
+    params = (
+        tags_ids (tagIdsRequest :: ArticlesByTagIdListRequest)
+        );
+} in do
+    Right connection <- Connection.acquire connectionSettings
+    sessionResults <- (Session.run (Session.statement params HST.getArticlesByAllTagId) connection)
     pure (fmap encode sessionResults)

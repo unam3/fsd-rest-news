@@ -24,11 +24,12 @@ module HasqlStatements (
     getArticleDraft,
     getArticlesByCategoryId,
     getArticlesByTagId,
-    getArticlesByAnyTagId
+    getArticlesByAnyTagId,
+    getArticlesByAllTagId
     ) where
 
 import Data.Aeson (Value)
-import Data.Int (Int16)
+import Data.Int (Int16, Int32)
 import Data.Text (Text)
 import Data.Vector (Vector)
 import qualified Hasql.TH as TH
@@ -256,9 +257,19 @@ getArticlesByTagId =
         |]
 
 -- select get_article(article_id) from articles_tags where article_id = any (array[4,1]::int[]) group by article_id;
-getArticlesByAnyTagId :: Statement (Vector Int16) (Maybe Value)
+getArticlesByAnyTagId :: Statement (Vector Int32) (Maybe Value)
 getArticlesByAnyTagId =
     [TH.maybeStatement|
         select json_agg(articles_ids.*) :: json from
-            (select get_article(article_id) from articles_tags where tag_id = any ($1 :: int2[]) group by article_id) as articles_ids
+            (select get_article(article_id) from articles_tags where tag_id = any ($1 :: int4[]) group by article_id) as articles_ids
+        |]
+
+-- select get_article(article_id) from (select article_id, array_agg(tag_id) as id_array from articles_tags group by article_id) as articles_tags_agg where id_array @> (array[2,1]::int[]);
+getArticlesByAllTagId :: Statement (Vector Int32) (Maybe Value)
+getArticlesByAllTagId =
+    [TH.maybeStatement|
+        select get_article(article_id) :: json from
+            (select article_id, array_agg(tag_id) as id_array from
+                articles_tags group by article_id) as articles_tags_agg
+            where id_array @> ($1 :: int4[])
         |]

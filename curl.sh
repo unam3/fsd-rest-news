@@ -49,9 +49,10 @@ curl -i -X GET -d '{"article_id": 2}' http://0.0.0.0:8081/articles
 curl -i -X DELETE -d '{"article_id": 2}' http://0.0.0.0:8081/articles
 
 #filtering
-curl -i -X GET -d '{"category_id": 2}' http://0.0.0.0:8081/articles
+curl -i -X GET -d '{"category_id": 2}' http://0.0.0.0:8081/articles/category
 
 curl -i -X GET -d '{"tag_id": 2}' http://0.0.0.0:8081/articles/tag
 
-curl -i -X GET -d '{"tags_ids_any": [2, 1]}' http://0.0.0.0:8081/articles/tags
+curl -i -X GET -d '{"tags_ids": [2, 1]}' http://0.0.0.0:8081/articles/tags__any
 
+curl -i -X GET -d '{"tags_ids": [2, 1]}' http://0.0.0.0:8081/articles/tags__all

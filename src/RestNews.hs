@@ -33,7 +33,7 @@ restAPI request respond = let {
         (debugM "rest-news" "Cleaning up")
         (do
             requestBody <- strictRequestBody request
-            print requestBody
+            print (pathTextChunks, requestBody)
 
             errorOrSessionName <- let {
                 maybeCreateUserRequestJSON = decode requestBody :: Maybe CreateUserRequest;
@@ -85,19 +85,26 @@ restAPI request respond = let {
                             "GET"       -> ifValidRequest "getArticleComments" maybeArticleCommentsRequestJSON
                             "DELETE"    -> ifValidRequest "deleteComment" maybeCommentIdRequestJSON
                             _ -> "Method is not implemented"
-                        "articles" -> case requestMethod request of
-                            "POST"      -> if isJust maybeArticleDraftRequestJSON
-                                then "createArticleDraft"
-                                else ifValidRequest "publishArticleDraft" maybeArticleDraftIdRequestJSON
-                            "GET"       -> if isJust maybeArticleDraftIdRequestJSON
-                                then "getArticleDraft"
-                                else if isJust maybeArticlesByCategoryIdRequestJSON
-                                then "getArticlesByCategoryId" 
-                                -- TODO: add second level patch chunks matching (tag, any_tag)
-                                else if isJust maybeTagIdRequestJSON
-                                then "getArticlesByTagId" 
-                                else ifValidRequest "getArticlesByAnyTagId" maybeArticlesByTagIdListRequest
-                            _ -> "Method is not implemented"
+                        "articles" -> case tail pathTextChunks of
+                            [] -> case requestMethod request of
+                                "POST" -> if isJust maybeArticleDraftRequestJSON
+                                    then "createArticleDraft"
+                                    else ifValidRequest "publishArticleDraft" maybeArticleDraftIdRequestJSON
+                                "GET" -> ifValidRequest "getArticleDraft" maybeArticleDraftIdRequestJSON
+                                _ -> "Method is not implemented"
+                            ["category"] -> case requestMethod request of
+                                "GET" -> ifValidRequest "getArticlesByCategoryId" maybeArticlesByCategoryIdRequestJSON
+                                _ -> "Method is not implemented"
+                            ["tag"] -> case requestMethod request of
+                                "GET" -> ifValidRequest "getArticlesByTagId" maybeTagIdRequestJSON
+                                _ -> "Method is not implemented"
+                            ["tags__any"] -> case requestMethod request of
+                                "GET" -> ifValidRequest "getArticlesByAnyTagId" maybeArticlesByTagIdListRequest
+                                _ -> "Method is not implemented"
+                            ["tags__all"] -> case requestMethod request of
+                                "GET" -> ifValidRequest "getArticlesByAllTagId" maybeArticlesByTagIdListRequest
+                                _ -> "Method is not implemented"
+                            _ -> "No such endpoint"
                         _ -> "No such endpoint")
                     else "Endpoint needed")
 
@@ -178,6 +185,9 @@ restAPI request respond = let {
                     pure . fromStrict . pack $ show sessionResults
                 "getArticlesByAnyTagId" -> do
                     sessionResults <- HSS.getArticlesByAnyTagId $ fromJust (decode requestBody :: Maybe ArticlesByTagIdListRequest)
+                    pure . fromStrict . pack $ show sessionResults
+                "getArticlesByAllTagId" -> do
+                    sessionResults <- HSS.getArticlesByAllTagId $ fromJust (decode requestBody :: Maybe ArticlesByTagIdListRequest)
                     pure . fromStrict . pack $ show sessionResults
                 nonMatched -> pure . fromStrict . pack $ nonMatched
             --respond $ responseLBS H.status200 [] errorOrSessionName)

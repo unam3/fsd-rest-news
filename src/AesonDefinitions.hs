@@ -23,7 +23,7 @@ module AesonDefinitions (
     ) where
 
 import Data.Aeson (FromJSON)
-import Data.Int (Int16)
+import Data.Int (Int16, Int32)
 import Data.Text (Text)
 import Data.Vector (Vector)
 import GHC.Generics (Generic)
@@ -169,7 +169,7 @@ data ArticlesByCategoryIdRequest = ArticlesByCategoryIdRequest {
 instance FromJSON ArticlesByCategoryIdRequest
 
 data ArticlesByTagIdListRequest = ArticlesByTagIdListRequest {
-    tags_ids_any :: Vector Int16
+    tags_ids :: Vector Int32
 } deriving (Show, Generic)
 
 instance FromJSON ArticlesByTagIdListRequest
