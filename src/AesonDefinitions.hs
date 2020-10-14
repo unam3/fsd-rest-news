@@ -20,7 +20,8 @@ module AesonDefinitions (
     ArticleDraftIdRequest(..),
     ArticlesByCategoryIdRequest(..),
     ArticlesByTagIdListRequest(..),
-    ArticlesByTitlePartRequest(..)
+    ArticlesByTitlePartRequest(..),
+    ArticlesByContentPartRequest(..)
     ) where
 
 import Data.Aeson (FromJSON)
@@ -180,3 +181,9 @@ data ArticlesByTitlePartRequest = ArticlesByTitlePartRequest {
 } deriving (Show, Generic)
 
 instance FromJSON ArticlesByTitlePartRequest
+
+data ArticlesByContentPartRequest = ArticlesByContentPartRequest {
+    content_substring :: Text
+} deriving (Show, Generic)
+
+instance FromJSON ArticlesByContentPartRequest
