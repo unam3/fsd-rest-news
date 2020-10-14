@@ -80,10 +80,12 @@ create table articles (
 --);
 
 INSERT INTO articles (author, category_id, article_title, article_content, is_published) VALUES
-    (1, 1, '1n', '1xt', true),
-    (1, 2, '2n', 't2t', false);
-    --(1, 1, '5n', '5xt', true),
-    --(1, 1, '6n', 't6t', true);
+    (1, 1, 'Pretentious silly title', 'As you all know.', true),
+    --(1, 2, E'You\'ve never imagine what was…', 'And today topic is children education.', false),
+    (1, 2, 'You''ve never imagine what was…', 'And today topic is children education.', false),
+    (1, 1, 'Can you believe this?', 'Rectangle has four angles alright!', false),
+    (1, 2, 'My dad not a phone', 'My dad not a cellphone. Duh.', false),
+    (1, 1, 'Definitely not a clickbait', 'Oh my goooood!11', false);
 
 
 create table articles_tags (

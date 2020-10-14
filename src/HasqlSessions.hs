@@ -26,7 +26,8 @@ module HasqlSessions (
     getArticlesByCategoryId,
     getArticlesByTagId,
     getArticlesByAnyTagId,
-    getArticlesByAllTagId
+    getArticlesByAllTagId,
+    getArticlesByTitlePart
     ) where
 
 import Data.ByteString.Lazy (ByteString)
@@ -292,4 +293,15 @@ getArticlesByAllTagId tagIdsRequest = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- (Session.run (Session.statement params HST.getArticlesByAllTagId) connection)
+    pure (fmap encode sessionResults)
+
+getArticlesByTitlePart :: ArticlesByTitlePartRequest -> IO (Either Session.QueryError ByteString)
+getArticlesByTitlePart substringRequest = let {
+    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
+    params = (
+        title_substring (substringRequest :: ArticlesByTitlePartRequest)
+        );
+} in do
+    Right connection <- Connection.acquire connectionSettings
+    sessionResults <- (Session.run (Session.statement params HST.getArticlesByTitlePart) connection)
     pure (fmap encode sessionResults)

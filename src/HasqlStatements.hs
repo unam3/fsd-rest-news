@@ -25,7 +25,8 @@ module HasqlStatements (
     getArticlesByCategoryId,
     getArticlesByTagId,
     getArticlesByAnyTagId,
-    getArticlesByAllTagId
+    getArticlesByAllTagId,
+    getArticlesByTitlePart
     ) where
 
 import Data.Aeson (Value)
@@ -272,4 +273,13 @@ getArticlesByAllTagId =
             (select article_id, array_agg(tag_id) as id_array from
                 articles_tags group by article_id) as articles_tags_agg
             where id_array @> ($1 :: int4[])
+        |]
+
+-- select * from articles where article_title like '%ve%';
+-- select json_agg(get_article(article_id)) as articles from (select article_id  from articles where article_title like '%ve%') as foo;
+getArticlesByTitlePart :: Statement Text (Maybe Value)
+getArticlesByTitlePart =
+    [TH.maybeStatement|
+        select json_agg(get_article(article_id)) :: json from
+            (select article_id from articles where article_title ilike ($1 :: text)) as articles_by_title_part
         |]

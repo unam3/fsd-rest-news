@@ -4,7 +4,7 @@ module RestNews
     ( runWarpWithLogger
     ) where
 
-import AesonDefinitions (CreateUserRequest, UserIdRequest, PromoteUserToAuthorRequest, EditAuthorRequest, AuthorIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest, CreateCommentRequest, CreateCommentRequest, CommentIdRequest, ArticleCommentsRequest, ArticleDraftRequest, ArticleDraftIdRequest, ArticlesByCategoryIdRequest, ArticlesByTagIdListRequest)
+import AesonDefinitions (CreateUserRequest, UserIdRequest, PromoteUserToAuthorRequest, EditAuthorRequest, AuthorIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest, CreateCommentRequest, CreateCommentRequest, CommentIdRequest, ArticleCommentsRequest, ArticleDraftRequest, ArticleDraftIdRequest, ArticlesByCategoryIdRequest, ArticlesByTagIdListRequest, ArticlesByTitlePartRequest)
 import qualified HasqlSessions as HSS
 
 import Control.Exception (bracket_)
@@ -54,6 +54,7 @@ restAPI request respond = let {
                 maybeArticleDraftIdRequestJSON = decode requestBody :: Maybe ArticleDraftIdRequest;
                 maybeArticlesByCategoryIdRequestJSON = decode requestBody :: Maybe ArticlesByCategoryIdRequest;
                 maybeArticlesByTagIdListRequest = decode requestBody :: Maybe ArticlesByTagIdListRequest;
+                maybeArticlesByTitlePartRequest = decode requestBody :: Maybe ArticlesByTitlePartRequest;
             } in pure (
                 if isRequestPathNotEmpty
                     then (case pathHeadChunk of
@@ -103,6 +104,9 @@ restAPI request respond = let {
                                 _ -> "Method is not implemented"
                             ["tags__all"] -> case requestMethod request of
                                 "GET" -> ifValidRequest "getArticlesByAllTagId" maybeArticlesByTagIdListRequest
+                                _ -> "Method is not implemented"
+                            ["in__title"] -> case requestMethod request of
+                                "GET" -> ifValidRequest "getArticlesByTitlePart" maybeArticlesByTitlePartRequest
                                 _ -> "Method is not implemented"
                             _ -> "No such endpoint"
                         _ -> "No such endpoint")
@@ -188,6 +192,9 @@ restAPI request respond = let {
                     pure . fromStrict . pack $ show sessionResults
                 "getArticlesByAllTagId" -> do
                     sessionResults <- HSS.getArticlesByAllTagId $ fromJust (decode requestBody :: Maybe ArticlesByTagIdListRequest)
+                    pure . fromStrict . pack $ show sessionResults
+                "getArticlesByTitlePart" -> do
+                    sessionResults <- HSS.getArticlesByTitlePart $ fromJust (decode requestBody :: Maybe ArticlesByTitlePartRequest)
                     pure . fromStrict . pack $ show sessionResults
                 nonMatched -> pure . fromStrict . pack $ nonMatched
             --respond $ responseLBS H.status200 [] errorOrSessionName)
