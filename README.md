@@ -29,3 +29,6 @@ stack exec rest-news-exe
 ## Known limitations
 
 - Deletion of inexistent entity will return response with 200 HTTP status code.
+
+
+- `%` and `_` characters will be stripped from `title_substring` parameter of `articles/in__title` request.

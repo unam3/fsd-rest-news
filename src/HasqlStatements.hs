@@ -281,5 +281,6 @@ getArticlesByTitlePart :: Statement Text (Maybe Value)
 getArticlesByTitlePart =
     [TH.maybeStatement|
         select json_agg(get_article(article_id)) :: json from
-            (select article_id from articles where article_title ilike ($1 :: text)) as articles_by_title_part
+            (select article_id from articles where article_title ilike
+                '%' || regexp_replace(($1 :: text), '(%|_)', '', 'g') || '%') as articles_by_title_part
         |]

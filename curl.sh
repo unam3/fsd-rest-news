@@ -57,4 +57,4 @@ curl -i -X GET -d '{"tags_ids": [2, 1]}' http://0.0.0.0:8081/articles/tags__any
 
 curl -i -X GET -d '{"tags_ids": [2, 1]}' http://0.0.0.0:8081/articles/tags__all
 
-curl -i -X GET -d '{"title_substring": "%ve%"}' http://0.0.0.0:8081/articles/in__title
+curl -i -X GET -d '{"title_substring": "ve"}' http://0.0.0.0:8081/articles/in__title

@@ -28,12 +28,13 @@ restAPI request respond = let {
         pathTextChunks = pathInfo request;
         isRequestPathNotEmpty = (not $ null pathTextChunks);
         pathHeadChunk = head pathTextChunks;
+        method = requestMethod request;
     } in bracket_
         (debugM "rest-news" "Allocating scarce resource")
         (debugM "rest-news" "Cleaning up")
         (do
             requestBody <- strictRequestBody request
-            print (pathTextChunks, requestBody)
+            print (method, pathTextChunks, requestBody)
 
             errorOrSessionName <- let {
                 maybeCreateUserRequestJSON = decode requestBody :: Maybe CreateUserRequest;
@@ -58,54 +59,54 @@ restAPI request respond = let {
             } in pure (
                 if isRequestPathNotEmpty
                     then (case pathHeadChunk of
-                        "users" -> case requestMethod request of
+                        "users" -> case method of
                             "POST"      -> ifValidRequest "createUser" maybeCreateUserRequestJSON
                             "GET"       -> ifValidRequest "getUser" maybeUserIdRequestJSON
                             "DELETE"    -> ifValidRequest "deleteUser" maybeUserIdRequestJSON
                             _ -> "Method is not implemented"
-                        "authors" -> case requestMethod request of
+                        "authors" -> case method of
                             "POST"      -> ifValidRequest "promoteUserToAuthor" maybePromoteUserToAuthorRequestJSON
                             "PATCH"     -> ifValidRequest "editAuthor" maybeEditAuthorRequestJSON
                             "GET"       -> ifValidRequest "getAuthor" maybeAuthorIdRequestJSON
                             "DELETE"    -> ifValidRequest "deleteAuthorRole" maybeUserIdRequestJSON
                             _ -> "Method is not implemented"
-                        "categories" -> case requestMethod request of
+                        "categories" -> case method of
                             "POST"      -> ifValidRequest "createCategory" maybeCreateCategoryRequestJSON
                             "PATCH"     -> ifValidRequest "updateCategory" maybeUpdateCategoryRequestJSON
                             "GET"       -> ifValidRequest "getCategory" maybeCategoryIdRequestJSON
                             "DELETE"    -> ifValidRequest "deleteCategory" maybeCategoryIdRequestJSON
                             _ -> "Method is not implemented"
-                        "tags" -> case requestMethod request of
+                        "tags" -> case method of
                             "POST"      -> ifValidRequest "createTag" maybeCreateTagRequestJSON
                             "PATCH"     -> ifValidRequest "editTag" maybeEditTagRequestJSON
                             "GET"       -> ifValidRequest "getTag" maybeTagIdRequestJSON
                             "DELETE"    -> ifValidRequest "deleteTag" maybeTagIdRequestJSON
                             _ -> "Method is not implemented"
-                        "comments" -> case requestMethod request of
+                        "comments" -> case method of
                             "POST"      -> ifValidRequest "createComment" maybeCreateCommentRequestJSON
                             "GET"       -> ifValidRequest "getArticleComments" maybeArticleCommentsRequestJSON
                             "DELETE"    -> ifValidRequest "deleteComment" maybeCommentIdRequestJSON
                             _ -> "Method is not implemented"
                         "articles" -> case tail pathTextChunks of
-                            [] -> case requestMethod request of
+                            [] -> case method of
                                 "POST" -> if isJust maybeArticleDraftRequestJSON
                                     then "createArticleDraft"
                                     else ifValidRequest "publishArticleDraft" maybeArticleDraftIdRequestJSON
                                 "GET" -> ifValidRequest "getArticleDraft" maybeArticleDraftIdRequestJSON
                                 _ -> "Method is not implemented"
-                            ["category"] -> case requestMethod request of
+                            ["category"] -> case method of
                                 "GET" -> ifValidRequest "getArticlesByCategoryId" maybeArticlesByCategoryIdRequestJSON
                                 _ -> "Method is not implemented"
-                            ["tag"] -> case requestMethod request of
+                            ["tag"] -> case method of
                                 "GET" -> ifValidRequest "getArticlesByTagId" maybeTagIdRequestJSON
                                 _ -> "Method is not implemented"
-                            ["tags__any"] -> case requestMethod request of
+                            ["tags__any"] -> case method of
                                 "GET" -> ifValidRequest "getArticlesByAnyTagId" maybeArticlesByTagIdListRequest
                                 _ -> "Method is not implemented"
-                            ["tags__all"] -> case requestMethod request of
+                            ["tags__all"] -> case method of
                                 "GET" -> ifValidRequest "getArticlesByAllTagId" maybeArticlesByTagIdListRequest
                                 _ -> "Method is not implemented"
-                            ["in__title"] -> case requestMethod request of
+                            ["in__title"] -> case method of
                                 "GET" -> ifValidRequest "getArticlesByTitlePart" maybeArticlesByTitlePartRequest
                                 _ -> "Method is not implemented"
                             _ -> "No such endpoint"
