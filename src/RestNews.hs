@@ -22,6 +22,7 @@ import System.Log.Logger (Priority (DEBUG, ERROR), debugM, setLevel, traplogging
 ifValidRequest :: String -> Maybe a -> String
 ifValidRequest sessionName = maybe "Wrong parameters/parameters values" (const sessionName)
 
+
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
 restAPI :: Application;
 restAPI request respond = let {
@@ -117,94 +118,23 @@ restAPI request respond = let {
                         _ -> "No such endpoint")
                     else "Endpoint needed")
 
-            results <- case errorOrSessionName of
-                "createUser" -> do
-                    sessionResults <- HSS.createUser $ fromJust (decode requestBody :: Maybe CreateUserRequest)
-                    pure $ case sessionResults of
-                        Left (Session.QueryError _ _ (Session.ResultError (Session.UnexpectedResult "Unexpected result status: CommandOk"))) -> "ok"
-                        Left (Session.QueryError _ _ (Session.ResultError sessionError)) -> fromStrict . pack $ show sessionError
-                        _ -> "eeh?"
-                "getUser" -> do
-                    sessionResults <- HSS.getUser $ fromJust (decode requestBody :: Maybe UserIdRequest)
-                    -- Right ("n1","s1",False)
-                    -- Left (QueryError "SELECT name :: text, surname :: text, is_admin :: bool FROM users WHERE user_id = $1 :: int2" ["-231"] (ResultError (UnexpectedAmountOfRows 0)))
-                    pure . fromStrict . pack $ show sessionResults
-                "deleteUser" -> do
-                    sessionResults <- HSS.deleteUser $ fromJust (decode requestBody :: Maybe UserIdRequest)
-                    pure . fromStrict . pack $ show sessionResults
-                "promoteUserToAuthor" -> do
-                    sessionResults <- HSS.promoteUserToAuthor $ fromJust (decode requestBody :: Maybe PromoteUserToAuthorRequest)
-                    pure . fromStrict . pack $ show sessionResults
-                "editAuthor" -> do
-                    sessionResults <- HSS.editAuthor $ fromJust (decode requestBody :: Maybe EditAuthorRequest)
-                    pure . fromStrict . pack $ show sessionResults
-                "getAuthor" -> do
-                    sessionResults <- HSS.getAuthor $ fromJust (decode requestBody :: Maybe AuthorIdRequest)
-                    pure . fromStrict . pack $ show sessionResults
-                "deleteAuthorRole" -> do
-                    sessionResults <- HSS.deleteAuthorRole $ fromJust (decode requestBody :: Maybe AuthorIdRequest)
-                    pure . fromStrict . pack $ show sessionResults
-                "createCategory" -> do
-                    sessionResults <- HSS.createCategory $ fromJust (decode requestBody :: Maybe CreateCategoryRequest)
-                    pure . fromStrict . pack $ show sessionResults
-                "updateCategory" -> do
-                    sessionResults <- HSS.updateCategory $ fromJust (decode requestBody :: Maybe UpdateCategoryRequest)
-                    pure . fromStrict . pack $ show sessionResults
-                "getCategory" -> do
-                    sessionResults <- HSS.getCategory $ fromJust (decode requestBody :: Maybe CategoryIdRequest)
-                    pure . fromStrict . pack $ show sessionResults
-                "deleteCategory" -> do
-                    sessionResults <- HSS.deleteCategory $ fromJust (decode requestBody :: Maybe CategoryIdRequest)
-                    pure . fromStrict . pack $ show sessionResults
-                "createTag" -> do
-                    sessionResults <- HSS.createTag $ fromJust (decode requestBody :: Maybe CreateTagRequest)
-                    pure . fromStrict . pack $ show sessionResults
-                "editTag" -> do
-                    sessionResults <- HSS.editTag $ fromJust (decode requestBody :: Maybe EditTagRequest)
-                    pure . fromStrict . pack $ show sessionResults
-                "getTag" -> do
-                    sessionResults <- HSS.getTag $ fromJust (decode requestBody :: Maybe TagIdRequest)
-                    pure . fromStrict . pack $ show sessionResults
-                "deleteTag" -> do
-                    sessionResults <- HSS.deleteTag $ fromJust (decode requestBody :: Maybe TagIdRequest)
-                    pure . fromStrict . pack $ show sessionResults
-                "createComment" -> do
-                    sessionResults <- HSS.createComment $ fromJust (decode requestBody :: Maybe CreateCommentRequest)
-                    pure . fromStrict . pack $ show sessionResults
-                "deleteComment" -> do
-                    sessionResults <- HSS.deleteComment $ fromJust (decode requestBody :: Maybe CommentIdRequest)
-                    pure . fromStrict . pack $ show sessionResults
-                "getArticleComments" -> do
-                    sessionResults <- HSS.getArticleComments $ fromJust (decode requestBody :: Maybe ArticleCommentsRequest)
-                    pure . fromStrict . pack $ show sessionResults
-                "createArticleDraft" -> do
-                    sessionResults <- HSS.createArticleDraft $ fromJust (decode requestBody :: Maybe ArticleDraftRequest)
-                    pure . fromStrict . pack $ show sessionResults
-                "publishArticleDraft" -> do
-                    sessionResults <- HSS.publishArticleDraft $ fromJust (decode requestBody :: Maybe ArticleDraftIdRequest)
-                    pure . fromStrict . pack $ show sessionResults
-                "getArticleDraft" -> do
-                    sessionResults <- HSS.getArticleDraft $ fromJust (decode requestBody :: Maybe ArticleDraftIdRequest)
-                    pure . fromStrict . pack $ show sessionResults
-                "getArticlesByCategoryId" -> do
-                    sessionResults <- HSS.getArticlesByCategoryId $ fromJust (decode requestBody :: Maybe ArticlesByCategoryIdRequest)
-                    pure . fromStrict . pack $ show sessionResults
-                "getArticlesByTagId" -> do
-                    sessionResults <- HSS.getArticlesByTagId $ fromJust (decode requestBody :: Maybe TagIdRequest)
-                    pure . fromStrict . pack $ show sessionResults
-                "getArticlesByAnyTagId" -> do
-                    sessionResults <- HSS.getArticlesByAnyTagId $ fromJust (decode requestBody :: Maybe ArticlesByTagIdListRequest)
-                    pure . fromStrict . pack $ show sessionResults
-                "getArticlesByAllTagId" -> do
-                    sessionResults <- HSS.getArticlesByAllTagId $ fromJust (decode requestBody :: Maybe ArticlesByTagIdListRequest)
-                    pure . fromStrict . pack $ show sessionResults
-                "getArticlesByTitlePart" -> do
-                    sessionResults <- HSS.getArticlesByTitlePart $ fromJust (decode requestBody :: Maybe ArticlesByTitlePartRequest)
-                    pure . fromStrict . pack $ show sessionResults
-                "getArticlesByContentPart" -> do
-                    sessionResults <- HSS.getArticlesByContentPart $ fromJust (decode requestBody :: Maybe ArticlesByContentPartRequest)
-                    pure . fromStrict . pack $ show sessionResults
+            results <- let {
+                --runSession :: Text -> IO 
+                runSession session = (session . fromJust $ decode requestBody) >>= (pure . fromStrict . pack . show);
+
+                sessionResults = case errorOrSessionName of
+                --"createUser" -> do
+                --    sessionResults <- HSS.createUser $ fromJust (decode requestBody :: Maybe CreateUserRequest)
+                --    pure $ case sessionResults of
+                --        Left (Session.QueryError _ _ (Session.ResultError (Session.UnexpectedResult "Unexpected result status: CommandOk"))) -> "ok"
+                --        Left (Session.QueryError _ _ (Session.ResultError sessionError)) -> fromStrict . pack $ show sessionError
+                --        _ -> "eeh?"
+
+                "getUser" -> runSession HSS.getUser
+                "deleteUser" -> runSession HSS.deleteUser
+                "promoteUserToAuthor" -> runSession HSS.promoteUserToAuthor;
                 nonMatched -> pure . fromStrict . pack $ nonMatched
+            } in sessionResults
             --respond $ responseLBS H.status200 [] errorOrSessionName)
             let {
                 httpStatus = case errorOrSessionName of
