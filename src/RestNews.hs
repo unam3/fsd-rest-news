@@ -13,15 +13,14 @@ import Data.Aeson (decode)
 import Data.ByteString.Char8 (pack)
 import Data.ByteString.Lazy (fromStrict)
 import Data.Maybe (fromJust, isJust)
-import qualified Hasql.Session as Session
 import qualified Network.HTTP.Types as H
 import Network.Wai (Application, pathInfo, requestMethod, responseLBS, strictRequestBody)
 import Network.Wai.Handler.Warp (Port, run)
 import System.Log.Logger (Priority (DEBUG, ERROR), debugM, setLevel, traplogging, updateGlobalLogger)
 
+
 ifValidRequest :: String -> Maybe a -> String
 ifValidRequest sessionName = maybe "Wrong parameters/parameters values" (const sessionName)
-
 
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
 restAPI :: Application;
@@ -36,7 +35,6 @@ restAPI request respond = let {
         (do
             requestBody <- strictRequestBody request
             print (method, pathTextChunks, requestBody)
-
             errorOrSessionName <- let {
                 maybeCreateUserRequestJSON = decode requestBody :: Maybe CreateUserRequest;
                 maybeUserIdRequestJSON = decode requestBody :: Maybe UserIdRequest;
@@ -119,22 +117,37 @@ restAPI request respond = let {
                     else "Endpoint needed")
 
             results <- let {
-                --runSession :: Text -> IO 
                 runSession session = (session . fromJust $ decode requestBody) >>= (pure . fromStrict . pack . show);
-
                 sessionResults = case errorOrSessionName of
-                --"createUser" -> do
-                --    sessionResults <- HSS.createUser $ fromJust (decode requestBody :: Maybe CreateUserRequest)
-                --    pure $ case sessionResults of
-                --        Left (Session.QueryError _ _ (Session.ResultError (Session.UnexpectedResult "Unexpected result status: CommandOk"))) -> "ok"
-                --        Left (Session.QueryError _ _ (Session.ResultError sessionError)) -> fromStrict . pack $ show sessionError
-                --        _ -> "eeh?"
-
-                "getUser" -> runSession HSS.getUser
-                "deleteUser" -> runSession HSS.deleteUser
-                "promoteUserToAuthor" -> runSession HSS.promoteUserToAuthor;
-                nonMatched -> pure . fromStrict . pack $ nonMatched
-            } in sessionResults
+                    "createUser" -> runSession HSS.createUser
+                    "getUser" -> runSession HSS.getUser
+                    "deleteUser" -> runSession HSS.deleteUser
+                    "promoteUserToAuthor" -> runSession HSS.promoteUserToAuthor;
+                    "editAuthor" -> runSession HSS.editAuthor
+                    "getAuthor" -> runSession HSS.getAuthor
+                    "deleteAuthorRole" -> runSession HSS.deleteAuthorRole
+                    "createCategory" -> runSession HSS.createCategory
+                    "updateCategory" -> runSession HSS.updateCategory
+                    "getCategory" -> runSession HSS.getCategory
+                    "deleteCategory" -> runSession HSS.deleteCategory
+                    "createTag" -> runSession HSS.createTag
+                    "editTag" -> runSession HSS.editTag
+                    "getTag" -> runSession HSS.getTag
+                    "deleteTag" -> runSession HSS.deleteTag
+                    "createComment" -> runSession HSS.createComment
+                    "deleteComment" -> runSession HSS.deleteComment
+                    "getArticleComments" -> runSession HSS.getArticleComments
+                    "createArticleDraft" -> runSession HSS.createArticleDraft
+                    "publishArticleDraft" -> runSession HSS.publishArticleDraft
+                    "getArticleDraft" -> runSession HSS.getArticleDraft
+                    "getArticlesByCategoryId" -> runSession HSS.getArticlesByCategoryId
+                    "getArticlesByTagId" -> runSession HSS.getArticlesByTagId
+                    "getArticlesByAnyTagId" -> runSession HSS.getArticlesByAnyTagId
+                    "getArticlesByAllTagId" -> runSession HSS.getArticlesByAllTagId
+                    "getArticlesByTitlePart" -> runSession HSS.getArticlesByTitlePart
+                    "getArticlesByContentPart" -> runSession HSS.getArticlesByContentPart
+                    nonMatched -> pure . fromStrict . pack $ nonMatched;
+                } in sessionResults
             --respond $ responseLBS H.status200 [] errorOrSessionName)
             let {
                 httpStatus = case errorOrSessionName of
