@@ -34,7 +34,7 @@ restAPI request respond = let {
         (debugM "rest-news" "Cleaning up")
         (do
             requestBody <- strictRequestBody request
-            print (method, pathTextChunks, requestBody)
+            debugM "rest-news" (show (method, pathTextChunks, requestBody))
             errorOrSessionName <- let {
                 maybeCreateUserRequestJSON = decode requestBody :: Maybe CreateUserRequest;
                 maybeUserIdRequestJSON = decode requestBody :: Maybe UserIdRequest;
@@ -162,7 +162,9 @@ restAPI request respond = let {
 runWarp :: IO ()
 runWarp = let {
     port = 8081 :: Port;
-} in run port restAPI >> pure ()
+} in updateGlobalLogger "rest-news" (setLevel DEBUG)
+    >> run port restAPI
+    >> pure ()
 
 runWarpWithLogger :: IO ()
-runWarpWithLogger = runWarp
+runWarpWithLogger = traplogging "rest-news" ERROR "shutdown due to" runWarp
