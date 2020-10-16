@@ -254,7 +254,7 @@ getArticlesByCategoryId =
 getArticlesByTagId :: Statement Int16 (Maybe Value)
 getArticlesByTagId =
     [TH.maybeStatement|
-        select json_agg(articles_by_tag_id.*) :: json from
+        select json_agg(articles_by_tag_id.get_article) :: json from
             (select get_article(article_id) from articles_tags where tag_id = $1 :: int2) as articles_by_tag_id
         |]
 
@@ -262,7 +262,7 @@ getArticlesByTagId =
 getArticlesByAnyTagId :: Statement (Vector Int32) (Maybe Value)
 getArticlesByAnyTagId =
     [TH.maybeStatement|
-        select json_agg(articles_ids.*) :: json from
+        select json_agg(articles_ids.get_article) :: json from
             (select get_article(article_id) from articles_tags where tag_id = any ($1 :: int4[]) group by article_id) as articles_ids
         |]
 
@@ -270,10 +270,11 @@ getArticlesByAnyTagId =
 getArticlesByAllTagId :: Statement (Vector Int32) (Maybe Value)
 getArticlesByAllTagId =
     [TH.maybeStatement|
-        select get_article(article_id) :: json from
-            (select article_id, array_agg(tag_id) as id_array from
-                articles_tags group by article_id) as articles_tags_agg
-            where id_array @> ($1 :: int4[])
+        select json_agg(get_article) :: json from (
+            select get_article(article_id) from
+                (select article_id, array_agg(tag_id) as id_array from
+                    articles_tags group by article_id) as articles_tags
+                where id_array @> ($1 :: int4[])) as articles_tags_agg
         |]
 
 -- select * from articles where article_title like '%ve%';
