@@ -139,7 +139,11 @@ CREATE OR REPLACE FUNCTION public.get_article(art_id integer)
                     )
                 ) as aauthor,
                 (select json_agg(tags) from (
-                        select * from articles_tags where article_id = art_id
+                        --select * from articles_tags where article_id = art_id
+                        select tags.* from tags, (
+                            select tag_id from articles_tags where article_id = art_id
+                        ) as tag_ids
+                        where tags.tag_id = tag_ids.tag_id
                     ) as tags
                 ) as atags,
                 (
