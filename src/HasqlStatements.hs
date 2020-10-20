@@ -27,7 +27,8 @@ module HasqlStatements (
     getArticlesByAnyTagId,
     getArticlesByAllTagId,
     getArticlesByTitlePart,
-    getArticlesByContentPart
+    getArticlesByContentPart,
+    getArticlesByAuthorNamePart
     ) where
 
 import Data.Aeson (Value)
@@ -293,4 +294,24 @@ getArticlesByContentPart =
         select json_agg(get_article(article_id)) :: json from
             (select article_id from articles where article_content ilike
                 '%' || regexp_replace(($1 :: text), '(%|_)', '', 'g') || '%') as articles_by_content_part
+        |]
+
+{-
+select get_article(article_id) from articles, (
+    select authors.author_id from authors, (
+        select user_id from users where name ilike '%ph%'
+    ) as s_users where authors.user_id = s_users.user_id
+) as s_author_ids
+where author = s_author_ids.author_id;
+-}
+getArticlesByAuthorNamePart :: Statement Text (Maybe Value)
+getArticlesByAuthorNamePart =
+    [TH.maybeStatement|
+        select json_agg(get_article(article_id)) :: json from articles, (
+            select authors.author_id from authors, (
+                select user_id from users where name ilike
+                    '%' || regexp_replace(($1 :: text), '(%|_)', '', 'g') || '%'
+            ) as s_users where authors.user_id = s_users.user_id
+        ) as s_author_ids
+        where author = s_author_ids.author_id
         |]

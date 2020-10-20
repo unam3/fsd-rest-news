@@ -28,7 +28,8 @@ module HasqlSessions (
     getArticlesByAnyTagId,
     getArticlesByAllTagId,
     getArticlesByTitlePart,
-    getArticlesByContentPart
+    getArticlesByContentPart,
+    getArticlesByAuthorNamePart
     ) where
 
 import Data.ByteString.Lazy (ByteString)
@@ -316,4 +317,15 @@ getArticlesByContentPart substringRequest = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- (Session.run (Session.statement params HST.getArticlesByContentPart) connection)
+    pure (fmap encode sessionResults)
+
+getArticlesByAuthorNamePart :: ArticlesByAuthorNamePartRequest -> IO (Either Session.QueryError ByteString)
+getArticlesByAuthorNamePart substringRequest = let {
+    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
+    params = (
+        author_name_substring (substringRequest :: ArticlesByAuthorNamePartRequest)
+        );
+} in do
+    Right connection <- Connection.acquire connectionSettings
+    sessionResults <- (Session.run (Session.statement params HST.getArticlesByAuthorNamePart) connection)
     pure (fmap encode sessionResults)

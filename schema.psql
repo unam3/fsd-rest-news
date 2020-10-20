@@ -20,8 +20,12 @@ create table users (
 );
 
 INSERT INTO users (name, surname, avatar, is_admin) VALUES
-    ('n', 's', 'http://pluh/meh.jpg', false),
-    ('n1', 's1', 'http://pluh/meh.jpg', false);
+    ('Scott', 'Adams', 'http://pluh/meh.jpg', false),
+    ('Stephen', 'Diehl', 'http://pluh/monad.jpg', false),
+    ('Sean', ' Carroll', 'https://preposterousuniverse.com/quant.jpg', false),
+    ('Phil', 'Well', 'https://daaaa.mn/it.jpg', false),
+    ('Douglas', 'Crockford', 'https://daaaa.mn/it.jpg', false),
+    ('Snoyberg', 'FPComplete', 'http://pluh/kek.jpg', false);
 
 create table authors (
     author_id       integer generated always as identity primary key,
@@ -29,7 +33,11 @@ create table authors (
     description     text not null
 );
 
-INSERT INTO authors (user_id, description) VALUES (2, 'short description');
+INSERT INTO authors (user_id, description) VALUES
+    (1, 'Hey you'),
+    (2, 'What I wish I knew'),
+    (3, 'Quantum relativity itself'),
+    (4, 'Well duh');
 
 -- how to create possible parental relations between rows?
 create table categories (
@@ -80,12 +88,13 @@ create table articles (
 --);
 
 INSERT INTO articles (author, category_id, article_title, article_content, is_published) VALUES
-    (1, 1, 'Pretentious silly title', 'As you all know.', true),
+    (1, 1, 'Loserthink', 'If you’re interested in expanding how you think things through, check out Loserthink.', true),
     --(1, 2, E'You\'ve never imagine what was…', 'And today topic is children education.', false),
-    (1, 2, 'You''ve never imagine what was…', 'And today topic is children education.', false),
-    (1, 1, 'Can you believe this?', 'Rectangle has four angles alright!', false),
-    (1, 2, 'My dad not a phone', 'My dad not a cellphone. Duh.', false),
-    (1, 1, 'Definitely not a clickbait', 'Oh my goooood!11', false);
+    --(4, 2, 'You''ve never imagine what was…', 'And today topic is children education.', false),
+    (4, 2, 'Oh my gooood.', 'No one ever really dies.', false),
+    (3, 1, 'Something Deeply Hidden', 'New book out!', false),
+    (2, 2, 'What I Wish I Knew When Learning Haskell', 'English.', false),
+    (3, 1, 'The Big Picture', 'New book again!', false);
 
 
 create table articles_tags (

@@ -4,7 +4,7 @@ module RestNews
     ( runWarpWithLogger
     ) where
 
-import AesonDefinitions (CreateUserRequest, UserIdRequest, PromoteUserToAuthorRequest, EditAuthorRequest, AuthorIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest, CreateCommentRequest, CreateCommentRequest, CommentIdRequest, ArticleCommentsRequest, ArticleDraftRequest, ArticleDraftIdRequest, ArticlesByCategoryIdRequest, ArticlesByTagIdListRequest, ArticlesByTitlePartRequest, ArticlesByContentPartRequest)
+import AesonDefinitions (CreateUserRequest, UserIdRequest, PromoteUserToAuthorRequest, EditAuthorRequest, AuthorIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest, CreateCommentRequest, CreateCommentRequest, CommentIdRequest, ArticleCommentsRequest, ArticleDraftRequest, ArticleDraftIdRequest, ArticlesByCategoryIdRequest, ArticlesByTagIdListRequest, ArticlesByTitlePartRequest, ArticlesByContentPartRequest, ArticlesByAuthorNamePartRequest)
 import qualified HasqlSessions as HSS
 
 import Control.Exception (bracket_)
@@ -56,6 +56,7 @@ restAPI request respond = let {
                 maybeArticlesByTagIdListRequest = decode requestBody :: Maybe ArticlesByTagIdListRequest;
                 maybeArticlesByTitlePartRequest = decode requestBody :: Maybe ArticlesByTitlePartRequest;
                 maybeArticlesByContentPartRequest = decode requestBody :: Maybe ArticlesByContentPartRequest;
+                maybeArticlesByAuthorNamePartRequest = decode requestBody :: Maybe ArticlesByAuthorNamePartRequest;
             } in pure (
                 if isRequestPathNotEmpty
                     then (case pathHeadChunk of
@@ -112,6 +113,9 @@ restAPI request respond = let {
                             ["in__content"] -> case method of
                                 "GET" -> ifValidRequest "getArticlesByContentPart" maybeArticlesByContentPartRequest
                                 _ -> "Method is not implemented"
+                            ["in__author_name"] -> case method of
+                                "GET" -> ifValidRequest "getArticlesByAuthorNamePart" maybeArticlesByAuthorNamePartRequest
+                                _ -> "Method is not implemented"
                             _ -> "No such endpoint"
                         _ -> "No such endpoint")
                     else "Endpoint needed")
@@ -146,6 +150,7 @@ restAPI request respond = let {
                     "getArticlesByAllTagId" -> runSession HSS.getArticlesByAllTagId
                     "getArticlesByTitlePart" -> runSession HSS.getArticlesByTitlePart
                     "getArticlesByContentPart" -> runSession HSS.getArticlesByContentPart
+                    "getArticlesByAuthorNamePart" -> runSession HSS.getArticlesByAuthorNamePart
                     nonMatched -> pure . fromStrict . pack $ nonMatched;
                 } in sessionResults
             --respond $ responseLBS H.status200 [] errorOrSessionName)

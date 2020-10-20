@@ -60,3 +60,5 @@ curl -i -X GET -d '{"tags_ids": [2, 1]}' http://0.0.0.0:8081/articles/tags__all
 curl -i -X GET -d '{"title_substring": "ve"}' http://0.0.0.0:8081/articles/in__title
 
 curl -i -X GET -d '{"content_substring": "is"}' http://0.0.0.0:8081/articles/in__content
+
+curl -i -X GET -d '{"author_name_substring": "ph"}' http://0.0.0.0:8081/articles/in__author_name
