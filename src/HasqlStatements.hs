@@ -32,6 +32,7 @@ module HasqlStatements (
     ) where
 
 import Data.Aeson (Value)
+import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
 import Data.Int (Int32)
 import Data.Text (Text)
 import Data.Vector (Vector)
@@ -39,7 +40,7 @@ import qualified Hasql.TH as TH
 
 import Hasql.Statement (Statement(..))
 
-createUser :: Statement (Text, Text, Text, Bool) ()
+createUser :: Statement (Text, Text, Text, Bool) Int32
 createUser =
     [TH.singletonStatement|
         insert
@@ -50,6 +51,7 @@ createUser =
                 $3 :: text,
                 $4 :: bool
                 )
+        returning user_id :: int4
         |]
 
 deleteUser :: Statement Int32 ()

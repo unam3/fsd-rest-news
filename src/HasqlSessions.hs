@@ -35,9 +35,10 @@ module HasqlSessions (
 import Data.ByteString.Lazy (ByteString)
 import Data.Aeson (encode)
 import Data.Int (Int32)
-import Data.Text (Text)
+import Data.Text (Text, unpack)
 import qualified Hasql.Connection as Connection
 import qualified Hasql.Session as Session
+import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
 
 import AesonDefinitions
 import qualified HasqlStatements as HST
@@ -50,13 +51,17 @@ import qualified HasqlStatements as HST
 -- *Main RestNews> dbCall
 -- Left (QueryError "INSERT INTO users VALUES (5, 'n', 's', '2010-12-12', FALSE)" [] (ResultError (ServerError "23505" "duplicate key value violates unique constraint \"users_pkey\"" (Just "Key (user_id)=(5) already exists.") Nothing)))
 
-createUser :: CreateUserRequest -> IO (Either Session.QueryError ())
+createUser :: CreateUserRequest -> IO (Either Session.QueryError UTFLBS.ByteString)
 createUser createUserRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (name (createUserRequest :: CreateUserRequest), surname createUserRequest, avatar createUserRequest, is_admin createUserRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
-    Session.run (Session.statement params HST.createUser) connection
+    --Session.run (Session.statement params HST.createUser) connection
+    -- Int32
+    (fmap (fmap (UTFLBS.fromString . show))) $ Session.run (Session.statement params HST.createUser) connection
+    -- Text
+    --(fmap (fmap (UTFLBS.fromString . unpack))) $ Session.run (Session.statement params HST.createUser) connection
 
 deleteUser :: UserIdRequest -> IO (Either Session.QueryError ())
 deleteUser deleteUserRequest = let {
@@ -319,7 +324,7 @@ getArticlesByContentPart substringRequest = let {
     sessionResults <- (Session.run (Session.statement params HST.getArticlesByContentPart) connection)
     pure (fmap encode sessionResults)
 
-getArticlesByAuthorNamePart :: ArticlesByAuthorNamePartRequest -> IO (Either Session.QueryError ByteString)
+getArticlesByAuthorNamePart :: ArticlesByAuthorNamePartRequest -> IO (Either Session.QueryError UTFLBS.ByteString)
 getArticlesByAuthorNamePart substringRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (
@@ -329,3 +334,4 @@ getArticlesByAuthorNamePart substringRequest = let {
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- (Session.run (Session.statement params HST.getArticlesByAuthorNamePart) connection)
     pure (fmap encode sessionResults)
+    --pure sessionResults

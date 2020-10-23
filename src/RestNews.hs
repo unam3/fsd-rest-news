@@ -9,16 +9,12 @@ import qualified HasqlSessions as HSS
 
 import Control.Exception (bracket_)
 import Data.Aeson (decode)
---import Data.ByteString.Lazy.UTF8 (fromString)
-import Data.ByteString.Char8 (pack)
-import Data.ByteString.Lazy (fromStrict)
+import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
 import Data.Maybe (fromJust, isJust)
 import qualified Network.HTTP.Types as H
 import Network.Wai (Application, pathInfo, requestMethod, responseLBS, strictRequestBody)
 import Network.Wai.Handler.Warp (Port, run)
 import System.Log.Logger (Priority (DEBUG, ERROR), debugM, setLevel, traplogging, updateGlobalLogger)
-
-import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
 
 ifValidRequest :: String -> Maybe a -> String
 ifValidRequest sessionName = maybe "Wrong parameters/parameters values" (const sessionName)
@@ -123,40 +119,43 @@ restAPI request respond = let {
 
             results <- let {
                 -- get rid of show
-                runSession session = (session . fromJust $ decode requestBody) >>= (pure . fromStrict . pack . show);
+                runSession session = (session . fromJust $ decode requestBody);
                 sessionResults = case errorOrSessionName of
                     "createUser" -> runSession HSS.createUser
-                    "getUser" -> runSession HSS.getUser
-                    "deleteUser" -> runSession HSS.deleteUser
-                    "promoteUserToAuthor" -> runSession HSS.promoteUserToAuthor;
-                    "editAuthor" -> runSession HSS.editAuthor
-                    "getAuthor" -> runSession HSS.getAuthor
-                    "deleteAuthorRole" -> runSession HSS.deleteAuthorRole
-                    "createCategory" -> runSession HSS.createCategory
-                    "updateCategory" -> runSession HSS.updateCategory
-                    "getCategory" -> runSession HSS.getCategory
-                    "deleteCategory" -> runSession HSS.deleteCategory
-                    "createTag" -> runSession HSS.createTag
-                    "editTag" -> runSession HSS.editTag
-                    "getTag" -> runSession HSS.getTag
-                    "deleteTag" -> runSession HSS.deleteTag
-                    "createComment" -> runSession HSS.createComment
-                    "deleteComment" -> runSession HSS.deleteComment
-                    "getArticleComments" -> runSession HSS.getArticleComments
-                    "createArticleDraft" -> runSession HSS.createArticleDraft
-                    "publishArticleDraft" -> runSession HSS.publishArticleDraft
-                    "getArticleDraft" -> runSession HSS.getArticleDraft
-                    "getArticlesByCategoryId" -> runSession HSS.getArticlesByCategoryId
-                    "getArticlesByTagId" -> runSession HSS.getArticlesByTagId
-                    "getArticlesByAnyTagId" -> runSession HSS.getArticlesByAnyTagId
-                    "getArticlesByAllTagId" -> runSession HSS.getArticlesByAllTagId
-                    "getArticlesByTitlePart" -> runSession HSS.getArticlesByTitlePart
-                    "getArticlesByContentPart" -> runSession HSS.getArticlesByContentPart
+                    --"getUser" -> runSession HSS.getUser
+                    --"deleteUser" -> runSession HSS.deleteUser
+                    --"promoteUserToAuthor" -> runSession HSS.promoteUserToAuthor;
+                    --"editAuthor" -> runSession HSS.editAuthor
+                    --"getAuthor" -> runSession HSS.getAuthor
+                    --"deleteAuthorRole" -> runSession HSS.deleteAuthorRole
+                    --"createCategory" -> runSession HSS.createCategory
+                    --"updateCategory" -> runSession HSS.updateCategory
+                    --"getCategory" -> runSession HSS.getCategory
+                    --"deleteCategory" -> runSession HSS.deleteCategory
+                    --"createTag" -> runSession HSS.createTag
+                    --"editTag" -> runSession HSS.editTag
+                    --"getTag" -> runSession HSS.getTag
+                    --"deleteTag" -> runSession HSS.deleteTag
+                    --"createComment" -> runSession HSS.createComment
+                    --"deleteComment" -> runSession HSS.deleteComment
+                    --"getArticleComments" -> runSession HSS.getArticleComments
+                    --"createArticleDraft" -> runSession HSS.createArticleDraft
+                    --"publishArticleDraft" -> runSession HSS.publishArticleDraft
+                    --"getArticleDraft" -> runSession HSS.getArticleDraft
+                    --"getArticlesByCategoryId" -> runSession HSS.getArticlesByCategoryId
+                    --"getArticlesByTagId" -> runSession HSS.getArticlesByTagId
+                    --"getArticlesByAnyTagId" -> runSession HSS.getArticlesByAnyTagId
+                    --"getArticlesByAllTagId" -> runSession HSS.getArticlesByAllTagId
+                    --"getArticlesByTitlePart" -> runSession HSS.getArticlesByTitlePart
+                    --"getArticlesByContentPart" -> runSession HSS.getArticlesByContentPart
                     "getArticlesByAuthorNamePart" -> runSession HSS.getArticlesByAuthorNamePart
-                    nonMatched -> pure . fromStrict . pack $ nonMatched;
+                    --nonMatched -> pure . fromStrict . pack $ nonMatched;
                 } in sessionResults
+            processedResults <- pure (case results of
+                (Right ulbs) -> ulbs
+                _ -> "left sth" :: UTFLBS.ByteString)
             --respond $ responseLBS H.status200 [] errorOrSessionName)
-            debugM "rest-news" $ show results
+            debugM "rest-news" $ UTFLBS.toString processedResults
             let {
                 httpStatus = (case errorOrSessionName of
                     "Endpoint needed" -> H.status404
@@ -164,8 +163,7 @@ restAPI request respond = let {
                     "Wrong parameters/parameters values" -> H.status400
                     "Method is not implemented" -> H.status501
                     _ -> H.status200);
-                utfResults = UTFLBS.fromString "тост";
-            } in respond $ responseLBS httpStatus [] utfResults)
+            } in respond $ responseLBS httpStatus [] processedResults)
 
 
 runWarp :: IO ()
