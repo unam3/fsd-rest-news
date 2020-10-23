@@ -18,6 +18,7 @@ import Network.Wai (Application, pathInfo, requestMethod, responseLBS, strictReq
 import Network.Wai.Handler.Warp (Port, run)
 import System.Log.Logger (Priority (DEBUG, ERROR), debugM, setLevel, traplogging, updateGlobalLogger)
 
+import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
 
 ifValidRequest :: String -> Maybe a -> String
 ifValidRequest sessionName = maybe "Wrong parameters/parameters values" (const sessionName)
@@ -121,6 +122,7 @@ restAPI request respond = let {
                     else "Endpoint needed")
 
             results <- let {
+                -- get rid of show
                 runSession session = (session . fromJust $ decode requestBody) >>= (pure . fromStrict . pack . show);
                 sessionResults = case errorOrSessionName of
                     "createUser" -> runSession HSS.createUser
@@ -154,14 +156,16 @@ restAPI request respond = let {
                     nonMatched -> pure . fromStrict . pack $ nonMatched;
                 } in sessionResults
             --respond $ responseLBS H.status200 [] errorOrSessionName)
+            debugM "rest-news" $ show results
             let {
-                httpStatus = case errorOrSessionName of
+                httpStatus = (case errorOrSessionName of
                     "Endpoint needed" -> H.status404
                     "No such endpoint" -> H.status404
                     "Wrong parameters/parameters values" -> H.status400
                     "Method is not implemented" -> H.status501
-                    _ -> H.status200;
-            } in respond $ responseLBS httpStatus [] results)
+                    _ -> H.status200);
+                utfResults = UTFLBS.fromString "тост";
+            } in respond $ responseLBS httpStatus [] utfResults)
 
 
 runWarp :: IO ()
