@@ -26,7 +26,7 @@ module AesonDefinitions (
     ) where
 
 import Data.Aeson (FromJSON)
-import Data.Int (Int16, Int32)
+import Data.Int (Int32)
 import Data.Text (Text)
 import Data.Vector (Vector)
 import GHC.Generics (Generic)
@@ -42,7 +42,7 @@ instance FromJSON CreateUserRequest
 
 
 newtype UserIdRequest = UserIdRequest {
-    user_id :: Int16
+    user_id :: Int32
 } deriving (Show, Generic)
 
 instance FromJSON UserIdRequest
@@ -50,7 +50,7 @@ instance FromJSON UserIdRequest
 
 
 data PromoteUserToAuthorRequest = PromoteUserToAuthorRequest {
-    user_id :: Int16,
+    user_id :: Int32,
     description :: Text
 } deriving (Show, Generic)
 
@@ -58,8 +58,8 @@ instance FromJSON PromoteUserToAuthorRequest
 
 
 data EditAuthorRequest = EditAuthorRequest {
-    author_id :: Int16,
-    user_id :: Int16,
+    author_id :: Int32,
+    user_id :: Int32,
     description :: Text
 } deriving (Show, Generic)
 
@@ -67,7 +67,7 @@ instance FromJSON EditAuthorRequest
 
 
 data AuthorIdRequest = AuthorIdRequest {
-    author_id :: Int16
+    author_id :: Int32
 } deriving (Show, Generic)
 
 instance FromJSON AuthorIdRequest
@@ -76,23 +76,23 @@ instance FromJSON AuthorIdRequest
 
 data CreateCategoryRequest = CreateCategoryRequest {
     name :: Text,
-    parent_id :: Maybe Int16
+    parent_id :: Maybe Int32
 } deriving (Show, Generic)
 
 instance FromJSON CreateCategoryRequest
 
 
 data UpdateCategoryRequest = UpdateCategoryRequest {
-    category_id :: Int16,
+    category_id :: Int32,
     name :: Text,
-    parent_id :: Maybe Int16
+    parent_id :: Maybe Int32
 } deriving (Show, Generic)
 
 instance FromJSON UpdateCategoryRequest
 
 
 data CategoryIdRequest = CategoryIdRequest {
-    category_id :: Int16
+    category_id :: Int32
 } deriving (Show, Generic)
 
 instance FromJSON CategoryIdRequest
@@ -107,7 +107,7 @@ instance FromJSON CreateTagRequest
 
 
 data EditTagRequest = EditTagRequest {
-    tag_id :: Int16,
+    tag_id :: Int32,
     tag_name :: Text
 } deriving (Show, Generic)
 
@@ -115,7 +115,7 @@ instance FromJSON EditTagRequest
 
 
 newtype TagIdRequest = TagIdRequest {
-    tag_id :: Int16
+    tag_id :: Int32
 } deriving (Show, Generic)
 
 instance FromJSON TagIdRequest
@@ -123,7 +123,7 @@ instance FromJSON TagIdRequest
 
 
 data CreateCommentRequest = CreateCommentRequest {
-    article_id :: Int16,
+    article_id :: Int32,
     comment_text :: Text
 } deriving (Show, Generic)
 
@@ -131,14 +131,14 @@ instance FromJSON CreateCommentRequest
 
 
 newtype CommentIdRequest = CommentIdRequest {
-    comment_id :: Int16
+    comment_id :: Int32
 } deriving (Show, Generic)
 
 instance FromJSON CommentIdRequest
 
 
 newtype ArticleCommentsRequest = ArticleCommentsRequest {
-    article_id :: Int16
+    article_id :: Int32
 } deriving (Show, Generic)
 
 instance FromJSON ArticleCommentsRequest
@@ -146,8 +146,8 @@ instance FromJSON ArticleCommentsRequest
 
 
 data ArticleDraftRequest = ArticleDraftRequest {
-    author :: Int16,
-    category_id :: Int16,
+    author :: Int32,
+    category_id :: Int32,
     --tags :: Text,
     article_title :: Text,
     article_content :: Text
@@ -157,7 +157,7 @@ instance FromJSON ArticleDraftRequest
 
 
 data ArticleDraftIdRequest = ArticleDraftIdRequest {
-    article_id :: Int16
+    article_id :: Int32
 } deriving (Show, Generic)
 
 instance FromJSON ArticleDraftIdRequest
@@ -166,7 +166,7 @@ instance FromJSON ArticleDraftIdRequest
 
 
 data ArticlesByCategoryIdRequest = ArticlesByCategoryIdRequest {
-    category_id :: Int16
+    category_id :: Int32
 } deriving (Show, Generic)
 
 instance FromJSON ArticlesByCategoryIdRequest
