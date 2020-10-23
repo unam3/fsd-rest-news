@@ -34,7 +34,7 @@ module HasqlSessions (
 
 import Data.ByteString.Lazy (ByteString)
 import Data.Aeson (encode)
-import Data.Int (Int16)
+import Data.Int (Int32)
 import Data.Text (Text)
 import qualified Hasql.Connection as Connection
 import qualified Hasql.Session as Session
@@ -75,7 +75,7 @@ getUser getUserRequest = let {
     Session.run (Session.statement params HST.getUser) connection
 
 
-promoteUserToAuthor :: PromoteUserToAuthorRequest -> IO (Either Session.QueryError (Int16))
+promoteUserToAuthor :: PromoteUserToAuthorRequest -> IO (Either Session.QueryError (Int32))
 promoteUserToAuthor promoteUserToAuthorRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (
@@ -96,7 +96,7 @@ editAuthor editAuthorRequest = let {
     Right connection <- Connection.acquire connectionSettings
     Session.run (Session.statement params HST.editAuthor) connection
 
-getAuthor :: AuthorIdRequest -> IO (Either Session.QueryError (Int16, Int16, Text))
+getAuthor :: AuthorIdRequest -> IO (Either Session.QueryError (Int32, Int32, Text))
 getAuthor authorIdRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = author_id (authorIdRequest :: AuthorIdRequest);
@@ -135,7 +135,7 @@ updateCategory updateCategoryRequest = let {
     Right connection <- Connection.acquire connectionSettings
     Session.run (Session.statement params HST.updateCategory) connection
 
-getCategory :: CategoryIdRequest -> IO (Either Session.QueryError (Text, Maybe Int16))
+getCategory :: CategoryIdRequest -> IO (Either Session.QueryError (Text, Maybe Int32))
 getCategory categoryIdRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = category_id (categoryIdRequest :: CategoryIdRequest);
@@ -208,7 +208,7 @@ deleteComment deleteCommentRequest = let {
     Right connection <- Connection.acquire connectionSettings
     Session.run (Session.statement params HST.deleteComment) connection
 
-getArticleComments :: ArticleCommentsRequest -> IO (Either Session.QueryError (Int16, Text))
+getArticleComments :: ArticleCommentsRequest -> IO (Either Session.QueryError (Int32, Text))
 getArticleComments articleCommentsRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = article_id (articleCommentsRequest :: ArticleCommentsRequest);
@@ -217,7 +217,7 @@ getArticleComments articleCommentsRequest = let {
     Session.run (Session.statement params HST.getArticleComments) connection
 
 
-createArticleDraft :: ArticleDraftRequest -> IO (Either Session.QueryError Int16)
+createArticleDraft :: ArticleDraftRequest -> IO (Either Session.QueryError Int32)
 createArticleDraft articleDraftRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (

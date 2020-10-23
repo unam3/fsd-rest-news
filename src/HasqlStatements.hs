@@ -32,7 +32,7 @@ module HasqlStatements (
     ) where
 
 import Data.Aeson (Value)
-import Data.Int (Int16, Int32)
+import Data.Int (Int32)
 import Data.Text (Text)
 import Data.Vector (Vector)
 import qualified Hasql.TH as TH
@@ -52,94 +52,94 @@ createUser =
                 )
         |]
 
-deleteUser :: Statement Int16 ()
+deleteUser :: Statement Int32 ()
 deleteUser =
     [TH.resultlessStatement|
         delete
         from users
-        where user_id = $1 :: int2
+        where user_id = $1 :: int4
         |]
 
-getUser :: Statement Int16 (Text, Text, Text, Text, Bool)
+getUser :: Statement Int32 (Text, Text, Text, Text, Bool)
 getUser =
     [TH.singletonStatement|
         select name :: text, surname :: text, avatar :: text, creation_date :: text, is_admin :: bool
         from users
-        where user_id = $1 :: int2
+        where user_id = $1 :: int4
         |]
 
 
-getAuthor :: Statement Int16 (Int16, Int16, Text)
+getAuthor :: Statement Int32 (Int32, Int32, Text)
 getAuthor =
     [TH.singletonStatement|
-        select author_id :: int2, user_id :: int2, description :: text
+        select author_id :: int4, user_id :: int4, description :: text
         from authors
-        where author_id = $1 :: int2
+        where author_id = $1 :: int4
         |]
 
-deleteAuthorRole :: Statement Int16 ()
+deleteAuthorRole :: Statement Int32 ()
 deleteAuthorRole =
     [TH.resultlessStatement|
         delete
         from authors
-        where author_id = $1 :: int2
+        where author_id = $1 :: int4
         |]
 
-promoteUserToAuthor :: Statement (Int16, Text) Int16
+promoteUserToAuthor :: Statement (Int32, Text) Int32
 promoteUserToAuthor =
     [TH.singletonStatement|
         insert
         into authors (user_id, description)
             values (
-                $1 :: int2,
+                $1 :: int4,
                 $2 :: text
                 )
-            returning (author_id :: int2)
+            returning (author_id :: int4)
         |]
 
-editAuthor :: Statement (Int16, Int16, Text) ()
+editAuthor :: Statement (Int32, Int32, Text) ()
 editAuthor =
     [TH.resultlessStatement|
         update authors
-        set user_id = $2 :: int2, description = $3 :: Text
-        where author_id = $1 :: int2
+        set user_id = $2 :: int4, description = $3 :: Text
+        where author_id = $1 :: int4
         |]
 
 
 -- resquest's parent_id may be omitted or set to "null"
-createCategory :: Statement (Text, Maybe Int16) ()
+createCategory :: Statement (Text, Maybe Int32) ()
 createCategory =
     [TH.singletonStatement|
         insert
         into categories (name, parent_id)
             values (
                 $1 :: text,
-                $2 :: int2?
+                $2 :: int4?
                 )
         |]
 
-updateCategory :: Statement (Int16, Text, Maybe Int16) ()
+updateCategory :: Statement (Int32, Text, Maybe Int32) ()
 updateCategory =
     [TH.singletonStatement|
         update categories
-        set name = $2 :: text, parent_id = $3 :: int2?
-        where category_id = $1 :: int2
+        set name = $2 :: text, parent_id = $3 :: int4?
+        where category_id = $1 :: int4
         |]
 
-getCategory :: Statement Int16 (Text, Maybe Int16)
+getCategory :: Statement Int32 (Text, Maybe Int32)
 getCategory =
     [TH.singletonStatement|
-        select name :: text, parent_id :: int2?
+        select name :: text, parent_id :: int4?
         from categories
-        where category_id = $1 :: int2
+        where category_id = $1 :: int4
         |]
 
-deleteCategory :: Statement Int16 ()
+deleteCategory :: Statement Int32 ()
 deleteCategory =
     [TH.resultlessStatement|
         delete
         from categories
-        where category_id = $1 :: int2
+        where category_id = $1 :: int4
         |]
 
 
@@ -154,96 +154,96 @@ createTag =
                 )
         |]
 
-editTag :: Statement (Int16, Text) ()
+editTag :: Statement (Int32, Text) ()
 editTag =
     [TH.singletonStatement|
         update tags
         set tag_name = $2 :: text
-        where tag_id = $1 :: int2
+        where tag_id = $1 :: int4
         |]
 
-deleteTag :: Statement Int16 ()
+deleteTag :: Statement Int32 ()
 deleteTag =
     [TH.resultlessStatement|
         delete
         from tags
-        where tag_id = $1 :: int2
+        where tag_id = $1 :: int4
         |]
 
-getTag :: Statement Int16 Text
+getTag :: Statement Int32 Text
 getTag =
     [TH.singletonStatement|
         select tag_name :: text
         from tags
-        where tag_id = $1 :: int2
+        where tag_id = $1 :: int4
         |]
 
 
 
-createComment :: Statement (Int16, Text) ()
+createComment :: Statement (Int32, Text) ()
 createComment =
     [TH.singletonStatement|
         insert
         into articles_comments (article_id, comment_text)
             values (
-                $1 :: int2,
+                $1 :: int4,
                 $2 :: text
                 )
         |]
 
-deleteComment :: Statement Int16 ()
+deleteComment :: Statement Int32 ()
 deleteComment =
     [TH.resultlessStatement|
         delete
         from articles_comments
-        where comment_id = $1 :: int2
+        where comment_id = $1 :: int4
         |]
 
-getArticleComments :: Statement Int16 (Int16, Text)
+getArticleComments :: Statement Int32 (Int32, Text)
 getArticleComments =
     [TH.singletonStatement|
-        select comment_id :: int2, comment_text :: text
+        select comment_id :: int4, comment_text :: text
         from articles_comments
-        where article_id = $1 :: int2
+        where article_id = $1 :: int4
         |]
 
 
-createArticleDraft :: Statement (Int16, Int16, Text, Text) Int16
+createArticleDraft :: Statement (Int32, Int32, Text, Text) Int32
 createArticleDraft =
     [TH.singletonStatement|
         insert
         into articles (author, category_id, article_title, article_content, is_published)
             values (
-                $1 :: int2,
-                $2 :: int2,
+                $1 :: int4,
+                $2 :: int4,
                 $3 :: text,
                 $4 :: text,
                 False :: bool
                 )
-        returning article_id :: int2
+        returning article_id :: int4
         |]
 
-publishArticleDraft :: Statement Int16 ()
+publishArticleDraft :: Statement Int32 ()
 publishArticleDraft =
     [TH.resultlessStatement|
         update
         articles
         set is_published = True :: bool
-        where article_id = $1 :: int2
+        where article_id = $1 :: int4
         |]
 
-getArticleDraft :: Statement Int16 (Maybe Value)
+getArticleDraft :: Statement Int32 (Maybe Value)
 getArticleDraft =
     [TH.maybeStatement|
-        select get_article($1 :: int2) :: json
+        select get_article($1 :: int4) :: json
         |]
 
 
-getArticlesByCategoryId :: Statement Int16 (Maybe Value)
+getArticlesByCategoryId :: Statement Int32 (Maybe Value)
 getArticlesByCategoryId =
     [TH.maybeStatement|
         select json_agg(aid.get_article) :: json from 
-            (select get_article(article_id) from articles where category_id = $1 :: int2) as aid
+            (select get_article(article_id) from articles where category_id = $1 :: int4) as aid
         |]
 
 
@@ -251,12 +251,12 @@ getArticlesByCategoryId =
 
 -- doesn't work
 --select (articles_by_tag_id.*) :: json from
---    (select json_agg(get_article(article_id)) from articles_tags where tag_id = $1 :: int2) as articles_by_tag_id
-getArticlesByTagId :: Statement Int16 (Maybe Value)
+--    (select json_agg(get_article(article_id)) from articles_tags where tag_id = $1 :: int4) as articles_by_tag_id
+getArticlesByTagId :: Statement Int32 (Maybe Value)
 getArticlesByTagId =
     [TH.maybeStatement|
         select json_agg(articles_by_tag_id.get_article) :: json from
-            (select get_article(article_id) from articles_tags where tag_id = $1 :: int2) as articles_by_tag_id
+            (select get_article(article_id) from articles_tags where tag_id = $1 :: int4) as articles_by_tag_id
         |]
 
 -- select get_article(article_id) from articles_tags where article_id = any (array[4,1]::int[]) group by article_id;
