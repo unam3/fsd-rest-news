@@ -29,7 +29,7 @@ INSERT INTO users (name, surname, avatar, is_admin) VALUES
 
 create table authors (
     author_id       integer generated always as identity primary key,
-    user_id         integer references users,
+    user_id         integer references users unique,
     description     text not null
 );
 
