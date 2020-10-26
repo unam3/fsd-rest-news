@@ -66,7 +66,7 @@ restAPI request respond = let {
                             "POST"      -> ifValidRequest "promoteUserToAuthor" maybePromoteUserToAuthorRequestJSON
                             "PATCH"     -> ifValidRequest "editAuthor" maybeEditAuthorRequestJSON
                             "GET"       -> ifValidRequest "getAuthor" maybeAuthorIdRequestJSON
-                            "DELETE"    -> ifValidRequest "deleteAuthorRole" maybeUserIdRequestJSON
+                            "DELETE"    -> ifValidRequest "deleteAuthorRole" maybeAuthorIdRequestJSON
                             _ -> "Method is not implemented"
                         "categories" -> case method of
                             "POST"      -> ifValidRequest "createCategory" maybeCreateCategoryRequestJSON
