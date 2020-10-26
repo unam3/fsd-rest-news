@@ -359,9 +359,9 @@ select get_article(article_id) from articles, (
 ) as s_author_ids
 where author = s_author_ids.author_id;
 -}
-getArticlesByAuthorNamePart :: Statement Text (Maybe Value)
+getArticlesByAuthorNamePart :: Statement Text Value
 getArticlesByAuthorNamePart =
-    [TH.maybeStatement|
+    [TH.singletonStatement|
         select json_agg(get_article(article_id)) :: json from articles, (
             select authors.author_id from authors, (
                 select user_id from users where name ilike

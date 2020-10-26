@@ -66,7 +66,7 @@ createUser createUserRequest = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.createUser) connection
-    pure (fmap encode sessionResults)
+    valueToUTFLBS sessionResults
 
 deleteUser :: UserIdRequest -> IO (Either Session.QueryError ())
 deleteUser deleteUserRequest = let {
@@ -83,7 +83,7 @@ getUser getUserRequest = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getUser) connection
-    pure (fmap encode sessionResults)
+    valueToUTFLBS sessionResults
 
 
 promoteUserToAuthor :: PromoteUserToAuthorRequest -> IO (Either Session.QueryError ByteString)
@@ -107,7 +107,7 @@ editAuthor editAuthorRequest = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.editAuthor) connection
-    pure (fmap encode sessionResults)
+    valueToUTFLBS sessionResults
 
 getAuthor :: AuthorIdRequest -> IO (Either Session.QueryError ByteString)
 getAuthor authorIdRequest = let {
@@ -272,7 +272,7 @@ getArticleDraft articleDraftIdRequest = let {
         );
 } in do
     Right connection <- Connection.acquire connectionSettings
-    sessionResults <- (Session.run (Session.statement params HST.getArticleDraft) connection)
+    sessionResults <- Session.run (Session.statement params HST.getArticleDraft) connection
     valueToUTFLBS sessionResults
 
 
@@ -284,8 +284,8 @@ getArticlesByCategoryId articlesByCategoryIdRequest = let {
         );
 } in do
     Right connection <- Connection.acquire connectionSettings
-    sessionResults <- (Session.run (Session.statement params HST.getArticlesByCategoryId) connection)
-    pure (fmap encode sessionResults)
+    sessionResults <- Session.run (Session.statement params HST.getArticlesByCategoryId) connection
+    valueToUTFLBS sessionResults
 
 getArticlesByTagId :: TagIdRequest -> IO (Either Session.QueryError ByteString)
 getArticlesByTagId tagIdRequest = let {
@@ -295,8 +295,8 @@ getArticlesByTagId tagIdRequest = let {
         );
 } in do
     Right connection <- Connection.acquire connectionSettings
-    sessionResults <- (Session.run (Session.statement params HST.getArticlesByTagId) connection)
-    pure (fmap encode sessionResults)
+    sessionResults <- Session.run (Session.statement params HST.getArticlesByTagId) connection
+    valueToUTFLBS sessionResults
 
 
 getArticlesByAnyTagId :: ArticlesByTagIdListRequest -> IO (Either Session.QueryError ByteString)
@@ -307,8 +307,8 @@ getArticlesByAnyTagId tagIdsRequest = let {
         );
 } in do
     Right connection <- Connection.acquire connectionSettings
-    sessionResults <- (Session.run (Session.statement params HST.getArticlesByAnyTagId) connection)
-    pure (fmap encode sessionResults)
+    sessionResults <- Session.run (Session.statement params HST.getArticlesByAnyTagId) connection
+    valueToUTFLBS sessionResults
 
 getArticlesByAllTagId :: ArticlesByTagIdListRequest -> IO (Either Session.QueryError ByteString)
 getArticlesByAllTagId tagIdsRequest = let {
@@ -318,8 +318,8 @@ getArticlesByAllTagId tagIdsRequest = let {
         );
 } in do
     Right connection <- Connection.acquire connectionSettings
-    sessionResults <- (Session.run (Session.statement params HST.getArticlesByAllTagId) connection)
-    pure (fmap encode sessionResults)
+    sessionResults <- Session.run (Session.statement params HST.getArticlesByAllTagId) connection
+    valueToUTFLBS sessionResults
 
 getArticlesByTitlePart :: ArticlesByTitlePartRequest -> IO (Either Session.QueryError ByteString)
 getArticlesByTitlePart substringRequest = let {
@@ -329,9 +329,9 @@ getArticlesByTitlePart substringRequest = let {
         );
 } in do
     Right connection <- Connection.acquire connectionSettings
-    sessionResults <- (Session.run (Session.statement params HST.getArticlesByTitlePart) connection)
+    sessionResults <- Session.run (Session.statement params HST.getArticlesByTitlePart) connection
     --Data.Text.IO.putStrLn . pack $ show sessionResults
-    pure (fmap encode sessionResults)
+    valueToUTFLBS sessionResults
 
 getArticlesByContentPart :: ArticlesByContentPartRequest -> IO (Either Session.QueryError ByteString)
 getArticlesByContentPart substringRequest = let {
@@ -341,8 +341,8 @@ getArticlesByContentPart substringRequest = let {
         );
 } in do
     Right connection <- Connection.acquire connectionSettings
-    sessionResults <- (Session.run (Session.statement params HST.getArticlesByContentPart) connection)
-    pure (fmap encode sessionResults)
+    sessionResults <- Session.run (Session.statement params HST.getArticlesByContentPart) connection
+    valueToUTFLBS sessionResults
 
 getArticlesByAuthorNamePart :: ArticlesByAuthorNamePartRequest -> IO (Either Session.QueryError ByteString)
 getArticlesByAuthorNamePart substringRequest = let {
@@ -352,6 +352,5 @@ getArticlesByAuthorNamePart substringRequest = let {
         );
 } in do
     Right connection <- Connection.acquire connectionSettings
-    sessionResults <- (Session.run (Session.statement params HST.getArticlesByAuthorNamePart) connection)
-    pure (fmap encode sessionResults)
-    --pure sessionResults
+    sessionResults <- Session.run (Session.statement params HST.getArticlesByAuthorNamePart) connection
+    valueToUTFLBS sessionResults
