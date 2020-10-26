@@ -32,7 +32,6 @@ module HasqlStatements (
     ) where
 
 import Data.Aeson (Value)
-import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
 import Data.Int (Int32)
 import Data.Text (Text)
 import Data.Vector (Vector)
@@ -40,7 +39,7 @@ import qualified Hasql.TH as TH
 
 import Hasql.Statement (Statement(..))
 
-createUser :: Statement (Text, Text, Text, Bool) Int32
+createUser :: Statement (Text, Text, Text, Bool) Value
 createUser =
     [TH.singletonStatement|
         insert
@@ -51,7 +50,14 @@ createUser =
                 $3 :: text,
                 $4 :: bool
                 )
-        returning user_id :: int4
+        returning json_build_object(
+            'user_id', user_id,
+            'name', name,
+            'surname', surname,
+            'avatar', avatar,
+            'creation_date', creation_date,
+            'is_admin', is_admin
+            )::json
         |]
 
 deleteUser :: Statement Int32 ()
@@ -62,19 +68,19 @@ deleteUser =
         where user_id = $1 :: int4
         |]
 
-getUser :: Statement Int32 (Text, Text, Text, Text, Bool)
+getUser :: Statement Int32 Value
 getUser =
     [TH.singletonStatement|
-        select name :: text, surname :: text, avatar :: text, creation_date :: text, is_admin :: bool
+        select json_agg(users.*) :: json
         from users
         where user_id = $1 :: int4
         |]
 
 
-getAuthor :: Statement Int32 (Int32, Int32, Text)
+getAuthor :: Statement Int32 Value
 getAuthor =
     [TH.singletonStatement|
-        select author_id :: int4, user_id :: int4, description :: text
+        select json_agg(authors.*) :: json
         from authors
         where author_id = $1 :: int4
         |]
@@ -87,7 +93,7 @@ deleteAuthorRole =
         where author_id = $1 :: int4
         |]
 
-promoteUserToAuthor :: Statement (Int32, Text) Int32
+promoteUserToAuthor :: Statement (Int32, Text) Value
 promoteUserToAuthor =
     [TH.singletonStatement|
         insert
@@ -96,20 +102,29 @@ promoteUserToAuthor =
                 $1 :: int4,
                 $2 :: text
                 )
-            returning (author_id :: int4)
+        returning json_build_object(
+            'author_id', author_id,
+            'user_id', user_id,
+            'description', description
+            )::json
         |]
 
-editAuthor :: Statement (Int32, Int32, Text) ()
+editAuthor :: Statement (Int32, Int32, Text) Value
 editAuthor =
-    [TH.resultlessStatement|
+    [TH.singletonStatement|
         update authors
         set user_id = $2 :: int4, description = $3 :: Text
         where author_id = $1 :: int4
+        returning json_build_object(
+            'author_id', author_id,
+            'user_id', user_id,
+            'description', description
+            )::json
         |]
 
 
 -- resquest's parent_id may be omitted or set to "null"
-createCategory :: Statement (Text, Maybe Int32) ()
+createCategory :: Statement (Text, Maybe Int32) Value
 createCategory =
     [TH.singletonStatement|
         insert
@@ -118,20 +133,30 @@ createCategory =
                 $1 :: text,
                 $2 :: int4?
                 )
+        returning json_build_object(
+            'name', name,
+            'category_id', category_id,
+            'parent_id', parent_id
+            )::json
         |]
 
-updateCategory :: Statement (Int32, Text, Maybe Int32) ()
+updateCategory :: Statement (Int32, Text, Maybe Int32) Value
 updateCategory =
     [TH.singletonStatement|
         update categories
         set name = $2 :: text, parent_id = $3 :: int4?
         where category_id = $1 :: int4
+        returning json_build_object(
+            'name', name,
+            'category_id', category_id,
+            'parent_id', parent_id
+            )::json
         |]
 
-getCategory :: Statement Int32 (Text, Maybe Int32)
+getCategory :: Statement Int32 Value
 getCategory =
     [TH.singletonStatement|
-        select name :: text, parent_id :: int4?
+        select json_agg(categories.*)::json
         from categories
         where category_id = $1 :: int4
         |]
@@ -146,7 +171,7 @@ deleteCategory =
 
 
 
-createTag :: Statement Text ()
+createTag :: Statement Text Value
 createTag =
     [TH.singletonStatement|
         insert
@@ -154,14 +179,22 @@ createTag =
             values (
                 $1 :: text
                 )
+        returning json_build_object(
+            'tag_name', tag_name,
+            'tag_id', tag_id
+            )::json
         |]
 
-editTag :: Statement (Int32, Text) ()
+editTag :: Statement (Int32, Text) Value
 editTag =
     [TH.singletonStatement|
         update tags
         set tag_name = $2 :: text
         where tag_id = $1 :: int4
+        returning json_build_object(
+            'tag_name', tag_name,
+            'tag_id', tag_id
+            )::json
         |]
 
 deleteTag :: Statement Int32 ()
@@ -172,17 +205,17 @@ deleteTag =
         where tag_id = $1 :: int4
         |]
 
-getTag :: Statement Int32 Text
+getTag :: Statement Int32 Value
 getTag =
     [TH.singletonStatement|
-        select tag_name :: text
+        select json_agg(tags.*)::json
         from tags
         where tag_id = $1 :: int4
         |]
 
 
 
-createComment :: Statement (Int32, Text) ()
+createComment :: Statement (Int32, Text) Value
 createComment =
     [TH.singletonStatement|
         insert
@@ -191,6 +224,11 @@ createComment =
                 $1 :: int4,
                 $2 :: text
                 )
+        returning json_build_object(
+            'comment_id', comment_id,
+            'article_id', article_id,
+            'comment_text', comment_text
+            )::json
         |]
 
 deleteComment :: Statement Int32 ()
@@ -201,16 +239,16 @@ deleteComment =
         where comment_id = $1 :: int4
         |]
 
-getArticleComments :: Statement Int32 (Int32, Text)
+getArticleComments :: Statement Int32 Value
 getArticleComments =
     [TH.singletonStatement|
-        select comment_id :: int4, comment_text :: text
+        select json_agg(json_build_object('article_id', article_id, 'comment_text', comment_text))::json
         from articles_comments
         where article_id = $1 :: int4
         |]
 
 
-createArticleDraft :: Statement (Int32, Int32, Text, Text) Int32
+createArticleDraft :: Statement (Int32, Int32, Text, Text) Value
 createArticleDraft =
     [TH.singletonStatement|
         insert
@@ -222,28 +260,43 @@ createArticleDraft =
                 $4 :: text,
                 False :: bool
                 )
-        returning article_id :: int4
+        returning json_build_object(
+            'article_id', article_id,
+            'author', author,
+            'category_id', category_id,
+            'article_title', article_title,
+            'article_content', article_content,
+            'is_published', is_published
+            )::json
         |]
 
-publishArticleDraft :: Statement Int32 ()
+publishArticleDraft :: Statement Int32 Value
 publishArticleDraft =
-    [TH.resultlessStatement|
+    [TH.singletonStatement|
         update
         articles
         set is_published = True :: bool
         where article_id = $1 :: int4
+        returning json_build_object(
+            'article_id', article_id,
+            'author', author,
+            'category_id', category_id,
+            'article_title', article_title,
+            'article_content', article_content,
+            'is_published', is_published
+            )::json
         |]
 
-getArticleDraft :: Statement Int32 (Maybe Value)
+getArticleDraft :: Statement Int32 Value
 getArticleDraft =
-    [TH.maybeStatement|
+    [TH.singletonStatement|
         select get_article($1 :: int4) :: json
         |]
 
 
-getArticlesByCategoryId :: Statement Int32 (Maybe Value)
+getArticlesByCategoryId :: Statement Int32 Value
 getArticlesByCategoryId =
-    [TH.maybeStatement|
+    [TH.singletonStatement|
         select json_agg(aid.get_article) :: json from 
             (select get_article(article_id) from articles where category_id = $1 :: int4) as aid
         |]
@@ -254,25 +307,25 @@ getArticlesByCategoryId =
 -- doesn't work
 --select (articles_by_tag_id.*) :: json from
 --    (select json_agg(get_article(article_id)) from articles_tags where tag_id = $1 :: int4) as articles_by_tag_id
-getArticlesByTagId :: Statement Int32 (Maybe Value)
+getArticlesByTagId :: Statement Int32 Value
 getArticlesByTagId =
-    [TH.maybeStatement|
+    [TH.singletonStatement|
         select json_agg(articles_by_tag_id.get_article) :: json from
             (select get_article(article_id) from articles_tags where tag_id = $1 :: int4) as articles_by_tag_id
         |]
 
 -- select get_article(article_id) from articles_tags where article_id = any (array[4,1]::int[]) group by article_id;
-getArticlesByAnyTagId :: Statement (Vector Int32) (Maybe Value)
+getArticlesByAnyTagId :: Statement (Vector Int32) Value
 getArticlesByAnyTagId =
-    [TH.maybeStatement|
+    [TH.singletonStatement|
         select json_agg(articles_ids.get_article) :: json from
             (select get_article(article_id) from articles_tags where tag_id = any ($1 :: int4[]) group by article_id) as articles_ids
         |]
 
 -- select get_article(article_id) from (select article_id, array_agg(tag_id) as id_array from articles_tags group by article_id) as articles_tags_agg where id_array @> (array[2,1]::int[]);
-getArticlesByAllTagId :: Statement (Vector Int32) (Maybe Value)
+getArticlesByAllTagId :: Statement (Vector Int32) Value
 getArticlesByAllTagId =
-    [TH.maybeStatement|
+    [TH.singletonStatement|
         select json_agg(get_article) :: json from (
             select get_article(article_id) from
                 (select article_id, array_agg(tag_id) as id_array from
@@ -282,17 +335,17 @@ getArticlesByAllTagId =
 
 -- select * from articles where article_title like '%ve%';
 -- select json_agg(get_article(article_id)) as articles from (select article_id  from articles where article_title like '%ve%') as foo;
-getArticlesByTitlePart :: Statement Text (Maybe Value)
+getArticlesByTitlePart :: Statement Text Value
 getArticlesByTitlePart =
-    [TH.maybeStatement|
+    [TH.singletonStatement|
         select json_agg(get_article(article_id)) :: json from
             (select article_id from articles where article_title ilike
                 '%' || regexp_replace(($1 :: text), '(%|_)', '', 'g') || '%') as articles_by_title_part
         |]
 
-getArticlesByContentPart :: Statement Text (Maybe Value)
+getArticlesByContentPart :: Statement Text Value
 getArticlesByContentPart =
-    [TH.maybeStatement|
+    [TH.singletonStatement|
         select json_agg(get_article(article_id)) :: json from
             (select article_id from articles where article_content ilike
                 '%' || regexp_replace(($1 :: text), '(%|_)', '', 'g') || '%') as articles_by_content_part

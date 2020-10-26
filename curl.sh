@@ -15,6 +15,7 @@ curl -i -X DELETE -d '{"author_id": 2}' http://0.0.0.0:8081/authors
 
 
 curl -i -X POST -d '{"name": "pluh", "parent_id": null}' http://0.0.0.0:8081/categories
+curl -i -X POST -d '{"name": "pluh1", "parent_id": 1}' http://0.0.0.0:8081/categories
 
 curl -i -X PATCH -d '{"category_id": 1, "name": "pluh_pattched", "parent_id": null}' http://0.0.0.0:8081/categories
 
@@ -41,7 +42,7 @@ curl -i -X DELETE -d '{"tag_id": 1}' http://0.0.0.0:8081/tags
 
 curl -i -X POST -d '{"article_title": "they dont beleive their eyes…", "author": 1, "category_id": 1, "article_content": "article is long enough"}' http://0.0.0.0:8081/articles
 
-# "publish" article draft
+# publish article draft
 curl -i -X POST -d '{"article_id": 3}' http://0.0.0.0:8081/articles
 
 curl -i -X GET -d '{"article_id": 2}' http://0.0.0.0:8081/articles
