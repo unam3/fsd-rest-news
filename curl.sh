@@ -28,7 +28,7 @@ curl -i -X POST -d '{"article_id": 2, "comment_text": "bluasd!"}' http://0.0.0.0
 
 curl -i -X GET -d '{"article_id": 2}' http://0.0.0.0:8081/comments
 
-curl -i -X DELETE -d '{"article_id": 4}' http://0.0.0.0:8081/comments
+curl -i -X DELETE -d '{"comment_id": 4}' http://0.0.0.0:8081/comments
 
 
 curl -i -X POST -d '{"tag_name": "pluh"}' http://0.0.0.0:8081/tags
