@@ -68,13 +68,14 @@ createUser createUserRequest = let {
     sessionResults <- Session.run (Session.statement params HST.createUser) connection
     valueToUTFLBS sessionResults
 
-deleteUser :: UserIdRequest -> IO (Either Session.QueryError ())
+deleteUser :: UserIdRequest -> IO (Either Session.QueryError ByteString)
 deleteUser deleteUserRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = user_id (deleteUserRequest :: UserIdRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
-    Session.run (Session.statement params HST.deleteUser) connection
+    sessionResults <- Session.run (Session.statement params HST.deleteUser) connection
+    valueToUTFLBS sessionResults
 
 getUser :: UserIdRequest -> IO (Either Session.QueryError ByteString)
 getUser getUserRequest = let {
@@ -118,13 +119,14 @@ getAuthor authorIdRequest = let {
     sessionResults <- Session.run (Session.statement params HST.getUser) connection
     valueToUTFLBS sessionResults
 
-deleteAuthorRole :: AuthorIdRequest -> IO (Either Session.QueryError ())
+deleteAuthorRole :: AuthorIdRequest -> IO (Either Session.QueryError ByteString)
 deleteAuthorRole authorIdRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = author_id (authorIdRequest :: AuthorIdRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
-    Session.run (Session.statement params HST.deleteAuthorRole) connection
+    sessionResults <- Session.run (Session.statement params HST.deleteAuthorRole) connection
+    valueToUTFLBS sessionResults
 
 createCategory :: CreateCategoryRequest -> IO (Either Session.QueryError ByteString)
 createCategory createCategoryRequest = let {
@@ -160,13 +162,14 @@ getCategory categoryIdRequest = let {
     sessionResults <- Session.run (Session.statement params HST.getCategory) connection
     valueToUTFLBS sessionResults
 
-deleteCategory :: CategoryIdRequest -> IO (Either Session.QueryError ())
+deleteCategory :: CategoryIdRequest -> IO (Either Session.QueryError ByteString)
 deleteCategory categoryIdRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = category_id (categoryIdRequest :: CategoryIdRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
-    Session.run (Session.statement params HST.deleteCategory) connection
+    sessionResults <- Session.run (Session.statement params HST.deleteCategory) connection
+    valueToUTFLBS sessionResults
 
 
 createTag :: CreateTagRequest -> IO (Either Session.QueryError ByteString)
@@ -187,13 +190,14 @@ editTag editTagRequest = let {
     sessionResults <- Session.run (Session.statement params HST.editTag) connection
     valueToUTFLBS sessionResults
 
-deleteTag :: TagIdRequest -> IO (Either Session.QueryError ())
+deleteTag :: TagIdRequest -> IO (Either Session.QueryError ByteString)
 deleteTag deleteTagRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = tag_id (deleteTagRequest :: TagIdRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
-    Session.run (Session.statement params HST.deleteTag) connection
+    sessionResults <- Session.run (Session.statement params HST.deleteTag) connection
+    valueToUTFLBS sessionResults
 
 getTag :: TagIdRequest -> IO (Either Session.QueryError ByteString)
 getTag getTagRequest = let {
@@ -221,13 +225,14 @@ createComment createCommentRequest = let {
     sessionResults <- Session.run (Session.statement params HST.createComment) connection
     valueToUTFLBS sessionResults
 
-deleteComment :: CommentIdRequest -> IO (Either Session.QueryError ())
+deleteComment :: CommentIdRequest -> IO (Either Session.QueryError ByteString)
 deleteComment deleteCommentRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = comment_id (deleteCommentRequest :: CommentIdRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
-    Session.run (Session.statement params HST.deleteComment) connection
+    sessionResults <- Session.run (Session.statement params HST.deleteComment) connection
+    valueToUTFLBS sessionResults
 
 getArticleComments :: ArticleCommentsRequest -> IO (Either Session.QueryError ByteString)
 getArticleComments articleCommentsRequest = let {

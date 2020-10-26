@@ -122,21 +122,21 @@ restAPI request respond = let {
                 sessionResults = case errorOrSessionName of
                     "createUser" -> runSession HSS.createUser
                     "getUser" -> runSession HSS.getUser
-                    --"deleteUser" -> runSession HSS.deleteUser
+                    "deleteUser" -> runSession HSS.deleteUser
                     "promoteUserToAuthor" -> runSession HSS.promoteUserToAuthor;
                     "editAuthor" -> runSession HSS.editAuthor
                     "getAuthor" -> runSession HSS.getAuthor
-                    --"deleteAuthorRole" -> runSession HSS.deleteAuthorRole
+                    "deleteAuthorRole" -> runSession HSS.deleteAuthorRole
                     "createCategory" -> runSession HSS.createCategory
                     "updateCategory" -> runSession HSS.updateCategory
                     "getCategory" -> runSession HSS.getCategory
-                    --"deleteCategory" -> runSession HSS.deleteCategory
+                    "deleteCategory" -> runSession HSS.deleteCategory
                     "createTag" -> runSession HSS.createTag
                     "editTag" -> runSession HSS.editTag
                     "getTag" -> runSession HSS.getTag
-                    --"deleteTag" -> runSession HSS.deleteTag
+                    "deleteTag" -> runSession HSS.deleteTag
                     "createComment" -> runSession HSS.createComment
-                    --"deleteComment" -> runSession HSS.deleteComment
+                    "deleteComment" -> runSession HSS.deleteComment
                     "getArticleComments" -> runSession HSS.getArticleComments
                     "createArticleDraft" -> runSession HSS.createArticleDraft
                     "publishArticleDraft" -> runSession HSS.publishArticleDraft
@@ -153,6 +153,7 @@ restAPI request respond = let {
             processedResults <- pure (case results of
                 (Right ulbs) -> ulbs
                 _ -> "left sth" :: UTFLBS.ByteString)
+                --(Left sth) -> "left sth" :: UTFLBS.ByteString)
             --respond $ responseLBS H.status200 [] errorOrSessionName)
             debugM "rest-news" $ UTFLBS.toString processedResults
             let {

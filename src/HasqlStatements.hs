@@ -60,12 +60,15 @@ createUser =
             )::json
         |]
 
-deleteUser :: Statement Int32 ()
+deleteUser :: Statement Int32 Value
 deleteUser =
-    [TH.resultlessStatement|
+    [TH.singletonStatement|
         delete
         from users
         where user_id = $1 :: int4
+        returning json_build_object( 
+            'results', 'ook'
+            )::json
         |]
 
 getUser :: Statement Int32 Value
@@ -85,12 +88,15 @@ getAuthor =
         where author_id = $1 :: int4
         |]
 
-deleteAuthorRole :: Statement Int32 ()
+deleteAuthorRole :: Statement Int32 Value
 deleteAuthorRole =
-    [TH.resultlessStatement|
+    [TH.singletonStatement|
         delete
         from authors
         where author_id = $1 :: int4
+        returning json_build_object( 
+            'results', 'ook'
+            )::json
         |]
 
 promoteUserToAuthor :: Statement (Int32, Text) Value
@@ -161,12 +167,15 @@ getCategory =
         where category_id = $1 :: int4
         |]
 
-deleteCategory :: Statement Int32 ()
+deleteCategory :: Statement Int32 Value
 deleteCategory =
-    [TH.resultlessStatement|
+    [TH.singletonStatement|
         delete
         from categories
         where category_id = $1 :: int4
+        returning json_build_object( 
+            'results', 'ook'
+            )::json
         |]
 
 
@@ -197,12 +206,15 @@ editTag =
             )::json
         |]
 
-deleteTag :: Statement Int32 ()
+deleteTag :: Statement Int32 Value
 deleteTag =
-    [TH.resultlessStatement|
+    [TH.singletonStatement|
         delete
         from tags
         where tag_id = $1 :: int4
+        returning json_build_object( 
+            'results', 'ook'
+            )::json
         |]
 
 getTag :: Statement Int32 Value
@@ -231,12 +243,15 @@ createComment =
             )::json
         |]
 
-deleteComment :: Statement Int32 ()
+deleteComment :: Statement Int32 Value
 deleteComment =
-    [TH.resultlessStatement|
+    [TH.singletonStatement|
         delete
         from articles_comments
         where comment_id = $1 :: int4
+        returning json_build_object( 
+            'results', 'ook'
+            )::json
         |]
 
 getArticleComments :: Statement Int32 Value
