@@ -118,38 +118,37 @@ restAPI request respond = let {
                     else "Endpoint needed")
 
             results <- let {
-                -- get rid of show
                 runSession session = (session . fromJust $ decode requestBody);
                 sessionResults = case errorOrSessionName of
                     "createUser" -> runSession HSS.createUser
-                    --"getUser" -> runSession HSS.getUser
+                    "getUser" -> runSession HSS.getUser
                     --"deleteUser" -> runSession HSS.deleteUser
-                    --"promoteUserToAuthor" -> runSession HSS.promoteUserToAuthor;
-                    --"editAuthor" -> runSession HSS.editAuthor
-                    --"getAuthor" -> runSession HSS.getAuthor
+                    "promoteUserToAuthor" -> runSession HSS.promoteUserToAuthor;
+                    "editAuthor" -> runSession HSS.editAuthor
+                    "getAuthor" -> runSession HSS.getAuthor
                     --"deleteAuthorRole" -> runSession HSS.deleteAuthorRole
-                    --"createCategory" -> runSession HSS.createCategory
-                    --"updateCategory" -> runSession HSS.updateCategory
-                    --"getCategory" -> runSession HSS.getCategory
+                    "createCategory" -> runSession HSS.createCategory
+                    "updateCategory" -> runSession HSS.updateCategory
+                    "getCategory" -> runSession HSS.getCategory
                     --"deleteCategory" -> runSession HSS.deleteCategory
-                    --"createTag" -> runSession HSS.createTag
-                    --"editTag" -> runSession HSS.editTag
-                    --"getTag" -> runSession HSS.getTag
+                    "createTag" -> runSession HSS.createTag
+                    "editTag" -> runSession HSS.editTag
+                    "getTag" -> runSession HSS.getTag
                     --"deleteTag" -> runSession HSS.deleteTag
-                    --"createComment" -> runSession HSS.createComment
+                    "createComment" -> runSession HSS.createComment
                     --"deleteComment" -> runSession HSS.deleteComment
-                    --"getArticleComments" -> runSession HSS.getArticleComments
-                    --"createArticleDraft" -> runSession HSS.createArticleDraft
-                    --"publishArticleDraft" -> runSession HSS.publishArticleDraft
-                    --"getArticleDraft" -> runSession HSS.getArticleDraft
-                    --"getArticlesByCategoryId" -> runSession HSS.getArticlesByCategoryId
-                    --"getArticlesByTagId" -> runSession HSS.getArticlesByTagId
-                    --"getArticlesByAnyTagId" -> runSession HSS.getArticlesByAnyTagId
-                    --"getArticlesByAllTagId" -> runSession HSS.getArticlesByAllTagId
-                    --"getArticlesByTitlePart" -> runSession HSS.getArticlesByTitlePart
-                    --"getArticlesByContentPart" -> runSession HSS.getArticlesByContentPart
+                    "getArticleComments" -> runSession HSS.getArticleComments
+                    "createArticleDraft" -> runSession HSS.createArticleDraft
+                    "publishArticleDraft" -> runSession HSS.publishArticleDraft
+                    "getArticleDraft" -> runSession HSS.getArticleDraft
+                    "getArticlesByCategoryId" -> runSession HSS.getArticlesByCategoryId
+                    "getArticlesByTagId" -> runSession HSS.getArticlesByTagId
+                    "getArticlesByAnyTagId" -> runSession HSS.getArticlesByAnyTagId
+                    "getArticlesByAllTagId" -> runSession HSS.getArticlesByAllTagId
+                    "getArticlesByTitlePart" -> runSession HSS.getArticlesByTitlePart
+                    "getArticlesByContentPart" -> runSession HSS.getArticlesByContentPart
                     "getArticlesByAuthorNamePart" -> runSession HSS.getArticlesByAuthorNamePart
-                    --nonMatched -> pure . fromStrict . pack $ nonMatched;
+                    nonMatched -> pure . pure $ UTFLBS.fromString nonMatched;
                 } in sessionResults
             processedResults <- pure (case results of
                 (Right ulbs) -> ulbs

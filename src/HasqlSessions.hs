@@ -32,13 +32,12 @@ module HasqlSessions (
     getArticlesByAuthorNamePart
     ) where
 
-import Data.ByteString.Lazy (ByteString)
-import Data.Aeson (encode)
-import Data.Int (Int32)
-import Data.Text (Text, unpack)
+import Data.Aeson (Value, encode)
+import Data.ByteString.Lazy.UTF8 (ByteString)
+--import Data.Text (Text, unpack, pack)
+--import Data.Text.IO (putStrLn)
 import qualified Hasql.Connection as Connection
 import qualified Hasql.Session as Session
-import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
 
 import AesonDefinitions
 import qualified HasqlStatements as HST
@@ -51,17 +50,23 @@ import qualified HasqlStatements as HST
 -- *Main RestNews> dbCall
 -- Left (QueryError "INSERT INTO users VALUES (5, 'n', 's', '2010-12-12', FALSE)" [] (ResultError (ServerError "23505" "duplicate key value violates unique constraint \"users_pkey\"" (Just "Key (user_id)=(5) already exists.") Nothing)))
 
-createUser :: CreateUserRequest -> IO (Either Session.QueryError UTFLBS.ByteString)
+--int32ToUTFLBS $ Session.run (Session.statement params HST.createUser) connection
+--int32ToUTFLBS = fmap $ fmap (UTFLBS.fromString . show)
+
+-- Text
+--(fmap (fmap (UTFLBS.fromString . unpack))) $ Session.run (Session.statement params HST.createUser) connection
+
+valueToUTFLBS :: Either Session.QueryError Value -> IO (Either Session.QueryError ByteString)
+valueToUTFLBS = pure . fmap encode
+
+createUser :: CreateUserRequest -> IO (Either Session.QueryError ByteString)
 createUser createUserRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (name (createUserRequest :: CreateUserRequest), surname createUserRequest, avatar createUserRequest, is_admin createUserRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
-    --Session.run (Session.statement params HST.createUser) connection
-    -- Int32
-    (fmap (fmap (UTFLBS.fromString . show))) $ Session.run (Session.statement params HST.createUser) connection
-    -- Text
-    --(fmap (fmap (UTFLBS.fromString . unpack))) $ Session.run (Session.statement params HST.createUser) connection
+    sessionResults <- Session.run (Session.statement params HST.createUser) connection
+    pure (fmap encode sessionResults)
 
 deleteUser :: UserIdRequest -> IO (Either Session.QueryError ())
 deleteUser deleteUserRequest = let {
@@ -71,16 +76,17 @@ deleteUser deleteUserRequest = let {
     Right connection <- Connection.acquire connectionSettings
     Session.run (Session.statement params HST.deleteUser) connection
 
-getUser :: UserIdRequest -> IO (Either Session.QueryError (Text, Text, Text, Text, Bool))
+getUser :: UserIdRequest -> IO (Either Session.QueryError ByteString)
 getUser getUserRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = user_id (getUserRequest :: UserIdRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
-    Session.run (Session.statement params HST.getUser) connection
+    sessionResults <- Session.run (Session.statement params HST.getUser) connection
+    pure (fmap encode sessionResults)
 
 
-promoteUserToAuthor :: PromoteUserToAuthorRequest -> IO (Either Session.QueryError (Int32))
+promoteUserToAuthor :: PromoteUserToAuthorRequest -> IO (Either Session.QueryError ByteString)
 promoteUserToAuthor promoteUserToAuthorRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (
@@ -88,9 +94,10 @@ promoteUserToAuthor promoteUserToAuthorRequest = let {
         description (promoteUserToAuthorRequest :: PromoteUserToAuthorRequest));
 } in do
     Right connection <- Connection.acquire connectionSettings
-    Session.run (Session.statement params HST.promoteUserToAuthor) connection
+    sessionResults <- Session.run (Session.statement params HST.promoteUserToAuthor) connection
+    valueToUTFLBS sessionResults
 
-editAuthor :: EditAuthorRequest -> IO (Either Session.QueryError ())
+editAuthor :: EditAuthorRequest -> IO (Either Session.QueryError ByteString)
 editAuthor editAuthorRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (
@@ -99,15 +106,17 @@ editAuthor editAuthorRequest = let {
         description (editAuthorRequest :: EditAuthorRequest));
 } in do
     Right connection <- Connection.acquire connectionSettings
-    Session.run (Session.statement params HST.editAuthor) connection
+    sessionResults <- Session.run (Session.statement params HST.editAuthor) connection
+    pure (fmap encode sessionResults)
 
-getAuthor :: AuthorIdRequest -> IO (Either Session.QueryError (Int32, Int32, Text))
+getAuthor :: AuthorIdRequest -> IO (Either Session.QueryError ByteString)
 getAuthor authorIdRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = author_id (authorIdRequest :: AuthorIdRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
-    Session.run (Session.statement params HST.getAuthor) connection
+    sessionResults <- Session.run (Session.statement params HST.getUser) connection
+    valueToUTFLBS sessionResults
 
 deleteAuthorRole :: AuthorIdRequest -> IO (Either Session.QueryError ())
 deleteAuthorRole authorIdRequest = let {
@@ -117,7 +126,7 @@ deleteAuthorRole authorIdRequest = let {
     Right connection <- Connection.acquire connectionSettings
     Session.run (Session.statement params HST.deleteAuthorRole) connection
 
-createCategory :: CreateCategoryRequest -> IO (Either Session.QueryError ())
+createCategory :: CreateCategoryRequest -> IO (Either Session.QueryError ByteString)
 createCategory createCategoryRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (
@@ -126,9 +135,10 @@ createCategory createCategoryRequest = let {
         );
 } in do
     Right connection <- Connection.acquire connectionSettings
-    Session.run (Session.statement params HST.createCategory) connection
+    sessionResults <- Session.run (Session.statement params HST.createCategory) connection
+    valueToUTFLBS sessionResults
 
-updateCategory :: UpdateCategoryRequest -> IO (Either Session.QueryError ())
+updateCategory :: UpdateCategoryRequest -> IO (Either Session.QueryError ByteString)
 updateCategory updateCategoryRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (
@@ -138,15 +148,17 @@ updateCategory updateCategoryRequest = let {
         );
 } in do
     Right connection <- Connection.acquire connectionSettings
-    Session.run (Session.statement params HST.updateCategory) connection
+    sessionResults <- Session.run (Session.statement params HST.updateCategory) connection
+    valueToUTFLBS sessionResults
 
-getCategory :: CategoryIdRequest -> IO (Either Session.QueryError (Text, Maybe Int32))
+getCategory :: CategoryIdRequest -> IO (Either Session.QueryError ByteString)
 getCategory categoryIdRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = category_id (categoryIdRequest :: CategoryIdRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
-    Session.run (Session.statement params HST.getCategory) connection
+    sessionResults <- Session.run (Session.statement params HST.getCategory) connection
+    valueToUTFLBS sessionResults
 
 deleteCategory :: CategoryIdRequest -> IO (Either Session.QueryError ())
 deleteCategory categoryIdRequest = let {
@@ -157,21 +169,23 @@ deleteCategory categoryIdRequest = let {
     Session.run (Session.statement params HST.deleteCategory) connection
 
 
-createTag :: CreateTagRequest -> IO (Either Session.QueryError ())
+createTag :: CreateTagRequest -> IO (Either Session.QueryError ByteString)
 createTag createTagRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = tag_name (createTagRequest :: CreateTagRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
-    Session.run (Session.statement params HST.createTag) connection
+    sessionResults <- Session.run (Session.statement params HST.createTag) connection
+    valueToUTFLBS sessionResults
 
-editTag :: EditTagRequest -> IO (Either Session.QueryError ())
+editTag :: EditTagRequest -> IO (Either Session.QueryError ByteString)
 editTag editTagRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (tag_id (editTagRequest :: EditTagRequest), tag_name (editTagRequest :: EditTagRequest));
 } in do
     Right connection <- Connection.acquire connectionSettings
-    Session.run (Session.statement params HST.editTag) connection
+    sessionResults <- Session.run (Session.statement params HST.editTag) connection
+    valueToUTFLBS sessionResults
 
 deleteTag :: TagIdRequest -> IO (Either Session.QueryError ())
 deleteTag deleteTagRequest = let {
@@ -181,7 +195,7 @@ deleteTag deleteTagRequest = let {
     Right connection <- Connection.acquire connectionSettings
     Session.run (Session.statement params HST.deleteTag) connection
 
-getTag :: TagIdRequest -> IO (Either Session.QueryError Text)
+getTag :: TagIdRequest -> IO (Either Session.QueryError ByteString)
 getTag getTagRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = tag_id (getTagRequest :: TagIdRequest);
@@ -191,10 +205,11 @@ getTag getTagRequest = let {
     --    Left connectionError -> error $ show connectionError
     --    Right connection -> Connection.acquire connectionSettings
     Right connection <- Connection.acquire connectionSettings
-    Session.run (Session.statement params HST.getTag) connection
+    sessionResults <- Session.run (Session.statement params HST.getTag) connection
+    valueToUTFLBS sessionResults
 
 
-createComment :: CreateCommentRequest -> IO (Either Session.QueryError ())
+createComment :: CreateCommentRequest -> IO (Either Session.QueryError ByteString)
 createComment createCommentRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (
@@ -203,7 +218,8 @@ createComment createCommentRequest = let {
         );
 } in do
     Right connection <- Connection.acquire connectionSettings
-    Session.run (Session.statement params HST.createComment) connection
+    sessionResults <- Session.run (Session.statement params HST.createComment) connection
+    valueToUTFLBS sessionResults
 
 deleteComment :: CommentIdRequest -> IO (Either Session.QueryError ())
 deleteComment deleteCommentRequest = let {
@@ -213,16 +229,17 @@ deleteComment deleteCommentRequest = let {
     Right connection <- Connection.acquire connectionSettings
     Session.run (Session.statement params HST.deleteComment) connection
 
-getArticleComments :: ArticleCommentsRequest -> IO (Either Session.QueryError (Int32, Text))
+getArticleComments :: ArticleCommentsRequest -> IO (Either Session.QueryError ByteString)
 getArticleComments articleCommentsRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = article_id (articleCommentsRequest :: ArticleCommentsRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
-    Session.run (Session.statement params HST.getArticleComments) connection
+    sessionResults <- Session.run (Session.statement params HST.getArticleComments) connection
+    valueToUTFLBS sessionResults
 
 
-createArticleDraft :: ArticleDraftRequest -> IO (Either Session.QueryError Int32)
+createArticleDraft :: ArticleDraftRequest -> IO (Either Session.QueryError ByteString)
 createArticleDraft articleDraftRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (
@@ -233,9 +250,10 @@ createArticleDraft articleDraftRequest = let {
         );
 } in do
     Right connection <- Connection.acquire connectionSettings
-    Session.run (Session.statement params HST.createArticleDraft) connection
+    sessionResults <- Session.run (Session.statement params HST.createArticleDraft) connection
+    valueToUTFLBS sessionResults
 
-publishArticleDraft :: ArticleDraftIdRequest -> IO (Either Session.QueryError ())
+publishArticleDraft :: ArticleDraftIdRequest -> IO (Either Session.QueryError ByteString)
 publishArticleDraft articleDraftIdRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (
@@ -243,7 +261,8 @@ publishArticleDraft articleDraftIdRequest = let {
         );
 } in do
     Right connection <- Connection.acquire connectionSettings
-    Session.run (Session.statement params HST.publishArticleDraft) connection
+    sessionResults <- Session.run (Session.statement params HST.publishArticleDraft) connection
+    valueToUTFLBS sessionResults
 
 getArticleDraft :: ArticleDraftIdRequest -> IO (Either Session.QueryError ByteString)
 getArticleDraft articleDraftIdRequest = let {
@@ -254,7 +273,7 @@ getArticleDraft articleDraftIdRequest = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- (Session.run (Session.statement params HST.getArticleDraft) connection)
-    pure (fmap encode sessionResults)
+    valueToUTFLBS sessionResults
 
 
 getArticlesByCategoryId :: ArticlesByCategoryIdRequest -> IO (Either Session.QueryError ByteString)
@@ -311,6 +330,7 @@ getArticlesByTitlePart substringRequest = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- (Session.run (Session.statement params HST.getArticlesByTitlePart) connection)
+    --Data.Text.IO.putStrLn . pack $ show sessionResults
     pure (fmap encode sessionResults)
 
 getArticlesByContentPart :: ArticlesByContentPartRequest -> IO (Either Session.QueryError ByteString)
@@ -324,7 +344,7 @@ getArticlesByContentPart substringRequest = let {
     sessionResults <- (Session.run (Session.statement params HST.getArticlesByContentPart) connection)
     pure (fmap encode sessionResults)
 
-getArticlesByAuthorNamePart :: ArticlesByAuthorNamePartRequest -> IO (Either Session.QueryError UTFLBS.ByteString)
+getArticlesByAuthorNamePart :: ArticlesByAuthorNamePartRequest -> IO (Either Session.QueryError ByteString)
 getArticlesByAuthorNamePart substringRequest = let {
     connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (
