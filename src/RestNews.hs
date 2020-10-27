@@ -150,12 +150,14 @@ restAPI request respond = let {
                     "getArticlesByAuthorNamePart" -> runSession HSS.getArticlesByAuthorNamePart
                     nonMatched -> pure . pure $ UTFLBS.fromString nonMatched;
                 } in sessionResults
+            resultsString <- pure (case results of
+                (Right ulbs) -> UTFLBS.toString ulbs
+                leftErr -> show leftErr)
+            debugM "rest-news" resultsString
+
             processedResults <- pure (case results of
                 (Right ulbs) -> ulbs
                 _ -> "left sth" :: UTFLBS.ByteString)
-                --(Left sth) -> "left sth" :: UTFLBS.ByteString)
-            --respond $ responseLBS H.status200 [] errorOrSessionName)
-            debugM "rest-news" $ UTFLBS.toString processedResults
             let {
                 httpStatus = (case errorOrSessionName of
                     "Endpoint needed" -> H.status404
