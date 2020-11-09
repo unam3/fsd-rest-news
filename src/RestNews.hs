@@ -8,20 +8,38 @@ import AesonDefinitions (CreateUserRequest, UserIdRequest, PromoteUserToAuthorRe
 import qualified HasqlSessions as HSS
 
 import Control.Exception (bracket_)
+import Control.Monad (void)
 import Data.Aeson (decode)
 import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
 import Data.Maybe (fromJust, isJust)
+import qualified Data.Vault.Lazy as Vault
+import Database.PostgreSQL.Simple
 import qualified Network.HTTP.Types as H
 import Network.Wai (Application, pathInfo, requestMethod, responseLBS, strictRequestBody)
 import Network.Wai.Handler.Warp (Port, run)
+import Network.Wai.Session (withSession, Session)
+import Network.Wai.Session.PostgreSQL (dbStore, defaultSettings, fromSimpleConnection, purger)
 import System.Log.Logger (Priority (DEBUG, ERROR), debugM, setLevel, traplogging, updateGlobalLogger)
+import Web.Cookie (defaultSetCookie)
+
+--ifLoggedIn
 
 ifValidRequest :: String -> Maybe a -> String
 ifValidRequest sessionName = maybe "Wrong parameters/parameters values" (const sessionName)
 
+dbconnect :: IO Connection
+dbconnect = let {
+    connectInfo = ConnectInfo {
+          connectHost = "localhost"
+        , connectPort = 5432
+        , connectUser = "rest-news-user"
+        , connectPassword = "rest"
+        , connectDatabase = "rest-news-db" };
+    } in connectPostgreSQL $ postgreSQLConnectionString connectInfo
+
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
-restAPI :: Application;
-restAPI request respond = let {
+restAPI :: Vault.Key (Session IO String String) -> Application;
+restAPI vaultK request respond = let {
         pathTextChunks = pathInfo request;
         isRequestPathNotEmpty = (not $ null pathTextChunks);
         pathHeadChunk = head pathTextChunks;
@@ -171,8 +189,20 @@ restAPI request respond = let {
 runWarp :: IO ()
 runWarp = let {
     port = 8081 :: Port;
-} in run port restAPI
-    >> return ()
+} in do
+    vaultK <- Vault.newKey
+    simpleConnection <- (dbconnect >>= fromSimpleConnection)
+    -- IO (SessionStore IO String String)
+    store <- dbStore simpleConnection defaultSettings
+    void (purger simpleConnection defaultSettings)
+    void (run port
+        -- :: SessionStore m k v	The SessionStore to use for sessions
+        -- -> ByteString	        Name to use for the session cookie (MUST BE ASCII)
+        -- -> SetCookie	            Settings for the cookie (path, expiry, etc)
+        -- -> Key (Session m k v)	Vault key to use when passing the session through
+        -- -> Middleware	 
+        $ withSession store "SESSION" defaultSetCookie vaultK
+        $ restAPI vaultK)
 
 runWarpWithLogger :: IO ()
 runWarpWithLogger = traplogging "rest-news" ERROR "shutdown due to"
