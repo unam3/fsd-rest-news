@@ -59,9 +59,12 @@ import qualified HasqlStatements as HST
 valueToUTFLBS :: Either Session.QueryError Value -> IO (Either Session.QueryError ByteString)
 valueToUTFLBS = pure . fmap encode
 
+connectionSettings :: Connection.Settings
+connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
+
+
 createUser :: CreateUserRequest -> IO (Either Session.QueryError ByteString)
 createUser createUserRequest = let {
-    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (name (createUserRequest :: CreateUserRequest), surname createUserRequest, avatar createUserRequest, is_admin createUserRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
@@ -70,7 +73,6 @@ createUser createUserRequest = let {
 
 deleteUser :: UserIdRequest -> IO (Either Session.QueryError ByteString)
 deleteUser deleteUserRequest = let {
-    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = user_id (deleteUserRequest :: UserIdRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
@@ -79,7 +81,6 @@ deleteUser deleteUserRequest = let {
 
 getUser :: UserIdRequest -> IO (Either Session.QueryError ByteString)
 getUser getUserRequest = let {
-    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = user_id (getUserRequest :: UserIdRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
@@ -89,7 +90,6 @@ getUser getUserRequest = let {
 
 promoteUserToAuthor :: PromoteUserToAuthorRequest -> IO (Either Session.QueryError ByteString)
 promoteUserToAuthor promoteUserToAuthorRequest = let {
-    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (
         user_id (promoteUserToAuthorRequest :: PromoteUserToAuthorRequest),
         description (promoteUserToAuthorRequest :: PromoteUserToAuthorRequest));
@@ -100,7 +100,6 @@ promoteUserToAuthor promoteUserToAuthorRequest = let {
 
 editAuthor :: EditAuthorRequest -> IO (Either Session.QueryError ByteString)
 editAuthor editAuthorRequest = let {
-    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (
         author_id (editAuthorRequest :: EditAuthorRequest),
         user_id (editAuthorRequest :: EditAuthorRequest),
@@ -112,7 +111,6 @@ editAuthor editAuthorRequest = let {
 
 getAuthor :: AuthorIdRequest -> IO (Either Session.QueryError ByteString)
 getAuthor authorIdRequest = let {
-    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = author_id (authorIdRequest :: AuthorIdRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
@@ -121,7 +119,6 @@ getAuthor authorIdRequest = let {
 
 deleteAuthorRole :: AuthorIdRequest -> IO (Either Session.QueryError ByteString)
 deleteAuthorRole authorIdRequest = let {
-    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = author_id (authorIdRequest :: AuthorIdRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
@@ -130,7 +127,6 @@ deleteAuthorRole authorIdRequest = let {
 
 createCategory :: CreateCategoryRequest -> IO (Either Session.QueryError ByteString)
 createCategory createCategoryRequest = let {
-    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (
         name (createCategoryRequest :: CreateCategoryRequest),
         parent_id (createCategoryRequest :: CreateCategoryRequest)
@@ -142,7 +138,6 @@ createCategory createCategoryRequest = let {
 
 updateCategory :: UpdateCategoryRequest -> IO (Either Session.QueryError ByteString)
 updateCategory updateCategoryRequest = let {
-    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (
         category_id (updateCategoryRequest :: UpdateCategoryRequest),
         name (updateCategoryRequest :: UpdateCategoryRequest),
@@ -155,7 +150,6 @@ updateCategory updateCategoryRequest = let {
 
 getCategory :: CategoryIdRequest -> IO (Either Session.QueryError ByteString)
 getCategory categoryIdRequest = let {
-    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = category_id (categoryIdRequest :: CategoryIdRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
@@ -164,7 +158,6 @@ getCategory categoryIdRequest = let {
 
 deleteCategory :: CategoryIdRequest -> IO (Either Session.QueryError ByteString)
 deleteCategory categoryIdRequest = let {
-    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = category_id (categoryIdRequest :: CategoryIdRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
@@ -174,7 +167,6 @@ deleteCategory categoryIdRequest = let {
 
 createTag :: CreateTagRequest -> IO (Either Session.QueryError ByteString)
 createTag createTagRequest = let {
-    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = tag_name (createTagRequest :: CreateTagRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
@@ -183,7 +175,6 @@ createTag createTagRequest = let {
 
 editTag :: EditTagRequest -> IO (Either Session.QueryError ByteString)
 editTag editTagRequest = let {
-    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (tag_id (editTagRequest :: EditTagRequest), tag_name (editTagRequest :: EditTagRequest));
 } in do
     Right connection <- Connection.acquire connectionSettings
@@ -192,7 +183,6 @@ editTag editTagRequest = let {
 
 deleteTag :: TagIdRequest -> IO (Either Session.QueryError ByteString)
 deleteTag deleteTagRequest = let {
-    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = tag_id (deleteTagRequest :: TagIdRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
@@ -201,7 +191,6 @@ deleteTag deleteTagRequest = let {
 
 getTag :: TagIdRequest -> IO (Either Session.QueryError ByteString)
 getTag getTagRequest = let {
-    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = tag_id (getTagRequest :: TagIdRequest);
 } in do
     --acquireResults <- Connection.acquire connectionSettings
@@ -215,7 +204,6 @@ getTag getTagRequest = let {
 
 createComment :: CreateCommentRequest -> IO (Either Session.QueryError ByteString)
 createComment createCommentRequest = let {
-    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (
         article_id (createCommentRequest :: CreateCommentRequest),
         comment_text (createCommentRequest :: CreateCommentRequest)
@@ -227,7 +215,6 @@ createComment createCommentRequest = let {
 
 deleteComment :: CommentIdRequest -> IO (Either Session.QueryError ByteString)
 deleteComment deleteCommentRequest = let {
-    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = comment_id (deleteCommentRequest :: CommentIdRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
@@ -236,7 +223,6 @@ deleteComment deleteCommentRequest = let {
 
 getArticleComments :: ArticleCommentsRequest -> IO (Either Session.QueryError ByteString)
 getArticleComments articleCommentsRequest = let {
-    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = article_id (articleCommentsRequest :: ArticleCommentsRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
@@ -246,7 +232,6 @@ getArticleComments articleCommentsRequest = let {
 
 createArticleDraft :: ArticleDraftRequest -> IO (Either Session.QueryError ByteString)
 createArticleDraft articleDraftRequest = let {
-    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (
         author (articleDraftRequest :: ArticleDraftRequest),
         category_id (articleDraftRequest :: ArticleDraftRequest),
@@ -260,7 +245,6 @@ createArticleDraft articleDraftRequest = let {
 
 publishArticleDraft :: ArticleDraftIdRequest -> IO (Either Session.QueryError ByteString)
 publishArticleDraft articleDraftIdRequest = let {
-    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (
         article_id (articleDraftIdRequest :: ArticleDraftIdRequest)
         );
@@ -271,7 +255,6 @@ publishArticleDraft articleDraftIdRequest = let {
 
 getArticleDraft :: ArticleDraftIdRequest -> IO (Either Session.QueryError ByteString)
 getArticleDraft articleDraftIdRequest = let {
-    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (
         article_id (articleDraftIdRequest :: ArticleDraftIdRequest)
         );
@@ -283,7 +266,6 @@ getArticleDraft articleDraftIdRequest = let {
 
 getArticlesByCategoryId :: ArticlesByCategoryIdRequest -> IO (Either Session.QueryError ByteString)
 getArticlesByCategoryId articlesByCategoryIdRequest = let {
-    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (
         category_id (articlesByCategoryIdRequest :: ArticlesByCategoryIdRequest)
         );
@@ -294,7 +276,6 @@ getArticlesByCategoryId articlesByCategoryIdRequest = let {
 
 getArticlesByTagId :: TagIdRequest -> IO (Either Session.QueryError ByteString)
 getArticlesByTagId tagIdRequest = let {
-    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (
         tag_id (tagIdRequest :: TagIdRequest)
         );
@@ -306,7 +287,6 @@ getArticlesByTagId tagIdRequest = let {
 
 getArticlesByAnyTagId :: ArticlesByTagIdListRequest -> IO (Either Session.QueryError ByteString)
 getArticlesByAnyTagId tagIdsRequest = let {
-    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (
         tags_ids (tagIdsRequest :: ArticlesByTagIdListRequest)
         );
@@ -317,7 +297,6 @@ getArticlesByAnyTagId tagIdsRequest = let {
 
 getArticlesByAllTagId :: ArticlesByTagIdListRequest -> IO (Either Session.QueryError ByteString)
 getArticlesByAllTagId tagIdsRequest = let {
-    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (
         tags_ids (tagIdsRequest :: ArticlesByTagIdListRequest)
         );
@@ -328,7 +307,6 @@ getArticlesByAllTagId tagIdsRequest = let {
 
 getArticlesByTitlePart :: ArticlesByTitlePartRequest -> IO (Either Session.QueryError ByteString)
 getArticlesByTitlePart substringRequest = let {
-    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (
         title_substring (substringRequest :: ArticlesByTitlePartRequest)
         );
@@ -340,7 +318,6 @@ getArticlesByTitlePart substringRequest = let {
 
 getArticlesByContentPart :: ArticlesByContentPartRequest -> IO (Either Session.QueryError ByteString)
 getArticlesByContentPart substringRequest = let {
-    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (
         content_substring (substringRequest :: ArticlesByContentPartRequest)
         );
@@ -351,7 +328,6 @@ getArticlesByContentPart substringRequest = let {
 
 getArticlesByAuthorNamePart :: ArticlesByAuthorNamePartRequest -> IO (Either Session.QueryError ByteString)
 getArticlesByAuthorNamePart substringRequest = let {
-    connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
     params = (
         author_name_substring (substringRequest :: ArticlesByAuthorNamePartRequest)
         );

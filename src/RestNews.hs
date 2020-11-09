@@ -171,9 +171,10 @@ restAPI request respond = let {
 runWarp :: IO ()
 runWarp = let {
     port = 8081 :: Port;
-} in updateGlobalLogger "rest-news" (setLevel DEBUG)
-    >> run port restAPI
-    >> pure ()
+} in run port restAPI
+    >> return ()
 
 runWarpWithLogger :: IO ()
-runWarpWithLogger = traplogging "rest-news" ERROR "shutdown due to" runWarp
+runWarpWithLogger = traplogging "rest-news" ERROR "shutdown due to"
+    $ updateGlobalLogger "rest-news" (setLevel DEBUG)
+    >> runWarp
