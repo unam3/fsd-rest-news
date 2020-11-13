@@ -8,21 +8,19 @@ import AesonDefinitions (CreateUserRequest, UserIdRequest, PromoteUserToAuthorRe
 import qualified HasqlSessions as HSS
 
 import Control.Exception (bracket_)
-import Control.Monad (void)
+import Control.Monad (void, when)
 import Data.Aeson (decode)
 import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
 import Data.Maybe (fromJust, isJust)
 import qualified Data.Vault.Lazy as Vault
 import Database.PostgreSQL.Simple
 import qualified Network.HTTP.Types as H
-import Network.Wai (Application, pathInfo, requestMethod, responseLBS, strictRequestBody)
+import Network.Wai (Application, pathInfo, requestMethod, responseLBS, strictRequestBody, vault)
 import Network.Wai.Handler.Warp (Port, run)
 import Network.Wai.Session (withSession, Session)
 import Network.Wai.Session.PostgreSQL (dbStore, defaultSettings, fromSimpleConnection, purger)
 import System.Log.Logger (Priority (DEBUG, ERROR), debugM, setLevel, traplogging, updateGlobalLogger)
 import Web.Cookie (defaultSetCookie)
-
---ifLoggedIn
 
 ifValidRequest :: String -> Maybe a -> String
 ifValidRequest sessionName = maybe "Wrong parameters/parameters values" (const sessionName)
@@ -37,9 +35,10 @@ dbconnect = let {
         , connectDatabase = "rest-news-db" };
     } in connectPostgreSQL $ postgreSQLConnectionString connectInfo
 
+
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
 restAPI :: Vault.Key (Session IO String String) -> Application;
-restAPI vaultK request respond = let {
+restAPI vaultKey request respond = let {
         pathTextChunks = pathInfo request;
         isRequestPathNotEmpty = (not $ null pathTextChunks);
         pathHeadChunk = head pathTextChunks;
@@ -47,10 +46,25 @@ restAPI vaultK request respond = let {
     } in bracket_
         (debugM "rest-news" "Allocating scarce resource")
         (debugM "rest-news" "Cleaning up")
-        (do
+        (let {
+            Just (sessionLookup, sessionInsert) = Vault.lookup vaultKey (vault request);
+        } in do
             requestBody <- strictRequestBody request
+
+            sessionIsAdmin <- sessionLookup "is_admin"
+            debugM "rest-news" $ show ("is_admin", sessionIsAdmin)
+            
+            when (pathHeadChunk == "login") $ do
+                putStrLn "login simulation"
+                sessionInsert "is_admin" "True"
+
             debugM "rest-news" (show (method, pathTextChunks, requestBody))
             errorOrSessionName <- let {
+                isAdmin (Just _) = True;
+                isAdmin _ = False;
+                sessionNameOr404 sessionName = if isAdmin sessionIsAdmin
+                    then sessionName
+                    else "No such endpoint";
                 maybeCreateUserRequestJSON = decode requestBody :: Maybe CreateUserRequest;
                 maybeUserIdRequestJSON = decode requestBody :: Maybe UserIdRequest;
                 maybePromoteUserToAuthorRequestJSON = decode requestBody :: Maybe PromoteUserToAuthorRequest;
@@ -78,7 +92,7 @@ restAPI vaultK request respond = let {
                         "users" -> case method of
                             "POST"      -> ifValidRequest "createUser" maybeCreateUserRequestJSON
                             "GET"       -> ifValidRequest "getUser" maybeUserIdRequestJSON
-                            "DELETE"    -> ifValidRequest "deleteUser" maybeUserIdRequestJSON
+                            "DELETE"    -> sessionNameOr404 $ ifValidRequest "deleteUser" maybeUserIdRequestJSON
                             _ -> "Method is not implemented"
                         "authors" -> case method of
                             "POST"      -> ifValidRequest "promoteUserToAuthor" maybePromoteUserToAuthorRequestJSON
