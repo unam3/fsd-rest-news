@@ -28,7 +28,8 @@ module HasqlStatements (
     getArticlesByAllTagId,
     getArticlesByTitlePart,
     getArticlesByContentPart,
-    getArticlesByAuthorNamePart
+    getArticlesByAuthorNamePart,
+    getCredentials
     ) where
 
 import Data.Aeson (Value)
@@ -384,4 +385,10 @@ getArticlesByAuthorNamePart =
             ) as s_users where authors.user_id = s_users.user_id
         ) as s_author_ids
         where author = s_author_ids.author_id
+        |]
+
+getCredentials :: Statement () (Int32, Bool)
+getCredentials =
+    [TH.singletonStatement|
+        select user_id :: int4, is_admin :: bool from users where user_id = 1
         |]
