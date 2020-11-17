@@ -29,11 +29,13 @@ module HasqlSessions (
     getArticlesByAllTagId,
     getArticlesByTitlePart,
     getArticlesByContentPart,
-    getArticlesByAuthorNamePart
+    getArticlesByAuthorNamePart,
+    getCredentials    
     ) where
 
 import Data.Aeson (Value, encode)
 import Data.ByteString.Lazy.UTF8 (ByteString)
+import Data.Int (Int32)
 --import Data.Text (Text, unpack, pack)
 --import Data.Text.IO (putStrLn)
 import qualified Hasql.Connection as Connection
@@ -335,3 +337,10 @@ getArticlesByAuthorNamePart substringRequest = let {
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesByAuthorNamePart) connection
     valueToUTFLBS sessionResults
+
+getCredentials :: IO (Either Session.QueryError (Int32, Bool))
+getCredentials = 
+    do
+    Right connection <- Connection.acquire connectionSettings
+    sessionResults <- Session.run (Session.statement () HST.getCredentials) connection
+    pure sessionResults

@@ -11,6 +11,7 @@ import Control.Exception (bracket_)
 import Control.Monad (void, when)
 import Data.Aeson (decode)
 import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
+import Data.Either (fromRight)
 import Data.Maybe (fromJust, isJust)
 import qualified Data.Vault.Lazy as Vault
 import Database.PostgreSQL.Simple
@@ -59,10 +60,14 @@ restAPI vaultKey request respond = let {
 
                 putStrLn "login simulation"
 
-                -- implement is_admin db request
+                sessionResults <- HSS.getCredentials
 
-                (sessionInsert "user_id" "100500")
-                >> (sessionInsert "is_admin" "asdsa")
+                let {
+                    (user_id, is_admin) = fromRight (0, False) sessionResults;
+                } in
+                    (debugM "rest-news" . show $ ("put into sessions:", user_id, is_admin))
+                    >> (sessionInsert "is_admin" $ show is_admin)
+                    >> (sessionInsert "user_id" $ show user_id)
 
             requestBody <- strictRequestBody request
 
