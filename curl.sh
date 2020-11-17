@@ -2,7 +2,8 @@ curl -i -X POST -d '{"name": "5.110", "surname": "2ba49e2dfc0d", "avatar": "asd"
 
 curl -i -X GET -d '{"user_id": 2}' http://0.0.0.0:8081/users
 
-curl -i -X GET -v -H 'Cookie: SESSION=802ddcf910dc31abc4f3a5f35d7354b2bd66a484184c4' http://localhost:8081/login
+curl -i http://localhost:8081/login
+curl -i -H 'Cookie: SESSION=70bc3b8acc2ce34dc59723a5df5ac14d219a7e54faf367' http://localhost:8081/lo
 curl -i -X DELETE -d '{"user_id": 3}' -v -H 'Cookie: SESSION=802ddcf910dc31abc4f3a5f35d7354b2bd66a484184c4' http://localhost:8081/users
 
 curl -i -X DELETE -d '{"user_id": 3}' http://0.0.0.0:8081/users

@@ -49,16 +49,25 @@ restAPI vaultKey request respond = let {
         (let {
             Just (sessionLookup, sessionInsert) = Vault.lookup vaultKey (vault request);
         } in do
-            requestBody <- strictRequestBody request
-
+            sessionUserId <- sessionLookup "user_id"
             sessionIsAdmin <- sessionLookup "is_admin"
-            debugM "rest-news" $ show ("is_admin", sessionIsAdmin)
+
+            debugM "rest-news" $ show ("session user_id", sessionUserId)
+            debugM "rest-news" $ show ("session is_admin", sessionIsAdmin)
             
             when (pathHeadChunk == "login") $ do
+
                 putStrLn "login simulation"
-                sessionInsert "is_admin" "True"
+
+                -- implement is_admin db request
+
+                (sessionInsert "user_id" "100500")
+                >> (sessionInsert "is_admin" "asdsa")
+
+            requestBody <- strictRequestBody request
 
             debugM "rest-news" (show (method, pathTextChunks, requestBody))
+
             errorOrSessionName <- let {
                 isAdmin (Just _) = True;
                 isAdmin _ = False;
