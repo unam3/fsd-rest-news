@@ -18,6 +18,10 @@ curl -i -X GET -d '{"author_id": 1}' http://0.0.0.0:8081/authors
 curl -i -X DELETE -d '{"author_id": 2}' http://0.0.0.0:8081/authors
 
 
+SESSION=`curl -i http://localhost:8081/login|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`
+echo $SESSION
+curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"name": "pluh", "parent_id": null}' http://0.0.0.0:8081/categories
+
 curl -i -X POST -d '{"name": "pluh", "parent_id": null}' http://0.0.0.0:8081/categories
 curl -i -X POST -d '{"name": "pluh1", "parent_id": 1}' http://0.0.0.0:8081/categories
 
