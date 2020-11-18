@@ -81,7 +81,7 @@ restAPI vaultKey request respond = let {
             errorOrSessionName <- let {
                 isAdmin (Just "True") = True;
                 isAdmin _ = False;
-                sessionNameOr404 sessionName = if isAdmin maybeIsAdmin
+                passSessionNameIfAdmin sessionName = if isAdmin maybeIsAdmin
                     then sessionName
                     else "No such endpoint";
                 passIfHasUserId sessionName = if sessionUserId /= "0"
@@ -114,29 +114,32 @@ restAPI vaultKey request respond = let {
                         "users" -> case method of
                             "POST"      -> ifValidRequest "createUser" maybeCreateUserRequestJSON
                             "GET"       -> passIfHasUserId "getUser"
-                            "DELETE"    -> sessionNameOr404 $ ifValidRequest "deleteUser" maybeUserIdRequestJSON
+                            "DELETE"    -> passSessionNameIfAdmin   
+                                $ ifValidRequest "deleteUser" maybeUserIdRequestJSON
                             _ -> "Method is not implemented"
                         "authors" -> case method of
-                            "POST"      -> sessionNameOr404
+                            "POST"      -> passSessionNameIfAdmin
                                 $ ifValidRequest "promoteUserToAuthor" maybePromoteUserToAuthorRequestJSON
-                            "PATCH"     -> sessionNameOr404 $ ifValidRequest "editAuthor" maybeEditAuthorRequestJSON
-                            "GET"       -> sessionNameOr404 $ ifValidRequest "getAuthor" maybeAuthorIdRequestJSON
-                            "DELETE"    -> sessionNameOr404 $ ifValidRequest "deleteAuthorRole" maybeAuthorIdRequestJSON
+                            "PATCH"     -> passSessionNameIfAdmin
+                                $ ifValidRequest "editAuthor" maybeEditAuthorRequestJSON
+                            "GET"       -> passSessionNameIfAdmin $ ifValidRequest "getAuthor" maybeAuthorIdRequestJSON
+                            "DELETE"    -> passSessionNameIfAdmin
+                                $ ifValidRequest "deleteAuthorRole" maybeAuthorIdRequestJSON
                             _ -> "Method is not implemented"
                         "categories" -> case method of
-                            "POST"      -> sessionNameOr404
+                            "POST"      -> passSessionNameIfAdmin
                                 $ ifValidRequest "createCategory" maybeCreateCategoryRequestJSON
-                            "PATCH"     -> sessionNameOr404
+                            "PATCH"     -> passSessionNameIfAdmin
                                 $ ifValidRequest "updateCategory" maybeUpdateCategoryRequestJSON
                             "GET"       -> ifValidRequest "getCategory" maybeCategoryIdRequestJSON
-                            "DELETE"    -> sessionNameOr404
+                            "DELETE"    -> passSessionNameIfAdmin
                                 $ ifValidRequest "deleteCategory" maybeCategoryIdRequestJSON
                             _ -> "Method is not implemented"
                         "tags" -> case method of
-                            "POST"      -> sessionNameOr404 $ ifValidRequest "createTag" maybeCreateTagRequestJSON
-                            "PATCH"     -> sessionNameOr404 $ ifValidRequest "editTag" maybeEditTagRequestJSON
+                            "POST"      -> passSessionNameIfAdmin $ ifValidRequest "createTag" maybeCreateTagRequestJSON
+                            "PATCH"     -> passSessionNameIfAdmin $ ifValidRequest "editTag" maybeEditTagRequestJSON
                             "GET"       -> ifValidRequest "getTag" maybeTagIdRequestJSON
-                            "DELETE"    -> sessionNameOr404 $ ifValidRequest "deleteTag" maybeTagIdRequestJSON
+                            "DELETE"    -> passSessionNameIfAdmin $ ifValidRequest "deleteTag" maybeTagIdRequestJSON
                             _ -> "Method is not implemented"
                         "comments" -> case method of
                             "POST"      -> ifValidRequest "createComment" maybeCreateCommentRequestJSON
@@ -169,7 +172,9 @@ restAPI vaultKey request respond = let {
                                 "GET" -> ifValidRequest "getArticlesByContentPart" maybeArticlesByContentPartRequest
                                 _ -> "Method is not implemented"
                             ["in__author_name"] -> case method of
-                                "GET" -> ifValidRequest "getArticlesByAuthorNamePart" maybeArticlesByAuthorNamePartRequest
+                                "GET" -> ifValidRequest
+                                    "getArticlesByAuthorNamePart"
+                                    maybeArticlesByAuthorNamePartRequest
                                 _ -> "Method is not implemented"
                             _ -> "No such endpoint"
                         _ -> "No such endpoint")
