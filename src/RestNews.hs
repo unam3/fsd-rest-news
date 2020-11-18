@@ -12,6 +12,7 @@ import Control.Monad (void, when)
 import Data.Aeson (decode)
 import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
 import Data.Either (fromRight)
+import Data.Int (Int32)
 import Data.Maybe (fromJust, isJust)
 import qualified Data.Vault.Lazy as Vault
 import Database.PostgreSQL.Simple
@@ -25,6 +26,9 @@ import Web.Cookie (defaultSetCookie)
 
 ifValidRequest :: String -> Maybe a -> String
 ifValidRequest sessionName = maybe "Wrong parameters/parameters values" (const sessionName)
+
+getUserId :: Maybe String -> String
+getUserId = maybe "0" id
 
 dbconnect :: IO Connection
 dbconnect = let {
@@ -44,18 +48,18 @@ restAPI vaultKey request respond = let {
         isRequestPathNotEmpty = (not $ null pathTextChunks);
         pathHeadChunk = head pathTextChunks;
         method = requestMethod request;
+        Just (sessionLookup, sessionInsert) = Vault.lookup vaultKey (vault request);
     } in bracket_
         (debugM "rest-news" "Allocating scarce resource")
         (debugM "rest-news" "Cleaning up")
-        (let {
-            Just (sessionLookup, sessionInsert) = Vault.lookup vaultKey (vault request);
-        } in do
-            sessionUserId <- sessionLookup "user_id"
-            sessionIsAdmin <- sessionLookup "is_admin"
+        (do
+            maybeUserId <- sessionLookup "user_id"
+            maybeIsAdmin <- sessionLookup "is_admin"
+            let sessionUserId = getUserId maybeUserId
 
             debugM "rest-news" $ show request
-            debugM "rest-news" $ show ("session user_id", sessionUserId)
-            debugM "rest-news" $ show ("session is_admin", sessionIsAdmin)
+            debugM "rest-news" $ show ("session user_id" :: String, maybeUserId)
+            debugM "rest-news" $ show ("session is_admin" :: String, maybeIsAdmin)
             
             when (pathHeadChunk == "login") $ do
 
@@ -66,7 +70,7 @@ restAPI vaultKey request respond = let {
                 let {
                     (user_id, is_admin) = fromRight (0, False) sessionResults;
                 } in
-                    (debugM "rest-news" . show $ ("put into sessions:", user_id, is_admin))
+                    (debugM "rest-news" $ show ("put into sessions:" :: String, user_id, is_admin))
                     >> (sessionInsert "is_admin" $ show is_admin)
                     >> (sessionInsert "user_id" $ show user_id)
 
@@ -77,7 +81,10 @@ restAPI vaultKey request respond = let {
             errorOrSessionName <- let {
                 isAdmin (Just "True") = True;
                 isAdmin _ = False;
-                sessionNameOr404 sessionName = if isAdmin sessionIsAdmin
+                sessionNameOr404 sessionName = if isAdmin maybeIsAdmin
+                    then sessionName
+                    else "No such endpoint";
+                passIfHasUserId sessionName = if sessionUserId /= "0"
                     then sessionName
                     else "No such endpoint";
                 maybeCreateUserRequestJSON = decode requestBody :: Maybe CreateUserRequest;
@@ -106,7 +113,7 @@ restAPI vaultKey request respond = let {
                     then (case pathHeadChunk of
                         "users" -> case method of
                             "POST"      -> ifValidRequest "createUser" maybeCreateUserRequestJSON
-                            "GET"       -> ifValidRequest "getUser" maybeUserIdRequestJSON
+                            "GET"       -> passIfHasUserId "getUser"
                             "DELETE"    -> sessionNameOr404 $ ifValidRequest "deleteUser" maybeUserIdRequestJSON
                             _ -> "Method is not implemented"
                         "authors" -> case method of
@@ -172,7 +179,7 @@ restAPI vaultKey request respond = let {
                 runSession session = (session . fromJust $ decode requestBody);
                 sessionResults = case errorOrSessionName of
                     "createUser" -> runSession HSS.createUser
-                    "getUser" -> runSession HSS.getUser
+                    "getUser" -> HSS.getUser (read sessionUserId :: Int32)
                     "deleteUser" -> runSession HSS.deleteUser
                     "promoteUserToAuthor" -> runSession HSS.promoteUserToAuthor;
                     "editAuthor" -> runSession HSS.editAuthor

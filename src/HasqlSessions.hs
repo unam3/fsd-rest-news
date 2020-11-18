@@ -81,12 +81,10 @@ deleteUser deleteUserRequest = let {
     sessionResults <- Session.run (Session.statement params HST.deleteUser) connection
     valueToUTFLBS sessionResults
 
-getUser :: UserIdRequest -> IO (Either Session.QueryError ByteString)
-getUser getUserRequest = let {
-    params = user_id (getUserRequest :: UserIdRequest);
-} in do
+getUser :: Int32 -> IO (Either Session.QueryError ByteString)
+getUser userId = do
     Right connection <- Connection.acquire connectionSettings
-    sessionResults <- Session.run (Session.statement params HST.getUser) connection
+    sessionResults <- Session.run (Session.statement userId HST.getUser) connection
     valueToUTFLBS sessionResults
 
 
