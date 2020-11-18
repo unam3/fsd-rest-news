@@ -17,10 +17,10 @@ import Data.Maybe (fromJust, isJust)
 import qualified Data.Vault.Lazy as Vault
 import Database.PostgreSQL.Simple
 import qualified Network.HTTP.Types as H
-import Network.Wai (Application, pathInfo, requestMethod, responseLBS, strictRequestBody, vault)
+import Network.Wai (Application, Request, pathInfo, requestMethod, responseLBS, strictRequestBody, vault)
 import Network.Wai.Handler.Warp (Port, run)
 import Network.Wai.Session (withSession, Session)
-import Network.Wai.Session.PostgreSQL (dbStore, defaultSettings, fromSimpleConnection, purger)
+import Network.Wai.Session.PostgreSQL (clearSession, dbStore, defaultSettings, fromSimpleConnection, purger)
 import System.Log.Logger (Priority (DEBUG, ERROR), debugM, setLevel, traplogging, updateGlobalLogger)
 import Web.Cookie (defaultSetCookie)
 
@@ -42,8 +42,8 @@ dbconnect = let {
 
 
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
-restAPI :: Vault.Key (Session IO String String) -> Application;
-restAPI vaultKey request respond = let {
+restAPI :: Vault.Key (Session IO String String) -> (Request -> IO ()) -> Application;
+restAPI vaultKey clearSessionPartial request respond = let {
         pathTextChunks = pathInfo request;
         isRequestPathNotEmpty = (not $ null pathTextChunks);
         pathHeadChunk = head pathTextChunks;
@@ -64,6 +64,15 @@ restAPI vaultKey request respond = let {
             when (pathHeadChunk == "login") $ do
 
                 putStrLn "login simulation"
+
+                -- will fail if request has no cookies:
+                -- curl -i http://localhost:8081/login
+
+                -- https://github.com/hce/postgresql-session/blob/master/src/Network/Wai/Session/PostgreSQL.hs#L232
+
+                clearSessionPartial request
+
+                putStrLn "after clearSession call"
 
                 sessionResults <- HSS.getCredentials
 
@@ -235,14 +244,16 @@ runWarp = let {
     -- IO (SessionStore IO String String)
     store <- dbStore simpleConnection defaultSettings
     void (purger simpleConnection defaultSettings)
-    void (run port
+    void (let {
+            clearSessionPartial = clearSession simpleConnection "SESSION";
+        } in run port
         -- :: SessionStore m k v	The SessionStore to use for sessions
         -- -> ByteString	        Name to use for the session cookie (MUST BE ASCII)
         -- -> SetCookie	            Settings for the cookie (path, expiry, etc)
         -- -> Key (Session m k v)	Vault key to use when passing the session through
         -- -> Middleware	 
         $ withSession store "SESSION" defaultSetCookie vaultK
-        $ restAPI vaultK)
+        $ restAPI vaultK clearSessionPartial)
 
 runWarpWithLogger :: IO ()
 runWarpWithLogger = traplogging "rest-news" ERROR "shutdown due to"
