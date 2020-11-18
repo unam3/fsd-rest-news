@@ -53,6 +53,7 @@ restAPI vaultKey request respond = let {
             sessionUserId <- sessionLookup "user_id"
             sessionIsAdmin <- sessionLookup "is_admin"
 
+            debugM "rest-news" $ show request
             debugM "rest-news" $ show ("session user_id", sessionUserId)
             debugM "rest-news" $ show ("session is_admin", sessionIsAdmin)
             
@@ -74,7 +75,7 @@ restAPI vaultKey request respond = let {
             debugM "rest-news" (show (method, pathTextChunks, requestBody))
 
             errorOrSessionName <- let {
-                isAdmin (Just _) = True;
+                isAdmin (Just "True") = True;
                 isAdmin _ = False;
                 sessionNameOr404 sessionName = if isAdmin sessionIsAdmin
                     then sessionName
@@ -109,22 +110,26 @@ restAPI vaultKey request respond = let {
                             "DELETE"    -> sessionNameOr404 $ ifValidRequest "deleteUser" maybeUserIdRequestJSON
                             _ -> "Method is not implemented"
                         "authors" -> case method of
-                            "POST"      -> ifValidRequest "promoteUserToAuthor" maybePromoteUserToAuthorRequestJSON
-                            "PATCH"     -> ifValidRequest "editAuthor" maybeEditAuthorRequestJSON
-                            "GET"       -> ifValidRequest "getAuthor" maybeAuthorIdRequestJSON
-                            "DELETE"    -> ifValidRequest "deleteAuthorRole" maybeAuthorIdRequestJSON
+                            "POST"      -> sessionNameOr404
+                                $ ifValidRequest "promoteUserToAuthor" maybePromoteUserToAuthorRequestJSON
+                            "PATCH"     -> sessionNameOr404 $ ifValidRequest "editAuthor" maybeEditAuthorRequestJSON
+                            "GET"       -> sessionNameOr404 $ ifValidRequest "getAuthor" maybeAuthorIdRequestJSON
+                            "DELETE"    -> sessionNameOr404 $ ifValidRequest "deleteAuthorRole" maybeAuthorIdRequestJSON
                             _ -> "Method is not implemented"
                         "categories" -> case method of
-                            "POST"      -> ifValidRequest "createCategory" maybeCreateCategoryRequestJSON
-                            "PATCH"     -> ifValidRequest "updateCategory" maybeUpdateCategoryRequestJSON
+                            "POST"      -> sessionNameOr404
+                                $ ifValidRequest "createCategory" maybeCreateCategoryRequestJSON
+                            "PATCH"     -> sessionNameOr404
+                                $ ifValidRequest "updateCategory" maybeUpdateCategoryRequestJSON
                             "GET"       -> ifValidRequest "getCategory" maybeCategoryIdRequestJSON
-                            "DELETE"    -> ifValidRequest "deleteCategory" maybeCategoryIdRequestJSON
+                            "DELETE"    -> sessionNameOr404
+                                $ ifValidRequest "deleteCategory" maybeCategoryIdRequestJSON
                             _ -> "Method is not implemented"
                         "tags" -> case method of
-                            "POST"      -> ifValidRequest "createTag" maybeCreateTagRequestJSON
-                            "PATCH"     -> ifValidRequest "editTag" maybeEditTagRequestJSON
+                            "POST"      -> sessionNameOr404 $ ifValidRequest "createTag" maybeCreateTagRequestJSON
+                            "PATCH"     -> sessionNameOr404 $ ifValidRequest "editTag" maybeEditTagRequestJSON
                             "GET"       -> ifValidRequest "getTag" maybeTagIdRequestJSON
-                            "DELETE"    -> ifValidRequest "deleteTag" maybeTagIdRequestJSON
+                            "DELETE"    -> sessionNameOr404 $ ifValidRequest "deleteTag" maybeTagIdRequestJSON
                             _ -> "Method is not implemented"
                         "comments" -> case method of
                             "POST"      -> ifValidRequest "createComment" maybeCreateCommentRequestJSON

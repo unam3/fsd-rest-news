@@ -8,6 +8,7 @@ drop table if exists articles_comments cascade;
 
 begin;
 
+
 create table users (
     user_id         integer generated always as identity,
     name            varchar(80) not null,
@@ -20,12 +21,13 @@ create table users (
 );
 
 INSERT INTO users (name, surname, avatar, is_admin) VALUES
-    ('Scott', 'Adams', 'http://pluh/meh.jpg', false),
+    ('Scott', 'Adams', 'http://pluh/meh.jpg', true),
     ('Stephen', 'Diehl', 'http://pluh/monad.jpg', false),
     ('Sean', ' Carroll', 'https://preposterousuniverse.com/quant.jpg', false),
     ('Phil', 'Well', 'https://daaaa.mn/it.jpg', false),
     ('Douglas', 'Crockford', 'https://daaaa.mn/it.jpg', false),
     ('Snoyberg', 'FPComplete', 'http://pluh/kek.jpg', false);
+
 
 create table authors (
     author_id       integer generated always as identity primary key,
