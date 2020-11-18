@@ -194,3 +194,11 @@ data ArticlesByAuthorNamePartRequest = ArticlesByAuthorNamePartRequest {
 } deriving (Show, Generic)
 
 instance FromJSON ArticlesByAuthorNamePartRequest
+
+
+data LoginRequest = LoginRequest {
+    login :: Text,
+    password :: Text
+} deriving (Show, Generic)
+
+instance FromJSON LoginRequest

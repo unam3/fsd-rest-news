@@ -87,6 +87,7 @@ restAPI vaultKey request respond = let {
                 passIfHasUserId sessionName = if sessionUserId /= "0"
                     then sessionName
                     else "No such endpoint";
+                --maybeLoginRequestJSON = decode requestBody :: Maybe LoginRequest;
                 maybeCreateUserRequestJSON = decode requestBody :: Maybe CreateUserRequest;
                 maybeUserIdRequestJSON = decode requestBody :: Maybe UserIdRequest;
                 maybePromoteUserToAuthorRequestJSON = decode requestBody :: Maybe PromoteUserToAuthorRequest;
@@ -111,6 +112,9 @@ restAPI vaultKey request respond = let {
             } in pure (
                 if isRequestPathNotEmpty
                     then (case pathHeadChunk of
+                        --"login" -> case method of
+                        --    "POST"      -> ifValidRequest "login" maybeCreateUserRequestJSON
+                        --    _ -> "Method is not implemented"
                         "users" -> case method of
                             "POST"      -> ifValidRequest "createUser" maybeCreateUserRequestJSON
                             "GET"       -> passIfHasUserId "getUser"
