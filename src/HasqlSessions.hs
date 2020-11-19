@@ -230,10 +230,10 @@ getArticleComments articleCommentsRequest = let {
     valueToUTFLBS sessionResults
 
 
-createArticleDraft :: ArticleDraftRequest -> IO (Either Session.QueryError ByteString)
-createArticleDraft articleDraftRequest = let {
+createArticleDraft :: ArticleDraftRequest -> Int32 -> IO (Either Session.QueryError ByteString)
+createArticleDraft articleDraftRequest author_id' = let {
     params = (
-        author (articleDraftRequest :: ArticleDraftRequest),
+        author_id',
         category_id (articleDraftRequest :: ArticleDraftRequest),
         article_title (articleDraftRequest :: ArticleDraftRequest),
         article_content (articleDraftRequest :: ArticleDraftRequest)
@@ -336,7 +336,7 @@ getArticlesByAuthorNamePart substringRequest = let {
     sessionResults <- Session.run (Session.statement params HST.getArticlesByAuthorNamePart) connection
     valueToUTFLBS sessionResults
 
-getCredentials :: IO (Either Session.QueryError (Int32, Bool))
+getCredentials :: IO (Either Session.QueryError (Int32, Bool, Int32))
 getCredentials = 
     do
     Right connection <- Connection.acquire connectionSettings

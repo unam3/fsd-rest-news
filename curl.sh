@@ -1,10 +1,12 @@
 curl -i -X POST -d '{"name": "5.110", "surname": "2ba49e2dfc0d", "avatar": "asd", "is_admin": false}' http://0.0.0.0:8081/users
 
+curl -i -H 'Cookie: SESSION='${SESSION} -X GET http://0.0.0.0:8081/users
 curl -i -X GET -d '{"user_id": 2}' http://0.0.0.0:8081/users
 
-curl -i http://localhost:8081/login
-curl -i -H 'Cookie: SESSION=' http://localhost:8081/lo
-curl -i -X DELETE -d '{"user_id": 3}' -v -H 'Cookie: SESSION=802ddcf910dc31abc4f3a5f35d7354b2bd66a484184c4' http://localhost:8081/users
+# clearSession flow
+SESSION=`curl -i http://localhost:8081/l|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`
+SIGNED_IN_SESSION=`curl -i -H 'Cookie: SESSION='${SESSION} http://localhost:8081/login`
+curl -i -X DELETE -d '{"user_id": 3}' -H 'Cookie: SESSION=999a47e78d91d1339e0fe61e29bd5e7947ff266b222594' http://localhost:8081/users
 
 curl -i -X DELETE -d '{"user_id": 3}' http://0.0.0.0:8081/users
 
@@ -48,7 +50,9 @@ curl -i -X GET -d '{"tag_id": 2}' http://0.0.0.0:8081/tags
 curl -i -X DELETE -d '{"tag_id": 1}' http://0.0.0.0:8081/tags
 
 
-curl -i -X POST -d '{"article_title": "they dont beleive their eyes…", "author": 1, "category_id": 1, "article_content": "article is long enough"}' http://0.0.0.0:8081/articles
+SESSION=`curl -i http://localhost:8081/login|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`
+echo $SESSION
+curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"article_title": "they dont beleive their eyes…", "author": 1, "category_id": 1, "article_content": "article is long enough"}' http://0.0.0.0:8081/articles
 
 # publish article draft
 curl -i -X POST -d '{"article_id": 3}' http://0.0.0.0:8081/articles

@@ -146,7 +146,6 @@ instance FromJSON ArticleCommentsRequest
 
 
 data ArticleDraftRequest = ArticleDraftRequest {
-    author :: Int32,
     category_id :: Int32,
     --tags :: Text,
     article_title :: Text,

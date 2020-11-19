@@ -27,8 +27,8 @@ import Web.Cookie (defaultSetCookie)
 ifValidRequest :: String -> Maybe a -> String
 ifValidRequest sessionName = maybe "Wrong parameters/parameters values" (const sessionName)
 
-getUserId :: Maybe String -> String
-getUserId = maybe "0" id
+getIdString :: Maybe String -> String
+getIdString = maybe "0" id
 
 dbconnect :: IO Connection
 dbconnect = let {
@@ -55,11 +55,14 @@ restAPI vaultKey request respond = let {
         (do
             maybeUserId <- sessionLookup "user_id"
             maybeIsAdmin <- sessionLookup "is_admin"
-            let sessionUserId = getUserId maybeUserId
+            maybeAuthorId <- sessionLookup "author_id"
+            let sessionUserId = getIdString maybeUserId
+            let sessionAuthorId = getIdString maybeAuthorId
 
             debugM "rest-news" $ show request
             debugM "rest-news" $ show ("session user_id" :: String, maybeUserId)
             debugM "rest-news" $ show ("session is_admin" :: String, maybeIsAdmin)
+            debugM "rest-news" $ show ("session author_id" :: String, maybeAuthorId)
             
             when (pathHeadChunk == "login") $ do
 
@@ -68,11 +71,12 @@ restAPI vaultKey request respond = let {
                 sessionResults <- HSS.getCredentials
 
                 let {
-                    (user_id, is_admin) = fromRight (0, False) sessionResults;
+                    (user_id, is_admin, author_id) = fromRight (0, False, 0) sessionResults;
                 } in
-                    (debugM "rest-news" $ show ("put into sessions:" :: String, user_id, is_admin))
+                    (debugM "rest-news" $ show ("put into sessions:" :: String, user_id, is_admin, author_id))
                     >> (sessionInsert "is_admin" $ show is_admin)
                     >> (sessionInsert "user_id" $ show user_id)
+                    >> (sessionInsert "author_id" $ show author_id)
 
             requestBody <- strictRequestBody request
 
@@ -85,6 +89,9 @@ restAPI vaultKey request respond = let {
                     then sessionName
                     else "No such endpoint";
                 passIfHasUserId sessionName = if sessionUserId /= "0"
+                    then sessionName
+                    else "No such endpoint";
+                passIfHasAuthorId sessionName = if sessionAuthorId /= "0"
                     then sessionName
                     else "No such endpoint";
                 maybeCreateUserRequestJSON = decode requestBody :: Maybe CreateUserRequest;
@@ -148,7 +155,7 @@ restAPI vaultKey request respond = let {
                             _ -> "Method is not implemented"
                         "articles" -> case tail pathTextChunks of
                             [] -> case method of
-                                "POST" -> if isJust maybeArticleDraftRequestJSON
+                                "POST" -> passIfHasAuthorId $ if isJust maybeArticleDraftRequestJSON
                                     then "createArticleDraft"
                                     else ifValidRequest "publishArticleDraft" maybeArticleDraftIdRequestJSON
                                 "GET" -> ifValidRequest "getArticleDraft" maybeArticleDraftIdRequestJSON
@@ -201,7 +208,7 @@ restAPI vaultKey request respond = let {
                     "createComment" -> runSession HSS.createComment
                     "deleteComment" -> runSession HSS.deleteComment
                     "getArticleComments" -> runSession HSS.getArticleComments
-                    "createArticleDraft" -> runSession HSS.createArticleDraft
+                    "createArticleDraft" -> runSession HSS.createArticleDraft (read sessionAuthorId :: Int32)
                     "publishArticleDraft" -> runSession HSS.publishArticleDraft
                     "getArticleDraft" -> runSession HSS.getArticleDraft
                     "getArticlesByCategoryId" -> runSession HSS.getArticlesByCategoryId
