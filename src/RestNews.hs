@@ -209,7 +209,7 @@ restAPI vaultKey request respond = let {
                     "deleteComment" -> runSession HSS.deleteComment
                     "getArticleComments" -> runSession HSS.getArticleComments
                     "createArticleDraft" -> runSession HSS.createArticleDraft (read sessionAuthorId :: Int32)
-                    "publishArticleDraft" -> runSession HSS.publishArticleDraft
+                    "publishArticleDraft" -> runSession HSS.publishArticleDraft (read sessionAuthorId :: Int32)
                     "getArticleDraft" -> runSession HSS.getArticleDraft
                     "getArticlesByCategoryId" -> runSession HSS.getArticlesByCategoryId
                     "getArticlesByTagId" -> runSession HSS.getArticlesByTagId

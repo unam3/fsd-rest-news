@@ -243,9 +243,10 @@ createArticleDraft articleDraftRequest author_id' = let {
     sessionResults <- Session.run (Session.statement params HST.createArticleDraft) connection
     valueToUTFLBS sessionResults
 
-publishArticleDraft :: ArticleDraftIdRequest -> IO (Either Session.QueryError ByteString)
-publishArticleDraft articleDraftIdRequest = let {
+publishArticleDraft :: ArticleDraftIdRequest -> Int32 -> IO (Either Session.QueryError ByteString)
+publishArticleDraft articleDraftIdRequest author_id' = let {
     params = (
+        author_id',
         article_id (articleDraftIdRequest :: ArticleDraftIdRequest)
         );
 } in do

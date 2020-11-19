@@ -286,13 +286,15 @@ createArticleDraft =
             )::json
         |]
 
-publishArticleDraft :: Statement Int32 Value
+publishArticleDraft :: Statement (Int32, Int32) Value
 publishArticleDraft =
     [TH.singletonStatement|
         update
         articles
         set is_published = True :: bool
-        where article_id = $1 :: int4
+        where
+            article_id = $1 :: int4
+            and author = $2 :: int4
         returning json_build_object(
             'article_id', article_id,
             'author', author,
