@@ -387,8 +387,18 @@ getArticlesByAuthorNamePart =
         where author = s_author_ids.author_id
         |]
 
-getCredentials :: Statement () (Int32, Bool)
+
+--select users.user_id, users.is_admin, authors.author_id from users left join authors on authors.user_id = users.user_id where users.user_id = 6;
+getCredentials :: Statement () (Int32, Bool, Int32)
 getCredentials =
     [TH.singletonStatement|
-        select user_id :: int4, is_admin :: bool from users where user_id = 1
+        select
+            users.user_id :: int4,
+            users.is_admin :: bool,
+            coalesce(authors.author_id, 0) :: int4
+        from
+            users
+            left join authors on authors.user_id = users.user_id
+        where
+            users.user_id = 1
         |]
