@@ -17,6 +17,7 @@ module AesonDefinitions (
     CommentIdRequest(..),
     ArticleCommentsRequest(..),
     ArticleDraftRequest(..),
+    ArticleDraftEditRequest(..),
     ArticleDraftIdRequest(..),
     ArticlesByCategoryIdRequest(..),
     ArticlesByTagIdListRequest(..),
@@ -153,6 +154,17 @@ data ArticleDraftRequest = ArticleDraftRequest {
 } deriving (Show, Generic)
 
 instance FromJSON ArticleDraftRequest
+
+
+data ArticleDraftEditRequest = ArticleDraftEditRequest {
+    article_id :: Int32,
+    category_id :: Int32,
+    --tags :: Text,
+    article_title :: Text,
+    article_content :: Text
+} deriving (Show, Generic)
+
+instance FromJSON ArticleDraftEditRequest
 
 
 data ArticleDraftIdRequest = ArticleDraftIdRequest {

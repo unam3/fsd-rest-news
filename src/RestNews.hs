@@ -4,7 +4,7 @@ module RestNews
     ( runWarpWithLogger
     ) where
 
-import AesonDefinitions (CreateUserRequest, UserIdRequest, PromoteUserToAuthorRequest, EditAuthorRequest, AuthorIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest, CreateCommentRequest, CreateCommentRequest, CommentIdRequest, ArticleCommentsRequest, ArticleDraftRequest, ArticleDraftIdRequest, ArticlesByCategoryIdRequest, ArticlesByTagIdListRequest, ArticlesByTitlePartRequest, ArticlesByContentPartRequest, ArticlesByAuthorNamePartRequest)
+import AesonDefinitions (CreateUserRequest, UserIdRequest, PromoteUserToAuthorRequest, EditAuthorRequest, AuthorIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest, CreateCommentRequest, CreateCommentRequest, CommentIdRequest, ArticleCommentsRequest, ArticleDraftRequest, ArticleDraftEditRequest, ArticleDraftIdRequest, ArticlesByCategoryIdRequest, ArticlesByTagIdListRequest, ArticlesByTitlePartRequest, ArticlesByContentPartRequest, ArticlesByAuthorNamePartRequest)
 import qualified HasqlSessions as HSS
 
 import Control.Exception (bracket_)
@@ -109,6 +109,7 @@ restAPI vaultKey request respond = let {
                 maybeCommentIdRequestJSON = decode requestBody :: Maybe CommentIdRequest;
                 maybeArticleCommentsRequestJSON = decode requestBody :: Maybe ArticleCommentsRequest;
                 maybeArticleDraftRequestJSON = decode requestBody :: Maybe ArticleDraftRequest;
+                maybeArticleDraftEditRequestJSON = decode requestBody :: Maybe ArticleDraftEditRequest;
                 maybeArticleDraftIdRequestJSON = decode requestBody :: Maybe ArticleDraftIdRequest;
                 maybeArticlesByCategoryIdRequestJSON = decode requestBody :: Maybe ArticlesByCategoryIdRequest;
                 maybeArticlesByTagIdListRequest = decode requestBody :: Maybe ArticlesByTagIdListRequest;
@@ -158,6 +159,8 @@ restAPI vaultKey request respond = let {
                                 "POST" -> passIfHasAuthorId $ if isJust maybeArticleDraftRequestJSON
                                     then "createArticleDraft"
                                     else ifValidRequest "publishArticleDraft" maybeArticleDraftIdRequestJSON
+                                "PATCH" -> passIfHasAuthorId
+                                    $ ifValidRequest "editArticleDraft" maybeArticleDraftEditRequestJSON
                                 "GET" -> ifValidRequest "getArticleDraft" maybeArticleDraftIdRequestJSON
                                 _ -> "Method is not implemented"
                             ["category"] -> case method of
@@ -209,6 +212,7 @@ restAPI vaultKey request respond = let {
                     "deleteComment" -> runSession HSS.deleteComment
                     "getArticleComments" -> runSession HSS.getArticleComments
                     "createArticleDraft" -> runSession HSS.createArticleDraft (read sessionAuthorId :: Int32)
+                    "editArticleDraft" -> runSession HSS.editArticleDraft (read sessionAuthorId :: Int32)
                     "publishArticleDraft" -> runSession HSS.publishArticleDraft (read sessionAuthorId :: Int32)
                     "getArticleDraft" -> runSession HSS.getArticleDraft
                     "getArticlesByCategoryId" -> runSession HSS.getArticlesByCategoryId

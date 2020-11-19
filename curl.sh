@@ -52,7 +52,11 @@ curl -i -X DELETE -d '{"tag_id": 1}' http://0.0.0.0:8081/tags
 
 SESSION=`curl -i http://localhost:8081/login|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`
 echo $SESSION
-curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"article_title": "they dont beleive their eyes…", "author": 1, "category_id": 1, "article_content": "article is long enough"}' http://0.0.0.0:8081/articles
+curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"article_title": "they dont beleive their eyes…", "category_id": 1, "article_content": "article is long enough"}' http://0.0.0.0:8081/articles
+
+SESSION=`curl -i http://localhost:8081/login|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`
+echo $SESSION
+curl -i -H 'Cookie: SESSION='${SESSION} -X PATCH -d '{"article_title": "PATCHED", "category_id": 1, "article_content": "article is long enough", "article_id": 1}' http://0.0.0.0:8081/articles
 
 # publish article draft
 SESSION=`curl -i http://localhost:8081/login|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`

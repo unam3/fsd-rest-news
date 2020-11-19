@@ -21,6 +21,7 @@ module HasqlStatements (
     getArticleComments,
     createArticleDraft,
     publishArticleDraft,
+    editArticleDraft,
     getArticleDraft,
     getArticlesByCategoryId,
     getArticlesByTagId,
@@ -295,6 +296,25 @@ publishArticleDraft =
         where
             article_id = $1 :: int4
             and author = $2 :: int4
+        returning json_build_object(
+            'article_id', article_id,
+            'author', author,
+            'category_id', category_id,
+            'article_title', article_title,
+            'article_content', article_content,
+            'is_published', is_published
+            )::json
+        |]
+
+editArticleDraft =
+    [TH.singletonStatement|
+        update articles
+        set category_id = $3 :: int4,
+            article_title = $4 :: text,
+            article_content = $5 :: text
+        where
+            author = $1 :: int4
+            and article_id = $2 :: int4
         returning json_build_object(
             'article_id', article_id,
             'author', author,

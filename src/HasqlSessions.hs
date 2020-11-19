@@ -22,6 +22,7 @@ module HasqlSessions (
     getArticleComments,
     createArticleDraft,
     publishArticleDraft,
+    editArticleDraft,
     getArticleDraft,
     getArticlesByCategoryId,
     getArticlesByTagId,
@@ -252,6 +253,20 @@ publishArticleDraft articleDraftIdRequest author_id' = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.publishArticleDraft) connection
+    valueToUTFLBS sessionResults
+
+editArticleDraft :: ArticleDraftEditRequest -> Int32 -> IO (Either Session.QueryError ByteString)
+editArticleDraft articleDraftEditRequest author_id' = let {
+    params = (
+        author_id',
+        article_id (articleDraftEditRequest :: ArticleDraftEditRequest),
+        category_id (articleDraftEditRequest :: ArticleDraftEditRequest),
+        article_title (articleDraftEditRequest :: ArticleDraftEditRequest),
+        article_content (articleDraftEditRequest :: ArticleDraftEditRequest)
+        );
+} in do
+    Right connection <- Connection.acquire connectionSettings
+    sessionResults <- Session.run (Session.statement params HST.editArticleDraft) connection
     valueToUTFLBS sessionResults
 
 getArticleDraft :: ArticleDraftIdRequest -> IO (Either Session.QueryError ByteString)
