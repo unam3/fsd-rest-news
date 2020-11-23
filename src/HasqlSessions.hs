@@ -269,10 +269,11 @@ editArticleDraft articleDraftEditRequest author_id' = let {
     sessionResults <- Session.run (Session.statement params HST.editArticleDraft) connection
     valueToUTFLBS sessionResults
 
-getArticleDraft :: ArticleDraftIdRequest -> IO (Either Session.QueryError ByteString)
-getArticleDraft articleDraftIdRequest = let {
+getArticleDraft :: ArticleDraftIdRequest -> Int32 -> IO (Either Session.QueryError ByteString)
+getArticleDraft articleDraftIdRequest author_id' = let {
     params = (
-        article_id (articleDraftIdRequest :: ArticleDraftIdRequest)
+        article_id (articleDraftIdRequest :: ArticleDraftIdRequest),
+        author_id'
         );
 } in do
     Right connection <- Connection.acquire connectionSettings
