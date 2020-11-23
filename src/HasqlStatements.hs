@@ -306,6 +306,7 @@ publishArticleDraft =
             )::json
         |]
 
+editArticleDraft :: Statement (Int32, Int32, Int32, Text, Text) Value
 editArticleDraft =
     [TH.singletonStatement|
         update articles
@@ -325,10 +326,15 @@ editArticleDraft =
             )::json
         |]
 
-getArticleDraft :: Statement Int32 Value
+getArticleDraft :: Statement (Int32, Int32) Value
 getArticleDraft =
     [TH.singletonStatement|
         select get_article($1 :: int4) :: json
+            where (
+                select *
+                from articles
+                where article_id = $1 :: int4 and author = $2 :: int4
+            ) is not null
         |]
 
 

@@ -57,7 +57,7 @@ restAPI vaultKey request respond = let {
             maybeIsAdmin <- sessionLookup "is_admin"
             maybeAuthorId <- sessionLookup "author_id"
             let sessionUserId = getIdString maybeUserId
-            let sessionAuthorId = getIdString maybeAuthorId
+            let sessionAuthorIdString = getIdString maybeAuthorId
 
             debugM "rest-news" $ show request
             debugM "rest-news" $ show ("session user_id" :: String, maybeUserId)
@@ -91,7 +91,7 @@ restAPI vaultKey request respond = let {
                 passIfHasUserId sessionName = if sessionUserId /= "0"
                     then sessionName
                     else "No such endpoint";
-                passIfHasAuthorId sessionName = if sessionAuthorId /= "0"
+                passIfHasAuthorId sessionName = if sessionAuthorIdString /= "0"
                     then sessionName
                     else "No such endpoint";
                 maybeCreateUserRequestJSON = decode requestBody :: Maybe CreateUserRequest;
@@ -155,12 +155,11 @@ restAPI vaultKey request respond = let {
                             "DELETE"    -> ifValidRequest "deleteComment" maybeCommentIdRequestJSON
                             _ -> "Method is not implemented"
                         "articles" -> case tail pathTextChunks of
-                            [] -> case method of
-                                "POST" -> passIfHasAuthorId $ if isJust maybeArticleDraftRequestJSON
+                            [] -> passIfHasAuthorId $ case method of
+                                "POST" -> if isJust maybeArticleDraftRequestJSON
                                     then "createArticleDraft"
                                     else ifValidRequest "publishArticleDraft" maybeArticleDraftIdRequestJSON
-                                "PATCH" -> passIfHasAuthorId
-                                    $ ifValidRequest "editArticleDraft" maybeArticleDraftEditRequestJSON
+                                "PATCH" -> ifValidRequest "editArticleDraft" maybeArticleDraftEditRequestJSON
                                 "GET" -> ifValidRequest "getArticleDraft" maybeArticleDraftIdRequestJSON
                                 _ -> "Method is not implemented"
                             ["category"] -> case method of
@@ -192,6 +191,7 @@ restAPI vaultKey request respond = let {
 
             results <- let {
                 runSession session = (session . fromJust $ decode requestBody);
+                sessionAuthorId = (read sessionAuthorIdString :: Int32);
                 sessionResults = case errorOrSessionName of
                     "createUser" -> runSession HSS.createUser
                     "getUser" -> HSS.getUser (read sessionUserId :: Int32)
@@ -211,10 +211,10 @@ restAPI vaultKey request respond = let {
                     "createComment" -> runSession HSS.createComment
                     "deleteComment" -> runSession HSS.deleteComment
                     "getArticleComments" -> runSession HSS.getArticleComments
-                    "createArticleDraft" -> runSession HSS.createArticleDraft (read sessionAuthorId :: Int32)
-                    "editArticleDraft" -> runSession HSS.editArticleDraft (read sessionAuthorId :: Int32)
-                    "publishArticleDraft" -> runSession HSS.publishArticleDraft (read sessionAuthorId :: Int32)
-                    "getArticleDraft" -> runSession HSS.getArticleDraft
+                    "createArticleDraft" -> runSession HSS.createArticleDraft sessionAuthorId
+                    "editArticleDraft" -> runSession HSS.editArticleDraft sessionAuthorId
+                    "publishArticleDraft" -> runSession HSS.publishArticleDraft sessionAuthorId
+                    "getArticleDraft" -> runSession HSS.getArticleDraft sessionAuthorId
                     "getArticlesByCategoryId" -> runSession HSS.getArticlesByCategoryId
                     "getArticlesByTagId" -> runSession HSS.getArticlesByTagId
                     "getArticlesByAnyTagId" -> runSession HSS.getArticlesByAnyTagId

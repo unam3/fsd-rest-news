@@ -91,6 +91,7 @@ create table articles (
 
 INSERT INTO articles (author, category_id, article_title, article_content, is_published) VALUES
     (1, 1, 'Loserthink', 'If you’re interested in expanding how you think things through, check out Loserthink.', true),
+    (2, 2, 'How To Solve It', 'Polya', true),
     --(1, 2, E'You\'ve never imagine what was…', 'And today topic is children education.', false),
     --(4, 2, 'You''ve never imagine what was…', 'And today topic is children education.', false),
     (4, 2, 'Oh my gooood.', 'No one ever really dies.', false),

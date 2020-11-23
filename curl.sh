@@ -61,7 +61,7 @@ curl -i -H 'Cookie: SESSION='${SESSION} -X PATCH -d '{"article_title": "PATCHED"
 # publish article draft
 SESSION=`curl -i http://localhost:8081/login|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`
 echo $SESSION
-curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"article_id": 3}' http://0.0.0.0:8081/articles
+curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"article_id": 1}' http://0.0.0.0:8081/articles
 
 curl -i -X GET -d '{"article_id": 2}' http://0.0.0.0:8081/articles
 
