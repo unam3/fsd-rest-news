@@ -330,19 +330,25 @@ getArticleDraft :: Statement (Int32, Int32) Value
 getArticleDraft =
     [TH.singletonStatement|
         select get_article($1 :: int4) :: json
-            where (
-                select *
-                from articles
-                where article_id = $1 :: int4 and author = $2 :: int4
-            ) is not null
+        where (
+            select *
+            from articles
+            where article_id = $1 :: int4
+                and author = $2 :: int4
+        ) is not null
         |]
 
 
 getArticlesByCategoryId :: Statement Int32 Value
 getArticlesByCategoryId =
     [TH.singletonStatement|
-        select json_agg(aid.get_article) :: json from 
-            (select get_article(article_id) from articles where category_id = $1 :: int4) as aid
+        select json_agg(aid.get_article) :: json
+        from (
+            select get_article(article_id)
+            from articles
+            where category_id = $1 :: int4
+                and is_published = true
+        ) as aid
         |]
 
 
@@ -354,27 +360,50 @@ getArticlesByCategoryId =
 getArticlesByTagId :: Statement Int32 Value
 getArticlesByTagId =
     [TH.singletonStatement|
-        select json_agg(articles_by_tag_id.get_article) :: json from
-            (select get_article(article_id) from articles_tags where tag_id = $1 :: int4) as articles_by_tag_id
+        select json_agg(articles_by_tag_id.get_article) :: json
+        from (select get_article(articles_ids_filtered.article_id)
+            from (select articles.article_id
+                from articles
+                inner join articles_tags
+                on articles.article_id = articles_tags.article_id
+                where tag_id = $1 :: int4
+                    and is_published = true
+            ) as articles_ids_filtered
+        ) as articles_by_tag_id
         |]
 
 -- select get_article(article_id) from articles_tags where article_id = any (array[4,1]::int[]) group by article_id;
 getArticlesByAnyTagId :: Statement (Vector Int32) Value
 getArticlesByAnyTagId =
     [TH.singletonStatement|
-        select json_agg(articles_ids.get_article) :: json from
-            (select get_article(article_id) from articles_tags where tag_id = any ($1 :: int4[]) group by article_id) as articles_ids
+        select json_agg(articles_filtered.get_article) :: json
+            from (select get_article(articles_ids_filtered.article_id)
+                from (select articles.article_id
+                    from articles
+                    inner join articles_tags
+                    on articles.article_id = articles_tags.article_id
+                    where tag_id = any ($1 :: int4[])
+                        and is_published = true
+                    group by articles.article_id
+                ) as articles_ids_filtered
+            ) as articles_filtered
         |]
 
 -- select get_article(article_id) from (select article_id, array_agg(tag_id) as id_array from articles_tags group by article_id) as articles_tags_agg where id_array @> (array[2,1]::int[]);
 getArticlesByAllTagId :: Statement (Vector Int32) Value
 getArticlesByAllTagId =
     [TH.singletonStatement|
-        select json_agg(get_article) :: json from (
-            select get_article(article_id) from
-                (select article_id, array_agg(tag_id) as id_array from
-                    articles_tags group by article_id) as articles_tags
-                where id_array @> ($1 :: int4[])) as articles_tags_agg
+        select json_agg(get_article) :: json
+            from (select get_article(articles_tags.article_id)
+                from articles
+                inner join (select article_id, array_agg(tag_id) as id_array
+                    from articles_tags
+                    group by article_id
+                ) as articles_tags
+                on articles.article_id = articles_tags.article_id
+                where id_array @> ($1 :: int4[])
+                    and is_published = true
+            ) as articles_tags_agg
         |]
 
 -- select * from articles where article_title like '%ve%';
@@ -382,17 +411,25 @@ getArticlesByAllTagId =
 getArticlesByTitlePart :: Statement Text Value
 getArticlesByTitlePart =
     [TH.singletonStatement|
-        select json_agg(get_article(article_id)) :: json from
-            (select article_id from articles where article_title ilike
-                '%' || regexp_replace(($1 :: text), '(%|_)', '', 'g') || '%') as articles_by_title_part
+        select json_agg(get_article(article_id)) :: json
+            from (select article_id
+                from articles
+                where article_title ilike
+                        '%' || regexp_replace(($1 :: text), '(%|_)', '', 'g') || '%'
+                    and is_published = true
+            ) as articles_by_title_part
         |]
 
 getArticlesByContentPart :: Statement Text Value
 getArticlesByContentPart =
     [TH.singletonStatement|
-        select json_agg(get_article(article_id)) :: json from
-            (select article_id from articles where article_content ilike
-                '%' || regexp_replace(($1 :: text), '(%|_)', '', 'g') || '%') as articles_by_content_part
+        select json_agg(get_article(article_id)) :: json
+            from (select article_id
+                from articles
+                where article_content ilike
+                        '%' || regexp_replace(($1 :: text), '(%|_)', '', 'g') || '%'
+                    and is_published = true
+            ) as articles_by_content_part
         |]
 
 {-
@@ -406,13 +443,19 @@ where author = s_author_ids.author_id;
 getArticlesByAuthorNamePart :: Statement Text Value
 getArticlesByAuthorNamePart =
     [TH.singletonStatement|
-        select json_agg(get_article(article_id)) :: json from articles, (
-            select authors.author_id from authors, (
-                select user_id from users where name ilike
-                    '%' || regexp_replace(($1 :: text), '(%|_)', '', 'g') || '%'
-            ) as s_users where authors.user_id = s_users.user_id
-        ) as s_author_ids
-        where author = s_author_ids.author_id
+        select json_agg(get_article(article_id)) :: json
+            from articles
+            inner join (select authors.author_id
+                from authors
+                inner join (select user_id
+                    from users
+                    where name ilike
+                        '%' || regexp_replace(($1 :: text), '(%|_)', '', 'g') || '%'
+                ) as filtered_user_ids
+                on authors.user_id = filtered_user_ids.user_id
+            ) as filtered_author_ids
+            on author = filtered_author_ids.author_id
+                and is_published = true
         |]
 
 
