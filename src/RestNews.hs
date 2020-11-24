@@ -125,14 +125,11 @@ restAPI vaultKey request respond = let {
                             "DELETE"    -> passSessionNameIfAdmin   
                                 $ ifValidRequest "deleteUser" maybeUserIdRequestJSON
                             _ -> "Method is not implemented"
-                        "authors" -> case method of
-                            "POST"      -> passSessionNameIfAdmin
-                                $ ifValidRequest "promoteUserToAuthor" maybePromoteUserToAuthorRequestJSON
-                            "PATCH"     -> passSessionNameIfAdmin
-                                $ ifValidRequest "editAuthor" maybeEditAuthorRequestJSON
-                            "GET"       -> passSessionNameIfAdmin $ ifValidRequest "getAuthor" maybeAuthorIdRequestJSON
-                            "DELETE"    -> passSessionNameIfAdmin
-                                $ ifValidRequest "deleteAuthorRole" maybeAuthorIdRequestJSON
+                        "authors" -> passSessionNameIfAdmin $ case method of
+                            "POST"      -> ifValidRequest "promoteUserToAuthor" maybePromoteUserToAuthorRequestJSON
+                            "PATCH"     -> ifValidRequest "editAuthor" maybeEditAuthorRequestJSON
+                            "GET"       -> ifValidRequest "getAuthor" maybeAuthorIdRequestJSON
+                            "DELETE"    -> ifValidRequest "deleteAuthorRole" maybeAuthorIdRequestJSON
                             _ -> "Method is not implemented"
                         "categories" -> case method of
                             "POST"      -> passSessionNameIfAdmin
@@ -150,9 +147,11 @@ restAPI vaultKey request respond = let {
                             "DELETE"    -> passSessionNameIfAdmin $ ifValidRequest "deleteTag" maybeTagIdRequestJSON
                             _ -> "Method is not implemented"
                         "comments" -> case method of
-                            "POST"      -> ifValidRequest "createComment" maybeCreateCommentRequestJSON
+                            "POST"      -> passIfHasAuthorId
+                                $ ifValidRequest "createComment" maybeCreateCommentRequestJSON
                             "GET"       -> ifValidRequest "getArticleComments" maybeArticleCommentsRequestJSON
-                            "DELETE"    -> ifValidRequest "deleteComment" maybeCommentIdRequestJSON
+                            "DELETE"    -> passIfHasAuthorId
+                                $ ifValidRequest "deleteComment" maybeCommentIdRequestJSON
                             _ -> "Method is not implemented"
                         "articles" -> case tail pathTextChunks of
                             [] -> passIfHasAuthorId $ case method of
@@ -208,8 +207,8 @@ restAPI vaultKey request respond = let {
                     "editTag" -> runSession HSS.editTag
                     "getTag" -> runSession HSS.getTag
                     "deleteTag" -> runSession HSS.deleteTag
-                    "createComment" -> runSession HSS.createComment
-                    "deleteComment" -> runSession HSS.deleteComment
+                    "createComment" -> runSession HSS.createComment sessionAuthorId
+                    "deleteComment" -> runSession HSS.deleteComment sessionAuthorId
                     "getArticleComments" -> runSession HSS.getArticleComments
                     "createArticleDraft" -> runSession HSS.createArticleDraft sessionAuthorId
                     "editArticleDraft" -> runSession HSS.editArticleDraft sessionAuthorId

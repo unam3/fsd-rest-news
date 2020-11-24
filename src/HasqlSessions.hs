@@ -203,20 +203,24 @@ getTag getTagRequest = let {
     valueToUTFLBS sessionResults
 
 
-createComment :: CreateCommentRequest -> IO (Either Session.QueryError ByteString)
-createComment createCommentRequest = let {
+createComment :: CreateCommentRequest -> Int32 -> IO (Either Session.QueryError ByteString)
+createComment createCommentRequest author_id' = let {
     params = (
         article_id (createCommentRequest :: CreateCommentRequest),
-        comment_text (createCommentRequest :: CreateCommentRequest)
+        comment_text (createCommentRequest :: CreateCommentRequest),
+        author_id'
         );
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.createComment) connection
     valueToUTFLBS sessionResults
 
-deleteComment :: CommentIdRequest -> IO (Either Session.QueryError ByteString)
-deleteComment deleteCommentRequest = let {
-    params = comment_id (deleteCommentRequest :: CommentIdRequest);
+deleteComment :: CommentIdRequest -> Int32 -> IO (Either Session.QueryError ByteString)
+deleteComment deleteCommentRequest author_id' = let {
+    params = (
+        comment_id (deleteCommentRequest :: CommentIdRequest),
+        author_id'
+    );
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.deleteComment) connection
