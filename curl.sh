@@ -34,11 +34,11 @@ curl -i -X GET -d '{"category_id": 1}' http://0.0.0.0:8081/categories
 curl -i -X DELETE -d '{"category_id": 10}' http://0.0.0.0:8081/categories
 
 
-curl -i -X POST -d '{"article_id": 2, "comment_text": "bluasd!"}' http://0.0.0.0:8081/comments
+curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"article_id": 2, "comment_text": "bluasd!"}' http://0.0.0.0:8081/comments
 
 curl -i -X GET -d '{"article_id": 2}' http://0.0.0.0:8081/comments
 
-curl -i -X DELETE -d '{"comment_id": 4}' http://0.0.0.0:8081/comments
+curl -i -H 'Cookie: SESSION='${SESSION} -X DELETE -d '{"comment_id": 4}' http://0.0.0.0:8081/comments
 
 
 curl -i -X POST -d '{"tag_name": "pluh"}' http://0.0.0.0:8081/tags

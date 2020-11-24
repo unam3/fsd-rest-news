@@ -229,28 +229,31 @@ getTag =
 
 
 
-createComment :: Statement (Int32, Text) Value
+createComment :: Statement (Int32, Text, Int32) Value
 createComment =
     [TH.singletonStatement|
         insert
-        into articles_comments (article_id, comment_text)
+        into articles_comments (article_id, comment_text, author)
             values (
                 $1 :: int4,
-                $2 :: text
+                $2 :: text,
+                $3 :: int4
                 )
         returning json_build_object(
             'comment_id', comment_id,
+            'author_id', author,
             'article_id', article_id,
             'comment_text', comment_text
             )::json
         |]
 
-deleteComment :: Statement Int32 Value
+deleteComment :: Statement (Int32, Int32) Value
 deleteComment =
     [TH.singletonStatement|
         delete
         from articles_comments
         where comment_id = $1 :: int4
+            and author = $2 :: int4
         returning json_build_object( 
             'results', 'ook'
             )::json
