@@ -24,6 +24,7 @@ module HasqlSessions (
     publishArticleDraft,
     editArticleDraft,
     getArticleDraft,
+    deleteArticleDraft,
     getArticlesByCategoryId,
     getArticlesByTagId,
     getArticlesByAnyTagId,
@@ -282,6 +283,17 @@ getArticleDraft articleDraftIdRequest author_id' = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticleDraft) connection
+    valueToUTFLBS sessionResults
+
+deleteArticleDraft :: ArticleDraftIdRequest -> Int32 -> IO (Either Session.QueryError ByteString)
+deleteArticleDraft articleDraftIdRequest author_id' = let {
+    params = (
+        article_id (articleDraftIdRequest :: ArticleDraftIdRequest),
+        author_id'
+        );
+} in do
+    Right connection <- Connection.acquire connectionSettings
+    sessionResults <- Session.run (Session.statement params HST.deleteArticleDraft) connection
     valueToUTFLBS sessionResults
 
 

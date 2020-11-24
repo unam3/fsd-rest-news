@@ -160,6 +160,7 @@ restAPI vaultKey request respond = let {
                                     else ifValidRequest "publishArticleDraft" maybeArticleDraftIdRequestJSON
                                 "PATCH" -> ifValidRequest "editArticleDraft" maybeArticleDraftEditRequestJSON
                                 "GET" -> ifValidRequest "getArticleDraft" maybeArticleDraftIdRequestJSON
+                                "DELETE" -> ifValidRequest "deleteArticleDraft" maybeArticleDraftIdRequestJSON
                                 _ -> "Method is not implemented"
                             ["category"] -> case method of
                                 "GET" -> ifValidRequest "getArticlesByCategoryId" maybeArticlesByCategoryIdRequestJSON
@@ -214,6 +215,7 @@ restAPI vaultKey request respond = let {
                     "editArticleDraft" -> runSession HSS.editArticleDraft sessionAuthorId
                     "publishArticleDraft" -> runSession HSS.publishArticleDraft sessionAuthorId
                     "getArticleDraft" -> runSession HSS.getArticleDraft sessionAuthorId
+                    "deleteArticleDraft" -> runSession HSS.deleteArticleDraft sessionAuthorId
                     "getArticlesByCategoryId" -> runSession HSS.getArticlesByCategoryId
                     "getArticlesByTagId" -> runSession HSS.getArticlesByTagId
                     "getArticlesByAnyTagId" -> runSession HSS.getArticlesByAnyTagId

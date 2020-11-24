@@ -23,6 +23,7 @@ module HasqlStatements (
     publishArticleDraft,
     editArticleDraft,
     getArticleDraft,
+    deleteArticleDraft,
     getArticlesByCategoryId,
     getArticlesByTagId,
     getArticlesByAnyTagId,
@@ -339,6 +340,19 @@ getArticleDraft =
             where article_id = $1 :: int4
                 and author = $2 :: int4
         ) is not null
+        |]
+
+deleteArticleDraft :: Statement (Int32, Int32) Value
+deleteArticleDraft =
+    [TH.singletonStatement|
+        delete
+        from articles
+        where article_id = $1 :: int4
+            and author = $2 :: int4
+            and is_published = false
+        returning json_build_object( 
+            'results', 'ook'
+            )::json
         |]
 
 
