@@ -207,22 +207,20 @@ CREATE OR REPLACE FUNCTION public.check_assignment(
             -- aggregate functions are not allowed in RETURNING
             --returning json_agg(tag_id) into tag_ids;
             
-            -- doesn't work
-            --select json_agg(tags.*)
-            --    from tags
-            --    inner join articles_tags
-            --    on tags.tag_id = articles_tags.tag_id
-            --    where article_id = art_id
-            --    returning * into assigned_tags;
-
             return json_build_object( 
                 'article_id', created_draft.article_id,
                 'author', created_draft.author,
                 'category_id', created_draft.category_id,
                 'article_title', created_draft.article_title,
                 'article_content', created_draft.article_content,
-                'is_published', created_draft.is_published
-                --'tags', assigned_tags
+                'is_published', created_draft.is_published,
+                'tags', (
+                    select json_agg(tags.*)
+                    from tags
+                    inner join articles_tags
+                    on tags.tag_id = articles_tags.tag_id
+                    where article_id = created_draft.article_id
+                )
             );
         end;
     $function$;
