@@ -155,11 +155,11 @@ CREATE OR REPLACE FUNCTION public.get_article(art_id integer)
                     )
                 ) as aauthor,
                 (select json_agg(tags) from (
-                        --select * from articles_tags where article_id = art_id
-                        select tags.* from tags, (
-                            select tag_id from articles_tags where article_id = art_id
-                        ) as tag_ids
-                        where tags.tag_id = tag_ids.tag_id
+                        select tags.*
+                        from tags
+                        inner join articles_tags
+                        on tags.tag_id = articles_tags.tag_id
+                        where article_id = art_id
                     ) as tags
                 ) as atags,
                 (
@@ -175,4 +175,54 @@ CREATE OR REPLACE FUNCTION public.get_article(art_id integer)
                     SELECT json_agg(row_to_json(categories_recursive.*)) FROM categories_recursive
                 ) as categories_hierarchy where a.article_id = art_id
         ) as as_row;
+    $function$;
+
+SET plpgsql.extra_warnings TO 'all';
+SET plpgsql.extra_errors TO 'all';
+
+CREATE OR REPLACE FUNCTION public.check_assignment(
+    author integer,
+    category_id integer,
+    article_title varchar,
+    article_content text,
+    tags int[]
+)
+       RETURNS json
+       LANGUAGE plpgsql
+    AS $function$
+        declare
+            created_draft articles%rowtype;
+            --tag_ids json;
+            assigned_tags json;
+        begin
+            insert into articles
+            (author, category_id, article_content, article_title, is_published) values
+            (author, category_id, article_content, article_title, false)
+            returning * into created_draft;
+
+            insert into articles_tags
+            (tag_id, article_id)
+            (select unnest(tags), created_draft.article_id);
+            -- returning works only for single row
+            -- aggregate functions are not allowed in RETURNING
+            --returning json_agg(tag_id) into tag_ids;
+            
+            -- doesn't work
+            --select json_agg(tags.*)
+            --    from tags
+            --    inner join articles_tags
+            --    on tags.tag_id = articles_tags.tag_id
+            --    where article_id = art_id
+            --    returning * into assigned_tags;
+
+            return json_build_object( 
+                'article_id', created_draft.article_id,
+                'author', created_draft.author,
+                'category_id', created_draft.category_id,
+                'article_title', created_draft.article_title,
+                'article_content', created_draft.article_content,
+                'is_published', created_draft.is_published
+                --'tags', assigned_tags
+            );
+        end;
     $function$;

@@ -268,27 +268,27 @@ getArticleComments =
         where article_id = $1 :: int4
         |]
 
+{-
+with created_draft as (
+    insert into articles
+    (author, category_id, article_content, article_title, is_published) values
+    (1, 4, 'asd', 'asd', false)
+    returning *
+) insert into articles_tags
+(tag_id, article_id)
+(select unnest(array[2,1]::int[], article_id) from created_draft) returning article_id; -- returns as many rows as tags
 
-createArticleDraft :: Statement (Int32, Int32, Text, Text) Value
+-}
+createArticleDraft :: Statement (Int32, Int32, Text, Text, Vector Int32) Value
 createArticleDraft =
     [TH.singletonStatement|
-        insert
-        into articles (author, category_id, article_title, article_content, is_published)
-            values (
+            select check_assignment(
                 $1 :: int4,
                 $2 :: int4,
                 $3 :: text,
                 $4 :: text,
-                False :: bool
-                )
-        returning json_build_object(
-            'article_id', article_id,
-            'author', author,
-            'category_id', category_id,
-            'article_title', article_title,
-            'article_content', article_content,
-            'is_published', is_published
-            )::json
+                $5 :: int4[]
+            ) :: json
         |]
 
 publishArticleDraft :: Statement (Int32, Int32) Value

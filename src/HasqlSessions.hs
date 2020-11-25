@@ -242,7 +242,8 @@ createArticleDraft articleDraftRequest author_id' = let {
         author_id',
         category_id (articleDraftRequest :: ArticleDraftRequest),
         article_title (articleDraftRequest :: ArticleDraftRequest),
-        article_content (articleDraftRequest :: ArticleDraftRequest)
+        article_content (articleDraftRequest :: ArticleDraftRequest),
+        tags (articleDraftRequest :: ArticleDraftRequest)
         );
 } in do
     Right connection <- Connection.acquire connectionSettings
