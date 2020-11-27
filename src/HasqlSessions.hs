@@ -205,11 +205,11 @@ getTag getTagRequest = let {
 
 
 createComment :: CreateCommentRequest -> Int32 -> IO (Either Session.QueryError ByteString)
-createComment createCommentRequest author_id' = let {
+createComment createCommentRequest user_id' = let {
     params = (
         article_id (createCommentRequest :: CreateCommentRequest),
         comment_text (createCommentRequest :: CreateCommentRequest),
-        author_id'
+        user_id'
         );
 } in do
     Right connection <- Connection.acquire connectionSettings
@@ -217,10 +217,10 @@ createComment createCommentRequest author_id' = let {
     valueToUTFLBS sessionResults
 
 deleteComment :: CommentIdRequest -> Int32 -> IO (Either Session.QueryError ByteString)
-deleteComment deleteCommentRequest author_id' = let {
+deleteComment deleteCommentRequest user_id' = let {
     params = (
         comment_id (deleteCommentRequest :: CommentIdRequest),
-        author_id'
+        user_id'
     );
 } in do
     Right connection <- Connection.acquire connectionSettings

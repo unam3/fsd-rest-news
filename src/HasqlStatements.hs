@@ -234,7 +234,7 @@ createComment :: Statement (Int32, Text, Int32) Value
 createComment =
     [TH.singletonStatement|
         insert
-        into articles_comments (article_id, comment_text, author)
+        into articles_comments (article_id, comment_text, user_id)
             values (
                 $1 :: int4,
                 $2 :: text,
@@ -242,7 +242,7 @@ createComment =
                 )
         returning json_build_object(
             'comment_id', comment_id,
-            'author_id', author,
+            'user_id', user_id,
             'article_id', article_id,
             'comment_text', comment_text
             )::json
@@ -254,7 +254,7 @@ deleteComment =
         delete
         from articles_comments
         where comment_id = $1 :: int4
-            and author = $2 :: int4
+            and user_id = $2 :: int4
         returning json_build_object( 
             'results', 'ook'
             )::json

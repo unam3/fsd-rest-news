@@ -147,10 +147,10 @@ restAPI vaultKey request respond = let {
                             "DELETE"    -> passSessionNameIfAdmin $ ifValidRequest "deleteTag" maybeTagIdRequestJSON
                             _ -> "Method is not implemented"
                         "comments" -> case method of
-                            "POST"      -> passIfHasAuthorId
+                            "POST"      -> passIfHasUserId
                                 $ ifValidRequest "createComment" maybeCreateCommentRequestJSON
                             "GET"       -> ifValidRequest "getArticleComments" maybeArticleCommentsRequestJSON
-                            "DELETE"    -> passIfHasAuthorId
+                            "DELETE"    -> passIfHasUserId
                                 $ ifValidRequest "deleteComment" maybeCommentIdRequestJSON
                             _ -> "Method is not implemented"
                         "articles" -> case tail pathTextChunks of
