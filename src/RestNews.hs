@@ -7,6 +7,7 @@ module RestNews
 import AesonDefinitions (CreateUserRequest, UserIdRequest, PromoteUserToAuthorRequest, EditAuthorRequest, AuthorIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest, CreateCommentRequest, CreateCommentRequest, CommentIdRequest, ArticleCommentsRequest, ArticleDraftRequest, ArticleDraftEditRequest, ArticleDraftIdRequest, ArticlesByCategoryIdRequest, ArticlesByTagIdListRequest, ArticlesByTitlePartRequest, ArticlesByContentPartRequest, ArticlesByAuthorNamePartRequest)
 import qualified HasqlSessions as HSS
 
+import Control.Concurrent (forkIO)
 import Control.Exception (bracket_)
 import Control.Monad (void, when)
 import Data.Aeson (decode)
@@ -18,6 +19,7 @@ import qualified Data.Vault.Lazy as Vault
 import Database.PostgreSQL.Simple
 import qualified Network.HTTP.Types as H
 import Network.Wai (Application, pathInfo, requestMethod, responseLBS, strictRequestBody, vault)
+import Network.Wai.Application.Static
 import Network.Wai.Handler.Warp (Port, run)
 import Network.Wai.Session (withSession, Session)
 import Network.Wai.Session.PostgreSQL (dbStore, defaultSettings, fromSimpleConnection, purger)
@@ -261,7 +263,14 @@ runWarp = let {
         $ withSession store "SESSION" defaultSetCookie vaultK
         $ restAPI vaultK)
 
+runWarpStatic :: IO ()
+runWarpStatic = let {
+    port = 8080 :: Port;
+} in do
+    run port $ staticApp (defaultWebAppSettings "static")
+
 runWarpWithLogger :: IO ()
 runWarpWithLogger = traplogging "rest-news" ERROR "shutdown due to"
     $ updateGlobalLogger "rest-news" (setLevel DEBUG)
-    >> runWarp
+    >> forkIO runWarp
+    >> runWarpStatic
