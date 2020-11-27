@@ -51,20 +51,17 @@ curl -i -X DELETE -d '{"tag_id": 1}' http://0.0.0.0:8081/tags
 
 
 SESSION=`curl -i http://localhost:8081/login|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`
-echo $SESSION
-curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"article_title": "they dont beleive their eyes…", "category_id": 1, "article_content": "article is long enough", "tags": [1,2]}' http://0.0.0.0:8081/articles
-curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"article_title": "they dont beleive their eyes…", "category_id": 1, "article_content": "article is long enough", "tags": []}' http://0.0.0.0:8081/articles
+curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"article_title": "they dont beleive their eyes…", "category_id": 1, "article_content": "article is long enough", "tags": [1,2], "main_photo": "http://pl.uh/main", "additional_photos": ["1", "2", "3"]}' http://0.0.0.0:8081/articles
 
 SESSION=`curl -i http://localhost:8081/login|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`
-echo $SESSION
-curl -i -H 'Cookie: SESSION='${SESSION} -X PATCH -d '{"article_title": "PATCHED", "category_id": 1, "article_content": "article is long enough", "article_id": 1}' http://0.0.0.0:8081/articles
+curl -i -H 'Cookie: SESSION='${SESSION} -X PATCH -d '{"article_title": "PATCHED", "category_id": 1, "article_content": "PATCHED", "article_id": 8, "main_photo": "fs", "additional_photos": ["9", "2"]}' http://0.0.0.0:8081/articles
 
 # publish article draft
 SESSION=`curl -i http://localhost:8081/login|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`
 echo $SESSION
 curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"article_id": 10}' http://0.0.0.0:8081/articles
 
-curl -i -X GET -d '{"article_id": 2}' http://0.0.0.0:8081/articles
+curl -i -H 'Cookie: SESSION='${SESSION} -X GET -d '{"article_id": 8}' http://0.0.0.0:8081/articles
 
 curl -i -H 'Cookie: SESSION='${SESSION} -X DELETE -d '{"article_id": 10}' http://0.0.0.0:8081/articles
 

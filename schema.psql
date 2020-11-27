@@ -75,8 +75,8 @@ create table articles (
     category_id         integer references categories,
     article_content     text not null,
     is_published        boolean not null,
-    --main_photo          text,
-    --additional_photos   text[] not null,
+    main_photo          text,
+    additional_photos   text[] not null default array[]::text[],
     primary key (article_id)
 );
 
@@ -127,12 +127,6 @@ INSERT INTO articles_comments (article_id, user_id, comment_text) VALUES
 
 commit;
 
-select * from users;
-select * from categories;
-select * from articles;
-select * from articles_tags;
-select * from articles_comments;
-
 CREATE OR REPLACE FUNCTION public.get_article(art_id integer)
        RETURNS json
        LANGUAGE sql
@@ -146,7 +140,9 @@ CREATE OR REPLACE FUNCTION public.get_article(art_id integer)
                 a.creation_date,
                 categories_hierarchy.json_agg as categories,
                 aauthor as author,
-                atags.json_agg as tags
+                atags.json_agg as tags,
+                a.main_photo,
+                a.additional_photos
             from
                 articles a,
                 (select * from authors where author_id = (
@@ -184,27 +180,25 @@ CREATE OR REPLACE FUNCTION public.check_assignment(
     category_id integer,
     article_title varchar,
     article_content text,
-    tags int[]
+    tags int[],
+    main_photo text,
+    additional_photos text[]
 )
        RETURNS json
        LANGUAGE plpgsql
     AS $function$
         declare
             created_draft articles%rowtype;
-            --tag_ids json;
             assigned_tags json;
         begin
             insert into articles
-            (author, category_id, article_content, article_title, is_published) values
-            (author, category_id, article_content, article_title, false)
+            (author, category_id, article_content, article_title, is_published, main_photo, additional_photos) values
+            (author, category_id, article_content, article_title, false, main_photo, additional_photos)
             returning * into created_draft;
 
             insert into articles_tags
             (tag_id, article_id)
             (select unnest(tags), created_draft.article_id);
-            -- returning works only for single row
-            -- aggregate functions are not allowed in RETURNING
-            --returning json_agg(tag_id) into tag_ids;
             
             return json_build_object( 
                 'article_id', created_draft.article_id,
@@ -219,7 +213,9 @@ CREATE OR REPLACE FUNCTION public.check_assignment(
                     inner join articles_tags
                     on tags.tag_id = articles_tags.tag_id
                     where article_id = created_draft.article_id
-                )
+                ),
+                'main_photo',  created_draft.main_photo,
+                'additional_photos',  created_draft.additional_photos
             );
         end;
     $function$;
