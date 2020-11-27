@@ -150,7 +150,9 @@ data ArticleDraftRequest = ArticleDraftRequest {
     category_id :: Int32,
     tags :: Vector Int32,
     article_title :: Text,
-    article_content :: Text
+    article_content :: Text,
+    main_photo :: Text,
+    additional_photos :: Vector Text
 } deriving (Show, Generic)
 
 instance FromJSON ArticleDraftRequest
@@ -160,7 +162,9 @@ data ArticleDraftEditRequest = ArticleDraftEditRequest {
     article_id :: Int32,
     category_id :: Int32,
     article_title :: Text,
-    article_content :: Text
+    article_content :: Text,
+    main_photo :: Text,
+    additional_photos :: Vector Text
 } deriving (Show, Generic)
 
 instance FromJSON ArticleDraftEditRequest

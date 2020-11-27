@@ -243,7 +243,9 @@ createArticleDraft articleDraftRequest author_id' = let {
         category_id (articleDraftRequest :: ArticleDraftRequest),
         article_title (articleDraftRequest :: ArticleDraftRequest),
         article_content (articleDraftRequest :: ArticleDraftRequest),
-        tags (articleDraftRequest :: ArticleDraftRequest)
+        tags (articleDraftRequest :: ArticleDraftRequest),
+        main_photo (articleDraftRequest :: ArticleDraftRequest),
+        additional_photos (articleDraftRequest :: ArticleDraftRequest)
         );
 } in do
     Right connection <- Connection.acquire connectionSettings
@@ -268,7 +270,9 @@ editArticleDraft articleDraftEditRequest author_id' = let {
         article_id (articleDraftEditRequest :: ArticleDraftEditRequest),
         category_id (articleDraftEditRequest :: ArticleDraftEditRequest),
         article_title (articleDraftEditRequest :: ArticleDraftEditRequest),
-        article_content (articleDraftEditRequest :: ArticleDraftEditRequest)
+        article_content (articleDraftEditRequest :: ArticleDraftEditRequest),
+        main_photo (articleDraftEditRequest :: ArticleDraftEditRequest),
+        additional_photos (articleDraftEditRequest :: ArticleDraftEditRequest)
         );
 } in do
     Right connection <- Connection.acquire connectionSettings

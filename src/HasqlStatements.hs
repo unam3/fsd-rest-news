@@ -279,7 +279,7 @@ with created_draft as (
 (select unnest(array[2,1]::int[], article_id) from created_draft) returning article_id; -- returns as many rows as tags
 
 -}
-createArticleDraft :: Statement (Int32, Int32, Text, Text, Vector Int32) Value
+createArticleDraft :: Statement (Int32, Int32, Text, Text, Vector Int32, Text, Vector Text) Value
 createArticleDraft =
     [TH.singletonStatement|
             select check_assignment(
@@ -287,7 +287,9 @@ createArticleDraft =
                 $2 :: int4,
                 $3 :: text,
                 $4 :: text,
-                $5 :: int4[]
+                $5 :: int4[],
+                $6 :: text,
+                $7 :: text[]
             ) :: json
         |]
 
@@ -309,13 +311,15 @@ publishArticleDraft =
             )::json
         |]
 
-editArticleDraft :: Statement (Int32, Int32, Int32, Text, Text) Value
+editArticleDraft :: Statement (Int32, Int32, Int32, Text, Text, Text, Vector Text) Value
 editArticleDraft =
     [TH.singletonStatement|
         update articles
         set category_id = $3 :: int4,
             article_title = $4 :: text,
-            article_content = $5 :: text
+            article_content = $5 :: text,
+            main_photo = $6 :: text,
+            additional_photos = $7 :: text[]
         where
             author = $1 :: int4
             and article_id = $2 :: int4
@@ -325,7 +329,9 @@ editArticleDraft =
             'category_id', category_id,
             'article_title', article_title,
             'article_content', article_content,
-            'is_published', is_published
+            'is_published', is_published,
+            'main_photo', main_photo,
+            'additional_photos', additional_photos
             )::json
         |]
 
@@ -334,7 +340,7 @@ getArticleDraft =
     [TH.singletonStatement|
         select get_article($1 :: int4) :: json
         where (
-            select *
+            select article_id
             from articles
             where article_id = $1 :: int4
                 and author = $2 :: int4
