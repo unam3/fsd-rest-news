@@ -75,10 +75,9 @@ create table articles (
     category_id         integer references categories,
     article_content     text not null,
     is_published        boolean not null,
+    --main_photo          text,
+    --additional_photos   text[] not null,
     primary key (article_id)
-
-    --main_photo          photos not null, -- !
-    --additional_photos   photos not null -- !
 );
 
 --create table articles_drafts (
