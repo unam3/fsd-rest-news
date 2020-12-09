@@ -81,3 +81,6 @@ curl -i -X GET -d '{"content_substring": "is"}' http://0.0.0.0:8081/articles/in_
 curl -i -X GET -d '{"author_name_substring": "ph"}' http://0.0.0.0:8081/articles/in__author_name
 # "If you’re
 curl -i -X GET -d '{"author_name_substring": "s"}' http://0.0.0.0:8081/articles/in__author_name
+
+# sorting
+curl -i -X GET http://0.0.0.0:8081/articles/byPhotosNumber

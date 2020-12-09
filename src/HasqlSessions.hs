@@ -32,7 +32,8 @@ module HasqlSessions (
     getArticlesByTitlePart,
     getArticlesByContentPart,
     getArticlesByAuthorNamePart,
-    getCredentials    
+    getArticlesSortedByPhotosNumber,
+    getCredentials
     ) where
 
 import Data.Aeson (Value, encode)
@@ -372,6 +373,13 @@ getArticlesByAuthorNamePart substringRequest = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesByAuthorNamePart) connection
+    valueToUTFLBS sessionResults
+
+getArticlesSortedByPhotosNumber :: IO (Either Session.QueryError ByteString)
+getArticlesSortedByPhotosNumber =
+    do
+    Right connection <- Connection.acquire connectionSettings
+    sessionResults <- Session.run (Session.statement () HST.getArticlesSortedByPhotosNumber) connection
     valueToUTFLBS sessionResults
 
 getCredentials :: IO (Either Session.QueryError (Int32, Bool, Int32))

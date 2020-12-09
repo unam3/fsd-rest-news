@@ -88,16 +88,25 @@ create table articles (
 --    article_id         integer references articles (article_id)
 --);
 
-INSERT INTO articles (author, category_id, article_title, article_content, is_published) VALUES
-    (1, 1, 'Loserthink', 'If you’re interested in expanding how you think things through, check out Loserthink.', true),
-    (2, 2, 'How To Solve It', 'Polya', true),
+INSERT INTO articles (
+        author,
+        category_id,
+        article_title,
+        article_content,
+        is_published,
+        main_photo,
+        additional_photos
+    ) VALUES
+    (1, 1, 'Loserthink', 'If you’re interested in expanding how you think things through, check out Loserthink.', true, 'asdjf',  array[]::text[]),
+    (2, 2, 'How To Solve It', 'Polya', true, '', array['one link']::text[]),
     --(1, 2, E'You\'ve never imagine what was…', 'And today topic is children education.', false),
     --(4, 2, 'You''ve never imagine what was…', 'And today topic is children education.', false),
-    (4, 2, 'Oh my gooood.', 'No one ever really dies.', false),
-    (3, 1, 'Something Deeply Hidden', 'New book out!', false),
-    (2, 2, 'What I Wish I Knew When Learning Haskell', 'English.', false),
-    (2, 2, 'Пыщ', 'Еей!', false),
-    (3, 1, 'The Big Picture', 'New book again!', false);
+    (4, 2, 'Oh my gooood.', 'No one ever really dies.', false, '', array['two', 'links']::text[]),
+    (3, 1, 'Something Deeply Hidden', 'New book out!', false, 'main ph', array['two', 'links']::text[]),
+    (2, 2, 'What I Wish I Knew When Learning Haskell', 'English.', false, '', array['three', 'eee', 'links']::text[]),
+    (2, 2, 'Пыщ', 'Еей!', false, '', array['f', 'o', 'u', 'r']::text[]),
+    (2, 2, 'Disparaged', 'So', false, 'main', array['thr', 'e', 'e']::text[]),
+    (3, 1, 'The Big Picture', 'New book again!', false, 'main', array['f', 'o', 'u', 'r']::text[]);
 
 
 create table articles_tags (
