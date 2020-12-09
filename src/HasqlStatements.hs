@@ -31,6 +31,7 @@ module HasqlStatements (
     getArticlesByTitlePart,
     getArticlesByContentPart,
     getArticlesByAuthorNamePart,
+    getArticlesSortedByPhotosNumber,
     getCredentials
     ) where
 
@@ -478,6 +479,32 @@ getArticlesByAuthorNamePart =
             ) as filtered_author_ids
             on author = filtered_author_ids.author_id
                 and is_published = true
+        |]
+
+{-
+select article_id from articles order by coalesce(array_length(additional_photos, 1), 0) asc, main_photo = '' desc;
+ main_photo | additional_photos
+------------+-------------------
+ asdjf      | {}
+            | {"one link"}
+            | {two,links}
+ main ph    | {two,links}
+            | {three,eee,links}
+ main       | {thr,e,e}
+            | {f,o,u,r}
+ main       | {f,o,u,r}
+-}
+getArticlesSortedByPhotosNumber :: Statement () Value
+getArticlesSortedByPhotosNumber =
+    [TH.singletonStatement|
+        select json_agg(get_article(sorted.article_id)) :: json
+            from (
+                select article_id
+                from articles
+                order by
+                    coalesce(array_length(additional_photos, 1), 0) asc,
+                    main_photo = '' desc
+            ) as sorted
         |]
 
 

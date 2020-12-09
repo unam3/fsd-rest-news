@@ -187,6 +187,9 @@ restAPI vaultKey request respond = let {
                                     "getArticlesByAuthorNamePart"
                                     maybeArticlesByAuthorNamePartRequest
                                 _ -> "Method is not implemented"
+                            ["byPhotosNumber"] -> case method of
+                                "GET" -> "getArticlesSortedByPhotosNumber"
+                                _ -> "Method is not implemented"
                             _ -> "No such endpoint"
                         _ -> "No such endpoint")
                     else "Endpoint needed")
@@ -225,6 +228,7 @@ restAPI vaultKey request respond = let {
                     "getArticlesByTitlePart" -> runSession HSS.getArticlesByTitlePart
                     "getArticlesByContentPart" -> runSession HSS.getArticlesByContentPart
                     "getArticlesByAuthorNamePart" -> runSession HSS.getArticlesByAuthorNamePart
+                    "getArticlesSortedByPhotosNumber" -> HSS.getArticlesSortedByPhotosNumber
                     nonMatched -> pure . pure $ UTFLBS.fromString nonMatched;
                 } in sessionResults
             resultsString <- pure (case results of
@@ -272,5 +276,4 @@ runWarpStatic = let {
 runWarpWithLogger :: IO ()
 runWarpWithLogger = traplogging "rest-news" ERROR "shutdown due to"
     $ updateGlobalLogger "rest-news" (setLevel DEBUG)
-    >> forkIO runWarp
-    >> runWarpStatic
+    >> runWarp
