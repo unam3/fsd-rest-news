@@ -190,6 +190,9 @@ restAPI vaultKey request respond = let {
                             ["byPhotosNumber"] -> case method of
                                 "GET" -> "getArticlesSortedByPhotosNumber"
                                 _ -> "Method is not implemented"
+                            ["byCreationDate"] -> case method of
+                                "GET" -> "getArticlesSortedByCreationDate"
+                                _ -> "Method is not implemented"
                             _ -> "No such endpoint"
                         _ -> "No such endpoint")
                     else "Endpoint needed")
@@ -229,6 +232,7 @@ restAPI vaultKey request respond = let {
                     "getArticlesByContentPart" -> runSession HSS.getArticlesByContentPart
                     "getArticlesByAuthorNamePart" -> runSession HSS.getArticlesByAuthorNamePart
                     "getArticlesSortedByPhotosNumber" -> HSS.getArticlesSortedByPhotosNumber
+                    "getArticlesSortedByCreationDate" -> HSS.getArticlesSortedByCreationDate
                     nonMatched -> pure . pure $ UTFLBS.fromString nonMatched;
                 } in sessionResults
             resultsString <- pure (case results of

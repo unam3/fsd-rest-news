@@ -84,3 +84,5 @@ curl -i -X GET -d '{"author_name_substring": "s"}' http://0.0.0.0:8081/articles/
 
 # sorting
 curl -i -X GET http://0.0.0.0:8081/articles/byPhotosNumber
+
+curl -i -X GET http://0.0.0.0:8081/articles/byCreationDate

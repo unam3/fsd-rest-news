@@ -29,6 +29,7 @@ INSERT INTO users (name, surname, avatar, is_admin) VALUES
     ('Snoyberg', 'FPComplete', 'http://pluh/kek.jpg', false);
 
 
+
 create table authors (
     author_id       integer generated always as identity primary key,
     user_id         integer references users unique,
@@ -107,6 +108,38 @@ INSERT INTO articles (
     (2, 2, 'Пыщ', 'Еей!', false, '', array['f', 'o', 'u', 'r']::text[]),
     (2, 2, 'Disparaged', 'So', false, 'main', array['thr', 'e', 'e']::text[]),
     (3, 1, 'The Big Picture', 'New book again!', false, 'main', array['f', 'o', 'u', 'r']::text[]);
+
+update articles
+set creation_date = timestamp '2020-12-09 20:20:20.666628'
+where article_id = 1;
+
+update articles
+set creation_date = timestamp '2020-12-09 18:18:18.666628'
+where article_id = 2;
+
+update articles
+set creation_date = timestamp '2020-12-09 11:11:11.666628'
+where article_id = 3;
+
+update articles
+set creation_date = timestamp '2020-12-09 19:19:19.666628'
+where article_id = 4;
+
+update articles
+set creation_date = timestamp '2020-12-09 12:12:12.666628'
+where article_id = 5;
+
+update articles
+set creation_date = timestamp '2020-12-09 15:15:15.666628'
+where article_id = 6;
+
+update articles
+set creation_date = timestamp '2020-12-09 14:14:14.666628'
+where article_id = 7;
+
+update articles
+set creation_date = timestamp '2020-12-09 13:13:13.666628'
+where article_id = 8;
 
 
 create table articles_tags (

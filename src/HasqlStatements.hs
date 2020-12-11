@@ -32,6 +32,7 @@ module HasqlStatements (
     getArticlesByContentPart,
     getArticlesByAuthorNamePart,
     getArticlesSortedByPhotosNumber,
+    getArticlesSortedByCreationDate,
     getCredentials
     ) where
 
@@ -501,9 +502,22 @@ getArticlesSortedByPhotosNumber =
             from (
                 select article_id
                 from articles
+                where is_published = true
                 order by
                     coalesce(array_length(additional_photos, 1), 0) asc,
                     main_photo = '' desc
+            ) as sorted
+        |]
+
+getArticlesSortedByCreationDate :: Statement () Value
+getArticlesSortedByCreationDate =
+    [TH.singletonStatement|
+        select json_agg(get_article(sorted.article_id)) :: json
+            from (
+                select article_id
+                from articles
+                where is_published = true
+                order by creation_date asc
             ) as sorted
         |]
 

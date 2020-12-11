@@ -33,6 +33,7 @@ module HasqlSessions (
     getArticlesByContentPart,
     getArticlesByAuthorNamePart,
     getArticlesSortedByPhotosNumber,
+    getArticlesSortedByCreationDate,
     getCredentials
     ) where
 
@@ -380,6 +381,13 @@ getArticlesSortedByPhotosNumber =
     do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement () HST.getArticlesSortedByPhotosNumber) connection
+    valueToUTFLBS sessionResults
+
+getArticlesSortedByCreationDate :: IO (Either Session.QueryError ByteString)
+getArticlesSortedByCreationDate =
+    do
+    Right connection <- Connection.acquire connectionSettings
+    sessionResults <- Session.run (Session.statement () HST.getArticlesSortedByCreationDate) connection
     valueToUTFLBS sessionResults
 
 getCredentials :: IO (Either Session.QueryError (Int32, Bool, Int32))
