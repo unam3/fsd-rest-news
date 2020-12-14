@@ -33,6 +33,7 @@ module HasqlStatements (
     getArticlesByAuthorNamePart,
     getArticlesSortedByPhotosNumber,
     getArticlesSortedByCreationDate,
+    getArticlesSortedByAuthor,
     getCredentials
     ) where
 
@@ -518,6 +519,23 @@ getArticlesSortedByCreationDate =
                 from articles
                 where is_published = true
                 order by creation_date asc
+            ) as sorted
+        |]
+
+-- select article_id from users inner join authors on users.user_id = authors.user_id inner join articles on authors.author_id = articles.author where is_published = true order by surname asc;
+getArticlesSortedByAuthor :: Statement () Value
+getArticlesSortedByAuthor =
+    [TH.singletonStatement|
+        select json_agg(get_article(sorted.article_id)) :: json
+            from (
+                select article_id
+                from users
+                inner join authors
+                on users.user_id = authors.user_id
+                inner join articles
+                on authors.author_id = articles.author
+                where is_published = true
+                order by surname asc
             ) as sorted
         |]
 
