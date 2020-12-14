@@ -34,6 +34,7 @@ module HasqlStatements (
     getArticlesSortedByPhotosNumber,
     getArticlesSortedByCreationDate,
     getArticlesSortedByAuthor,
+    getArticlesSortedByCategory,
     getCredentials
     ) where
 
@@ -539,6 +540,19 @@ getArticlesSortedByAuthor =
             ) as sorted
         |]
 
+getArticlesSortedByCategory :: Statement () Value
+getArticlesSortedByCategory =
+    [TH.singletonStatement|
+        select json_agg(get_article(sorted.article_id)) :: json
+            from (
+                select article_id
+                from articles
+                inner join categories
+                on articles.category_id = categories.category_id
+                where is_published = true
+                order by name asc
+            ) as sorted
+        |]
 
 --select users.user_id, users.is_admin, authors.author_id from users left join authors on authors.user_id = users.user_id where users.user_id = 6;
 getCredentials :: Statement () (Int32, Bool, Int32)
