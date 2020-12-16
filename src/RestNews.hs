@@ -4,7 +4,7 @@ module RestNews
     ( runWarpWithLogger
     ) where
 
-import AesonDefinitions (CreateUserRequest, UserIdRequest, PromoteUserToAuthorRequest, EditAuthorRequest, AuthorIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest, CreateCommentRequest, CreateCommentRequest, CommentIdRequest, ArticleCommentsRequest, ArticleDraftRequest, ArticleDraftEditRequest, ArticleDraftIdRequest, ArticlesByCategoryIdRequest, ArticlesByTagIdListRequest, ArticlesByTitlePartRequest, ArticlesByContentPartRequest, ArticlesByAuthorNamePartRequest)
+import AesonDefinitions (CreateUserRequest, UserIdRequest, PromoteUserToAuthorRequest, EditAuthorRequest, AuthorIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest, CreateCommentRequest, CreateCommentRequest, CommentIdRequest, ArticleCommentsRequest, ArticleDraftRequest, ArticleDraftEditRequest, ArticleDraftIdRequest, ArticlesByCategoryIdRequest, ArticlesByTagIdListRequest, ArticlesByTitlePartRequest, ArticlesByContentPartRequest, ArticlesByAuthorNamePartRequest, ArticlesByCreationDateRequest)
 import qualified HasqlSessions as HSS
 
 import Control.Concurrent (forkIO)
@@ -118,6 +118,7 @@ restAPI vaultKey request respond = let {
                 maybeArticlesByTitlePartRequest = decode requestBody :: Maybe ArticlesByTitlePartRequest;
                 maybeArticlesByContentPartRequest = decode requestBody :: Maybe ArticlesByContentPartRequest;
                 maybeArticlesByAuthorNamePartRequest = decode requestBody :: Maybe ArticlesByAuthorNamePartRequest;
+                maybeArticlesFilteredByCreationDate = decode requestBody :: Maybe ArticlesByCreationDateRequest;
             } in pure (
                 if isRequestPathNotEmpty
                     then (case pathHeadChunk of
@@ -199,6 +200,11 @@ restAPI vaultKey request respond = let {
                             ["sortByCategory"] -> case method of
                                 "GET" -> "getArticlesSortedByCategory"
                                 _ -> "Method is not implemented"
+                            ["createdAt"] -> case method of
+                                "GET" -> ifValidRequest
+                                    "getArticlesFilteredByCreationDate"
+                                    maybeArticlesFilteredByCreationDate
+                                _ -> "Method is not implemented"
                             _ -> "No such endpoint"
                         _ -> "No such endpoint")
                     else "Endpoint needed")
@@ -241,6 +247,7 @@ restAPI vaultKey request respond = let {
                     "getArticlesSortedByCreationDate" -> HSS.getArticlesSortedByCreationDate
                     "getArticlesSortedByAuthor" -> HSS.getArticlesSortedByAuthor
                     "getArticlesSortedByCategory" -> HSS.getArticlesSortedByCategory
+                    "getArticlesFilteredByCreationDate" -> runSession HSS.getArticlesFilteredByCreationDate
                     nonMatched -> pure . pure $ UTFLBS.fromString nonMatched;
                 } in sessionResults
             resultsString <- pure (case results of

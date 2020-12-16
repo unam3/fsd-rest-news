@@ -35,6 +35,7 @@ module HasqlStatements (
     getArticlesSortedByCreationDate,
     getArticlesSortedByAuthor,
     getArticlesSortedByCategory,
+    getArticlesFilteredByCreationDate,
     getCredentials
     ) where
 
@@ -552,6 +553,18 @@ getArticlesSortedByCategory =
                 where is_published = true
                 order by name asc
             ) as sorted
+        |]
+
+getArticlesFilteredByCreationDate :: Statement Text Value
+getArticlesFilteredByCreationDate =
+    [TH.singletonStatement|
+        select json_agg(get_article(filtered.article_id)) :: json
+            from (
+                select article_id
+                from articles
+                where is_published = true
+                    and creation_date :: date = ($1 :: text) :: date
+            ) as filtered
         |]
 
 --select users.user_id, users.is_admin, authors.author_id from users left join authors on authors.user_id = users.user_id where users.user_id = 6;

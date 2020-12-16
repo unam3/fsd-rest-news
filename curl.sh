@@ -82,6 +82,8 @@ curl -i -X GET -d '{"author_name_substring": "ph"}' http://0.0.0.0:8081/articles
 # "If you’re
 curl -i -X GET -d '{"author_name_substring": "s"}' http://0.0.0.0:8081/articles/in__author_name
 
+curl -i -X GET -d '{"day": "2020-12-09"}' http://0.0.0.0:8081/articles/createdAt
+
 # sorting
 curl -i -X GET http://0.0.0.0:8081/articles/byPhotosNumber
 

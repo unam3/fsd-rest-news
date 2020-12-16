@@ -36,14 +36,16 @@ module HasqlSessions (
     getArticlesSortedByCreationDate,
     getArticlesSortedByAuthor,
     getArticlesSortedByCategory,
+    getArticlesFilteredByCreationDate,
     getCredentials
     ) where
 
 import Data.Aeson (Value, encode)
 import Data.ByteString.Lazy.UTF8 (ByteString)
 import Data.Int (Int32)
---import Data.Text (Text, unpack, pack)
+import Data.Text (pack)
 --import Data.Text.IO (putStrLn)
+import Data.Time.Calendar (showGregorian)
 import qualified Hasql.Connection as Connection
 import qualified Hasql.Session as Session
 
@@ -404,6 +406,17 @@ getArticlesSortedByCategory =
     do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement () HST.getArticlesSortedByCategory) connection
+    valueToUTFLBS sessionResults
+
+getArticlesFilteredByCreationDate :: ArticlesByCreationDateRequest -> IO (Either Session.QueryError ByteString)
+getArticlesFilteredByCreationDate articlesByCreationDateRequest = let {
+    params = (
+        pack . showGregorian $ day (articlesByCreationDateRequest :: ArticlesByCreationDateRequest)
+        );
+} in do
+    Right connection <- Connection.acquire connectionSettings
+    sessionResults <- Session.run (Session.statement params HST.getArticlesFilteredByCreationDate) connection
+    print sessionResults
     valueToUTFLBS sessionResults
 
 getCredentials :: IO (Either Session.QueryError (Int32, Bool, Int32))

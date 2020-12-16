@@ -23,12 +23,14 @@ module AesonDefinitions (
     ArticlesByTagIdListRequest(..),
     ArticlesByTitlePartRequest(..),
     ArticlesByContentPartRequest(..),
-    ArticlesByAuthorNamePartRequest(..)
+    ArticlesByAuthorNamePartRequest(..),
+    ArticlesByCreationDateRequest(..)
     ) where
 
 import Data.Aeson (FromJSON)
 import Data.Int (Int32)
 import Data.Text (Text)
+import Data.Time.Calendar (Day)
 import Data.Vector (Vector)
 import GHC.Generics (Generic)
 
@@ -208,3 +210,9 @@ data ArticlesByAuthorNamePartRequest = ArticlesByAuthorNamePartRequest {
 } deriving (Show, Generic)
 
 instance FromJSON ArticlesByAuthorNamePartRequest
+
+data ArticlesByCreationDateRequest = ArticlesByCreationDateRequest {
+    day :: Day
+} deriving (Show, Generic)
+
+instance FromJSON ArticlesByCreationDateRequest
