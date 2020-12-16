@@ -36,6 +36,8 @@ module HasqlStatements (
     getArticlesSortedByAuthor,
     getArticlesSortedByCategory,
     getArticlesFilteredByCreationDate,
+    getArticlesCreatedBeforeDate,
+    getArticlesCreatedAfterDate,
     getCredentials
     ) where
 
@@ -564,6 +566,30 @@ getArticlesFilteredByCreationDate =
                 from articles
                 where is_published = true
                     and creation_date :: date = ($1 :: text) :: date
+            ) as filtered
+        |]
+
+getArticlesCreatedBeforeDate :: Statement Text Value
+getArticlesCreatedBeforeDate =
+    [TH.singletonStatement|
+        select json_agg(get_article(filtered.article_id)) :: json
+            from (
+                select article_id
+                from articles
+                where is_published = true
+                    and creation_date :: date < ($1 :: text) :: date
+            ) as filtered
+        |]
+
+getArticlesCreatedAfterDate :: Statement Text Value
+getArticlesCreatedAfterDate =
+    [TH.singletonStatement|
+        select json_agg(get_article(filtered.article_id)) :: json
+            from (
+                select article_id
+                from articles
+                where is_published = true
+                    and creation_date :: date > ($1 :: text) :: date
             ) as filtered
         |]
 

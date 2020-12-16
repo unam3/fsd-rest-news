@@ -37,6 +37,8 @@ module HasqlSessions (
     getArticlesSortedByAuthor,
     getArticlesSortedByCategory,
     getArticlesFilteredByCreationDate,
+    getArticlesCreatedBeforeDate,
+    getArticlesCreatedAfterDate,
     getCredentials
     ) where
 
@@ -416,7 +418,26 @@ getArticlesFilteredByCreationDate articlesByCreationDateRequest = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesFilteredByCreationDate) connection
-    print sessionResults
+    valueToUTFLBS sessionResults
+
+getArticlesCreatedBeforeDate :: ArticlesByCreationDateRequest -> IO (Either Session.QueryError ByteString)
+getArticlesCreatedBeforeDate articlesByCreationDateRequest = let {
+    params = (
+        pack . showGregorian $ day (articlesByCreationDateRequest :: ArticlesByCreationDateRequest)
+        );
+} in do
+    Right connection <- Connection.acquire connectionSettings
+    sessionResults <- Session.run (Session.statement params HST.getArticlesCreatedBeforeDate) connection
+    valueToUTFLBS sessionResults
+
+getArticlesCreatedAfterDate :: ArticlesByCreationDateRequest -> IO (Either Session.QueryError ByteString)
+getArticlesCreatedAfterDate articlesByCreationDateRequest = let {
+    params = (
+        pack . showGregorian $ day (articlesByCreationDateRequest :: ArticlesByCreationDateRequest)
+        );
+} in do
+    Right connection <- Connection.acquire connectionSettings
+    sessionResults <- Session.run (Session.statement params HST.getArticlesCreatedAfterDate) connection
     valueToUTFLBS sessionResults
 
 getCredentials :: IO (Either Session.QueryError (Int32, Bool, Int32))
