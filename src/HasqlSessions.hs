@@ -45,11 +45,12 @@ module HasqlSessions (
 import Data.Aeson (Value, encode)
 import Data.ByteString.Lazy.UTF8 (ByteString)
 import Data.Int (Int32)
-import Data.Text (pack)
+import Data.Text (Text, pack)
 --import Data.Text.IO (putStrLn)
 import Data.Time.Calendar (showGregorian)
 import qualified Hasql.Connection as Connection
 import qualified Hasql.Session as Session
+import Hasql.Statement (Statement)
 
 import AesonDefinitions
 import qualified HasqlStatements as HST
@@ -410,35 +411,25 @@ getArticlesSortedByCategory =
     sessionResults <- Session.run (Session.statement () HST.getArticlesSortedByCategory) connection
     valueToUTFLBS sessionResults
 
-getArticlesFilteredByCreationDate :: ArticlesByCreationDateRequest -> IO (Either Session.QueryError ByteString)
-getArticlesFilteredByCreationDate articlesByCreationDateRequest = let {
+getArticlesFilteredBy :: Statement Text Value -> ArticlesByCreationDateRequest
+    -> IO (Either Session.QueryError ByteString)
+getArticlesFilteredBy filterF articlesByCreationDateRequest = let {
     params = (
         pack . showGregorian $ day (articlesByCreationDateRequest :: ArticlesByCreationDateRequest)
         );
 } in do
     Right connection <- Connection.acquire connectionSettings
-    sessionResults <- Session.run (Session.statement params HST.getArticlesFilteredByCreationDate) connection
+    sessionResults <- Session.run (Session.statement params filterF) connection
     valueToUTFLBS sessionResults
+
+getArticlesFilteredByCreationDate :: ArticlesByCreationDateRequest -> IO (Either Session.QueryError ByteString)
+getArticlesFilteredByCreationDate = getArticlesFilteredBy HST.getArticlesFilteredByCreationDate
 
 getArticlesCreatedBeforeDate :: ArticlesByCreationDateRequest -> IO (Either Session.QueryError ByteString)
-getArticlesCreatedBeforeDate articlesByCreationDateRequest = let {
-    params = (
-        pack . showGregorian $ day (articlesByCreationDateRequest :: ArticlesByCreationDateRequest)
-        );
-} in do
-    Right connection <- Connection.acquire connectionSettings
-    sessionResults <- Session.run (Session.statement params HST.getArticlesCreatedBeforeDate) connection
-    valueToUTFLBS sessionResults
+getArticlesCreatedBeforeDate = getArticlesFilteredBy HST.getArticlesCreatedBeforeDate
 
 getArticlesCreatedAfterDate :: ArticlesByCreationDateRequest -> IO (Either Session.QueryError ByteString)
-getArticlesCreatedAfterDate articlesByCreationDateRequest = let {
-    params = (
-        pack . showGregorian $ day (articlesByCreationDateRequest :: ArticlesByCreationDateRequest)
-        );
-} in do
-    Right connection <- Connection.acquire connectionSettings
-    sessionResults <- Session.run (Session.statement params HST.getArticlesCreatedAfterDate) connection
-    valueToUTFLBS sessionResults
+getArticlesCreatedAfterDate = getArticlesFilteredBy HST.getArticlesCreatedAfterDate
 
 getCredentials :: IO (Either Session.QueryError (Int32, Bool, Int32))
 getCredentials = 
