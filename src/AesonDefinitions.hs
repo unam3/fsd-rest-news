@@ -4,6 +4,7 @@
 module AesonDefinitions (
     CreateUserRequest(..),
     UserIdRequest(..),
+    AuthRequest(..),
     PromoteUserToAuthorRequest(..),
     EditAuthorRequest(..),
     AuthorIdRequest(..),
@@ -49,6 +50,15 @@ newtype UserIdRequest = UserIdRequest {
 } deriving (Show, Generic)
 
 instance FromJSON UserIdRequest
+
+
+
+data AuthRequest = AuthRequest {
+    username :: Text,
+    password :: Text
+} deriving (Show, Generic)
+
+instance FromJSON AuthRequest
 
 
 

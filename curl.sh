@@ -96,3 +96,7 @@ curl -i -X GET http://0.0.0.0:8081/articles/byCreationDate
 curl -i -X GET http://0.0.0.0:8081/articles/sortByAuthor
 
 curl -i -X GET http://0.0.0.0:8081/articles/sortByCategory
+
+
+curl -i -X POST -d '{"username": "Mk", "password": "hey you"}' http://0.0.0.0:8081/auth
+curl -i -X POST -d '{"username": "username2", "password": "12345"}' http://0.0.0.0:8081/auth

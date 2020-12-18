@@ -15,6 +15,7 @@ su postgres
 createuser -d -P rest-news-user
 # enter password "rest" twice
 createdb rest-news-db
+psql rest-news-db -c "CREATE EXTENSION pgcrypto;"
 psql -h 0.0.0.0 -W -f schema.psql rest-news-db rest-news-user
 
 ^D

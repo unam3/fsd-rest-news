@@ -4,7 +4,7 @@ module RestNews
     ( runWarpWithLogger
     ) where
 
-import AesonDefinitions (CreateUserRequest, UserIdRequest, PromoteUserToAuthorRequest, EditAuthorRequest, AuthorIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest, CreateCommentRequest, CreateCommentRequest, CommentIdRequest, ArticleCommentsRequest, ArticleDraftRequest, ArticleDraftEditRequest, ArticleDraftIdRequest, ArticlesByCategoryIdRequest, ArticlesByTagIdListRequest, ArticlesByTitlePartRequest, ArticlesByContentPartRequest, ArticlesByAuthorNamePartRequest, ArticlesByCreationDateRequest)
+import AesonDefinitions (AuthRequest, CreateUserRequest, UserIdRequest, PromoteUserToAuthorRequest, EditAuthorRequest, AuthorIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest, CreateCommentRequest, CreateCommentRequest, CommentIdRequest, ArticleCommentsRequest, ArticleDraftRequest, ArticleDraftEditRequest, ArticleDraftIdRequest, ArticlesByCategoryIdRequest, ArticlesByTagIdListRequest, ArticlesByTitlePartRequest, ArticlesByContentPartRequest, ArticlesByAuthorNamePartRequest, ArticlesByCreationDateRequest)
 import qualified HasqlSessions as HSS
 
 import Control.Concurrent (forkIO)
@@ -16,7 +16,8 @@ import Data.Either (fromRight)
 import Data.Int (Int32)
 import Data.Maybe (fromJust, isJust)
 import qualified Data.Vault.Lazy as Vault
-import Database.PostgreSQL.Simple
+import Database.PostgreSQL.Simple (Connection, ConnectInfo(..), connectPostgreSQL, postgreSQLConnectionString)
+import Hasql.Session (QueryError)
 import qualified Network.HTTP.Types as H
 import Network.Wai (Application, pathInfo, requestMethod, responseLBS, strictRequestBody, vault)
 import Network.Wai.Application.Static
@@ -51,6 +52,15 @@ restAPI vaultKey request respond = let {
         pathHeadChunk = head pathTextChunks;
         method = requestMethod request;
         Just (sessionLookup, sessionInsert) = Vault.lookup vaultKey (vault request);
+        processCredentials :: Either QueryError (Int32, Bool, Int32) -> IO (Either QueryError UTFLBS.ByteString);
+        processCredentials sessionResults = let {
+            (user_id, is_admin, author_id) = fromRight (0, False, 0) sessionResults;
+        } in
+            (debugM "rest-news" $ show ("put into sessions:" :: String, user_id, is_admin, author_id))
+            >> (sessionInsert "is_admin" $ show is_admin)
+            >> (sessionInsert "user_id" $ show user_id)
+            >> (sessionInsert "author_id" $ show author_id)
+            >> pure (fmap (const "cookies are baked") sessionResults);
     } in bracket_
         (debugM "rest-news" "Allocating scarce resource")
         (debugM "rest-news" "Cleaning up")
@@ -65,23 +75,9 @@ restAPI vaultKey request respond = let {
             debugM "rest-news" $ show ("session user_id" :: String, maybeUserId)
             debugM "rest-news" $ show ("session is_admin" :: String, maybeIsAdmin)
             debugM "rest-news" $ show ("session author_id" :: String, maybeAuthorId)
-            
-            when (pathHeadChunk == "login") $ do
-
-                putStrLn "login simulation"
-
-                sessionResults <- HSS.getCredentials
-
-                let {
-                    (user_id, is_admin, author_id) = fromRight (0, False, 0) sessionResults;
-                } in
-                    (debugM "rest-news" $ show ("put into sessions:" :: String, user_id, is_admin, author_id))
-                    >> (sessionInsert "is_admin" $ show is_admin)
-                    >> (sessionInsert "user_id" $ show user_id)
-                    >> (sessionInsert "author_id" $ show author_id)
 
             requestBody <- strictRequestBody request
-
+            
             debugM "rest-news" (show (method, pathTextChunks, requestBody))
 
             errorOrSessionName <- let {
@@ -96,6 +92,7 @@ restAPI vaultKey request respond = let {
                 passIfHasAuthorId sessionName = if sessionAuthorIdString /= "0"
                     then sessionName
                     else "No such endpoint";
+                maybeAuthRequestJSON = decode requestBody :: Maybe AuthRequest;
                 maybeCreateUserRequestJSON = decode requestBody :: Maybe CreateUserRequest;
                 maybeUserIdRequestJSON = decode requestBody :: Maybe UserIdRequest;
                 maybePromoteUserToAuthorRequestJSON = decode requestBody :: Maybe PromoteUserToAuthorRequest;
@@ -122,6 +119,9 @@ restAPI vaultKey request respond = let {
             } in pure (
                 if isRequestPathNotEmpty
                     then (case pathHeadChunk of
+                        "auth" -> case method of
+                            "POST"      -> ifValidRequest "auth" maybeAuthRequestJSON
+                            _ -> "Method is not implemented"
                         "users" -> case method of
                             "POST"      -> ifValidRequest "createUser" maybeCreateUserRequestJSON
                             "GET"       -> passIfHasUserId "getUser"
@@ -226,6 +226,7 @@ restAPI vaultKey request respond = let {
                     "createUser" -> runSession HSS.createUser
                     "getUser" -> HSS.getUser (read sessionUserId :: Int32)
                     "deleteUser" -> runSession HSS.deleteUser
+                    "auth" -> runSession HSS.getCredentials >>= processCredentials
                     "promoteUserToAuthor" -> runSession HSS.promoteUserToAuthor;
                     "editAuthor" -> runSession HSS.editAuthor
                     "getAuthor" -> runSession HSS.getAuthor

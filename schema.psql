@@ -8,9 +8,10 @@ drop table if exists articles_comments cascade;
 
 begin;
 
-
 create table users (
     user_id         integer generated always as identity,
+    username        text not null unique,
+    password        text not null,
     name            varchar(80) not null,
     surname         varchar(80) not null,
     avatar          text,
@@ -20,13 +21,13 @@ create table users (
     primary key (user_id)
 );
 
-INSERT INTO users (name, surname, avatar, is_admin) VALUES
-    ('Scott', 'Adams', 'http://pluh/meh.jpg', true),
-    ('Stephen', 'Diehl', 'http://pluh/monad.jpg', false),
-    ('Sean', ' Carroll', 'https://preposterousuniverse.com/quant.jpg', false),
-    ('Phil', 'Well', 'https://daaaa.mn/it.jpg', false),
-    ('Douglas', 'Crockford', 'https://daaaa.mn/it.jpg', false),
-    ('Snoyberg', 'FPComplete', 'http://pluh/kek.jpg', false);
+INSERT INTO users (username, password, name, surname, avatar, is_admin) VALUES
+    ('username', crypt('12345', gen_salt('bf', 8)), 'Scott', 'Adams', 'http://pluh/meh.jpg', true),
+    ('username1', crypt('12345', gen_salt('bf', 8)), 'Stephen', 'Diehl', 'http://pluh/monad.jpg', false),
+    ('username2', crypt('12345', gen_salt('bf', 8)), 'Sean', ' Carroll', 'https://preposterousuniverse.com/quant.jpg', false),
+    ('username3', crypt('12345', gen_salt('bf', 8)), 'Phil', 'Well', 'https://daaaa.mn/it.jpg', false),
+    ('username4', crypt('12345', gen_salt('bf', 8)), 'Douglas', 'Crockford', 'https://daaaa.mn/it.jpg', false),
+    ('username5', crypt('12345', gen_salt('bf', 8)), 'Snoyberg', 'FPComplete', 'http://pluh/kek.jpg', false);
 
 
 

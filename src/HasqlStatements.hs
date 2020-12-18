@@ -89,7 +89,6 @@ getUser =
         where user_id = $1 :: int4
         |]
 
-
 getAuthor :: Statement Int32 Value
 getAuthor =
     [TH.singletonStatement|
@@ -593,8 +592,21 @@ getArticlesCreatedAfterDate =
             ) as filtered
         |]
 
---select users.user_id, users.is_admin, authors.author_id from users left join authors on authors.user_id = users.user_id where users.user_id = 6;
-getCredentials :: Statement () (Int32, Bool, Int32)
+{-
+select users.user_id, users.is_admin, authors.author_id from users left join authors on authors.user_id = users.user_id where users.user_id = 6;
+
+select
+    users.user_id,
+    users.is_admin,
+    authors.author_id
+from
+    users
+    left join authors
+    on authors.user_id = users.user_id,
+    (SELECT user_id FROM users WHERE username = lower('username4') AND password = crypt('12345', password)) as matched_user
+    where users.user_id = matched_user.user_id;
+-}
+getCredentials :: Statement (Text, Text) (Int32, Bool, Int32)
 getCredentials =
     [TH.singletonStatement|
         select
@@ -603,7 +615,13 @@ getCredentials =
             coalesce(authors.author_id, 0) :: int4
         from
             users
-            left join authors on authors.user_id = users.user_id
+            left join authors on authors.user_id = users.user_id,
+            (select user_id
+                from users
+                where
+                    username = lower($1 :: text)
+                    and password = crypt($2 :: text, password)
+            ) as matched_user
         where
-            users.user_id = 1
+            users.user_id = matched_user.user_id
         |]

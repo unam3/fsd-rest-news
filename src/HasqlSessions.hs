@@ -431,9 +431,16 @@ getArticlesCreatedBeforeDate = getArticlesFilteredBy HST.getArticlesCreatedBefor
 getArticlesCreatedAfterDate :: ArticlesByCreationDateRequest -> IO (Either Session.QueryError ByteString)
 getArticlesCreatedAfterDate = getArticlesFilteredBy HST.getArticlesCreatedAfterDate
 
-getCredentials :: IO (Either Session.QueryError (Int32, Bool, Int32))
-getCredentials = 
-    do
+
+getCredentials :: AuthRequest -> IO (Either Session.QueryError (Int32, Bool, Int32))
+getCredentials authRequest = let {
+    params = (
+        username (authRequest :: AuthRequest),
+        password (authRequest :: AuthRequest)
+        );
+} in do
     Right connection <- Connection.acquire connectionSettings
-    sessionResults <- Session.run (Session.statement () HST.getCredentials) connection
+    sessionResults <- Session.run (Session.statement params HST.getCredentials) connection
     pure sessionResults
+
+
