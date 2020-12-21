@@ -78,7 +78,14 @@ connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest
 
 createUser :: CreateUserRequest -> IO (Either Session.QueryError ByteString)
 createUser createUserRequest = let {
-    params = (name (createUserRequest :: CreateUserRequest), surname createUserRequest, avatar createUserRequest, is_admin createUserRequest);
+    params = (
+        username (createUserRequest :: CreateUserRequest),
+        password (createUserRequest :: CreateUserRequest),
+        name (createUserRequest :: CreateUserRequest),
+        surname createUserRequest,
+        avatar createUserRequest,
+        is_admin createUserRequest
+        );
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.createUser) connection

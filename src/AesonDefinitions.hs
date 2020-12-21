@@ -36,6 +36,8 @@ import Data.Vector (Vector)
 import GHC.Generics (Generic)
 
 data CreateUserRequest = CreateUserRequest {
+    username :: Text,
+    password :: Text,
     name :: Text,
     surname :: Text,
     avatar :: Text,

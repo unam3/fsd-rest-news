@@ -49,16 +49,18 @@ import qualified Hasql.TH as TH
 
 import Hasql.Statement (Statement(..))
 
-createUser :: Statement (Text, Text, Text, Bool) Value
+createUser :: Statement (Text, Text, Text, Text, Text, Bool) Value
 createUser =
     [TH.singletonStatement|
         insert
-        into users (name, surname, avatar, is_admin)
+        into users (username, password, name, surname, avatar, is_admin)
             values (
                 $1 :: text,
-                $2 :: text,
+                crypt($2 :: text, gen_salt('bf', 8)),
                 $3 :: text,
-                $4 :: bool
+                $4 :: text,
+                $5 :: text,
+                $6 :: bool
                 )
         returning json_build_object(
             'user_id', user_id,
