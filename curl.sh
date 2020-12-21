@@ -1,11 +1,20 @@
+# "no such endpoint" if not logged in
+SESSION=`curl -i -X POST -d '{"username": "Mk", "password": "hey you"}' http://0.0.0.0:8081/auth|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`
+
+# not an author
+SESSION=`curl -i -X POST -d '{"username": "username5", "password": "12345"}' http://0.0.0.0:8081/auth|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`
+
+# author
+SESSION=`curl -i -X POST -d '{"username": "username2", "password": "12345"}' http://0.0.0.0:8081/auth|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`
+
+
+####
 curl -i -X POST -d '{"name": "5.110", "surname": "2ba49e2dfc0d", "avatar": "asd", "is_admin": false}' http://0.0.0.0:8081/users
 
 curl -i -H 'Cookie: SESSION='${SESSION} -X GET http://0.0.0.0:8081/users
 curl -i -X GET -d '{"user_id": 2}' http://0.0.0.0:8081/users
 
 # clearSession flow
-SESSION=`curl -i http://localhost:8081/l|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`
-SIGNED_IN_SESSION=`curl -i -H 'Cookie: SESSION='${SESSION} http://localhost:8081/login`
 curl -i -X DELETE -d '{"user_id": 3}' -H 'Cookie: SESSION=999a47e78d91d1339e0fe61e29bd5e7947ff266b222594' http://localhost:8081/users
 
 curl -i -X DELETE -d '{"user_id": 3}' http://0.0.0.0:8081/users
@@ -20,8 +29,6 @@ curl -i -X GET -d '{"author_id": 1}' http://0.0.0.0:8081/authors
 curl -i -X DELETE -d '{"author_id": 2}' http://0.0.0.0:8081/authors
 
 
-SESSION=`curl -i http://localhost:8081/login|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`
-echo $SESSION
 curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"name": "pluh", "parent_id": null}' http://0.0.0.0:8081/categories
 
 curl -i -X POST -d '{"name": "pluh", "parent_id": null}' http://0.0.0.0:8081/categories
@@ -50,15 +57,11 @@ curl -i -X GET -d '{"tag_id": 2}' http://0.0.0.0:8081/tags
 curl -i -X DELETE -d '{"tag_id": 1}' http://0.0.0.0:8081/tags
 
 
-SESSION=`curl -i http://localhost:8081/login|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`
 curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"article_title": "they dont beleive their eyes…", "category_id": 1, "article_content": "article is long enough", "tags": [1,2], "main_photo": "http://pl.uh/main", "additional_photos": ["1", "2", "3"]}' http://0.0.0.0:8081/articles
 
-SESSION=`curl -i http://localhost:8081/login|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`
 curl -i -H 'Cookie: SESSION='${SESSION} -X PATCH -d '{"article_title": "PATCHED", "category_id": 1, "article_content": "PATCHED", "article_id": 8, "main_photo": "fs", "additional_photos": ["9", "2"]}' http://0.0.0.0:8081/articles
 
 # publish article draft
-SESSION=`curl -i http://localhost:8081/login|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`
-echo $SESSION
 curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"article_id": 10}' http://0.0.0.0:8081/articles
 
 curl -i -H 'Cookie: SESSION='${SESSION} -X GET -d '{"article_id": 8}' http://0.0.0.0:8081/articles
@@ -96,7 +99,3 @@ curl -i -X GET http://0.0.0.0:8081/articles/byCreationDate
 curl -i -X GET http://0.0.0.0:8081/articles/sortByAuthor
 
 curl -i -X GET http://0.0.0.0:8081/articles/sortByCategory
-
-
-curl -i -X POST -d '{"username": "Mk", "password": "hey you"}' http://0.0.0.0:8081/auth
-curl -i -X POST -d '{"username": "username2", "password": "12345"}' http://0.0.0.0:8081/auth
