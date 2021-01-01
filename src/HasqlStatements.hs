@@ -268,12 +268,20 @@ deleteComment =
             )::json
         |]
 
-getArticleComments :: Statement Int32 Value
+getArticleComments :: Statement (Int32, Maybe Int32) Value
 getArticleComments =
     [TH.singletonStatement|
-        select json_agg(json_build_object('article_id', article_id, 'comment_text', comment_text))::json
-        from articles_comments
-        where article_id = $1 :: int4
+        select json_agg(ordered.*)::json
+        from (
+            select
+                comment_id,
+                comment_text
+            from articles_comments
+            where article_id = $1 :: int4
+            order by comment_id
+            limit 20    
+            offset $2 :: int4?
+        ) as ordered
         |]
 
 {-

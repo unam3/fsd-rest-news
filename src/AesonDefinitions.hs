@@ -152,8 +152,9 @@ newtype CommentIdRequest = CommentIdRequest {
 instance FromJSON CommentIdRequest
 
 
-newtype ArticleCommentsRequest = ArticleCommentsRequest {
-    article_id :: Int32
+data ArticleCommentsRequest = ArticleCommentsRequest {
+    article_id :: Int32,
+    offset :: Maybe Int32
 } deriving (Show, Generic)
 
 instance FromJSON ArticleCommentsRequest

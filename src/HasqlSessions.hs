@@ -245,7 +245,10 @@ deleteComment deleteCommentRequest user_id' = let {
 
 getArticleComments :: ArticleCommentsRequest -> IO (Either Session.QueryError ByteString)
 getArticleComments articleCommentsRequest = let {
-    params = article_id (articleCommentsRequest :: ArticleCommentsRequest);
+    params = (
+        article_id (articleCommentsRequest :: ArticleCommentsRequest),
+        offset (articleCommentsRequest :: ArticleCommentsRequest)
+        );
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticleComments) connection

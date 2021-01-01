@@ -1,11 +1,11 @@
-# "no such endpoint" if not logged in
-SESSION=`curl -i -X POST -d '{"username": "Mk", "password": "hey you"}' http://0.0.0.0:8081/auth|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`
-
 # not an author
 SESSION=`curl -i -X POST -d '{"username": "username5", "password": "12345"}' http://0.0.0.0:8081/auth|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`
 
 # author
 SESSION=`curl -i -X POST -d '{"username": "username2", "password": "12345"}' http://0.0.0.0:8081/auth|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`
+
+# author and admin
+SESSION=`curl -i -X POST -d '{"username": "username", "password": "12345"}' http://0.0.0.0:8081/auth|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`
 
 # session invalidation test
 SESSION=`curl -i -X POST -d '{"username": "username5", "password": "12345"}' http://0.0.0.0:8081/auth|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`
@@ -37,8 +37,8 @@ curl -i -X DELETE -d '{"author_id": 2}' http://0.0.0.0:8081/authors
 
 curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"name": "pluh", "parent_id": null}' http://0.0.0.0:8081/categories
 
-curl -i -X POST -d '{"name": "pluh", "parent_id": null}' http://0.0.0.0:8081/categories
-curl -i -X POST -d '{"name": "pluh1", "parent_id": 1}' http://0.0.0.0:8081/categories
+curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"name": "pluh", "parent_id": null}' http://0.0.0.0:8081/categories
+curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"name": "pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1", "parent_id": 1}' http://0.0.0.0:8081/categories
 
 curl -i -X PATCH -d '{"category_id": 1, "name": "pluh_pattched", "parent_id": null}' http://0.0.0.0:8081/categories
 
@@ -50,6 +50,7 @@ curl -i -X DELETE -d '{"category_id": 10}' http://0.0.0.0:8081/categories
 curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"article_id": 2, "comment_text": "bluasd!"}' http://0.0.0.0:8081/comments
 
 curl -i -X GET -d '{"article_id": 2}' http://0.0.0.0:8081/comments
+curl -i -X GET -d '{"article_id": 2, "offset": 1}' http://0.0.0.0:8081/comments
 
 curl -i -H 'Cookie: SESSION='${SESSION} -X DELETE -d '{"comment_id": 4}' http://0.0.0.0:8081/comments
 
