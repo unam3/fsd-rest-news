@@ -417,7 +417,7 @@ getArticlesByTagId =
         |]
 
 -- select get_article(article_id) from articles_tags where article_id = any (array[4,1]::int[]) group by article_id;
-getArticlesByAnyTagId :: Statement (Vector Int32) Value
+getArticlesByAnyTagId :: Statement (Vector Int32, Maybe Int32) Value
 getArticlesByAnyTagId =
     [TH.singletonStatement|
         select json_agg(articles_filtered.get_article) :: json
@@ -429,12 +429,15 @@ getArticlesByAnyTagId =
                     where tag_id = any ($1 :: int4[])
                         and is_published = true
                     group by articles.article_id
+                    order by articles.article_id
+                    limit 20    
+                    offset $2 :: int4?
                 ) as articles_ids_filtered
             ) as articles_filtered
         |]
 
 -- select get_article(article_id) from (select article_id, array_agg(tag_id) as id_array from articles_tags group by article_id) as articles_tags_agg where id_array @> (array[2,1]::int[]);
-getArticlesByAllTagId :: Statement (Vector Int32) Value
+getArticlesByAllTagId :: Statement (Vector Int32, Maybe Int32) Value
 getArticlesByAllTagId =
     [TH.singletonStatement|
         select json_agg(get_article) :: json
@@ -447,6 +450,9 @@ getArticlesByAllTagId =
                 on articles.article_id = articles_tags.article_id
                 where id_array @> ($1 :: int4[])
                     and is_published = true
+                order by articles.article_id
+                limit 20    
+                offset $2 :: int4?
             ) as articles_tags_agg
         |]
 

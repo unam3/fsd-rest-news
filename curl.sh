@@ -83,8 +83,10 @@ curl -i -X GET -d '{"tag_id": 2}' http://0.0.0.0:8081/articles/tag
 curl -i -X GET -d '{"tag_id": 2, "offset": 1}' http://0.0.0.0:8081/articles/tag
 
 curl -i -X GET -d '{"tags_ids": [2, 1]}' http://0.0.0.0:8081/articles/tags__any
+curl -i -X GET -d '{"tags_ids": [2, 1], "offset": 1}' http://0.0.0.0:8081/articles/tags__any
 
 curl -i -X GET -d '{"tags_ids": [2, 1]}' http://0.0.0.0:8081/articles/tags__all
+curl -i -X GET -d '{"tags_ids": [2, 1], "offset": 1}' http://0.0.0.0:8081/articles/tags__all
 
 curl -i -X GET -d '{"title_substring": "ve"}' http://0.0.0.0:8081/articles/in__title
 

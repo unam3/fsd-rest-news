@@ -347,7 +347,8 @@ getArticlesByTagId tagIdRequestWithOffset = let {
 getArticlesByAnyTagId :: ArticlesByTagIdListRequest -> IO (Either Session.QueryError ByteString)
 getArticlesByAnyTagId tagIdsRequest = let {
     params = (
-        tags_ids (tagIdsRequest :: ArticlesByTagIdListRequest)
+        tags_ids (tagIdsRequest :: ArticlesByTagIdListRequest),
+        offset (tagIdsRequest :: ArticlesByTagIdListRequest)
         );
 } in do
     Right connection <- Connection.acquire connectionSettings
@@ -357,7 +358,8 @@ getArticlesByAnyTagId tagIdsRequest = let {
 getArticlesByAllTagId :: ArticlesByTagIdListRequest -> IO (Either Session.QueryError ByteString)
 getArticlesByAllTagId tagIdsRequest = let {
     params = (
-        tags_ids (tagIdsRequest :: ArticlesByTagIdListRequest)
+        tags_ids (tagIdsRequest :: ArticlesByTagIdListRequest),
+        offset (tagIdsRequest :: ArticlesByTagIdListRequest)
         );
 } in do
     Right connection <- Connection.acquire connectionSettings

@@ -211,7 +211,8 @@ data ArticlesByCategoryIdRequest = ArticlesByCategoryIdRequest {
 instance FromJSON ArticlesByCategoryIdRequest
 
 data ArticlesByTagIdListRequest = ArticlesByTagIdListRequest {
-    tags_ids :: Vector Int32
+    tags_ids :: Vector Int32,
+    offset :: Maybe Int32
 } deriving (Show, Generic)
 
 instance FromJSON ArticlesByTagIdListRequest
