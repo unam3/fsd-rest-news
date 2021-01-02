@@ -324,7 +324,8 @@ deleteArticleDraft articleDraftIdRequest author_id' = let {
 getArticlesByCategoryId :: ArticlesByCategoryIdRequest -> IO (Either Session.QueryError ByteString)
 getArticlesByCategoryId articlesByCategoryIdRequest = let {
     params = (
-        category_id (articlesByCategoryIdRequest :: ArticlesByCategoryIdRequest)
+        category_id (articlesByCategoryIdRequest :: ArticlesByCategoryIdRequest),
+        offset (articlesByCategoryIdRequest :: ArticlesByCategoryIdRequest)
         );
 } in do
     Right connection <- Connection.acquire connectionSettings

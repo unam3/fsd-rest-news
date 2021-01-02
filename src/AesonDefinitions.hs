@@ -195,7 +195,8 @@ instance FromJSON ArticleDraftIdRequest
 
 
 data ArticlesByCategoryIdRequest = ArticlesByCategoryIdRequest {
-    category_id :: Int32
+    category_id :: Int32,
+    offset :: Maybe Int32
 } deriving (Show, Generic)
 
 instance FromJSON ArticlesByCategoryIdRequest

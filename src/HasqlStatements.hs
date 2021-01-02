@@ -377,7 +377,7 @@ deleteArticleDraft =
         |]
 
 
-getArticlesByCategoryId :: Statement Int32 Value
+getArticlesByCategoryId :: Statement (Int32, Maybe Int32) Value
 getArticlesByCategoryId =
     [TH.singletonStatement|
         select json_agg(aid.get_article) :: json
@@ -386,6 +386,9 @@ getArticlesByCategoryId =
             from articles
             where category_id = $1 :: int4
                 and is_published = true
+            order by article_id
+            limit 20    
+            offset $2 :: int4?
         ) as aid
         |]
 
