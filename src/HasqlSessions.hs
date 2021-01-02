@@ -369,7 +369,8 @@ getArticlesByAllTagId tagIdsRequest = let {
 getArticlesByTitlePart :: ArticlesByTitlePartRequest -> IO (Either Session.QueryError ByteString)
 getArticlesByTitlePart substringRequest = let {
     params = (
-        title_substring (substringRequest :: ArticlesByTitlePartRequest)
+        title_substring (substringRequest :: ArticlesByTitlePartRequest),
+        offset (substringRequest :: ArticlesByTitlePartRequest)
         );
 } in do
     Right connection <- Connection.acquire connectionSettings

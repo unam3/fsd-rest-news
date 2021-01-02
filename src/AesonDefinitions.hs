@@ -218,7 +218,8 @@ data ArticlesByTagIdListRequest = ArticlesByTagIdListRequest {
 instance FromJSON ArticlesByTagIdListRequest
 
 data ArticlesByTitlePartRequest = ArticlesByTitlePartRequest {
-    title_substring :: Text
+    title_substring :: Text,
+    offset :: Maybe Int32
 } deriving (Show, Generic)
 
 instance FromJSON ArticlesByTitlePartRequest

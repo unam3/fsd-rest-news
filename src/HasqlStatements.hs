@@ -458,7 +458,7 @@ getArticlesByAllTagId =
 
 -- select * from articles where article_title like '%ve%';
 -- select json_agg(get_article(article_id)) as articles from (select article_id  from articles where article_title like '%ve%') as foo;
-getArticlesByTitlePart :: Statement Text Value
+getArticlesByTitlePart :: Statement (Text, Maybe Int32) Value
 getArticlesByTitlePart =
     [TH.singletonStatement|
         select json_agg(get_article(article_id)) :: json
@@ -467,6 +467,9 @@ getArticlesByTitlePart =
                 where article_title ilike
                         '%' || regexp_replace(($1 :: text), '(%|_)', '', 'g') || '%'
                     and is_published = true
+                order by articles.article_id
+                limit 20    
+                offset $2 :: int4?
             ) as articles_by_title_part
         |]
 
