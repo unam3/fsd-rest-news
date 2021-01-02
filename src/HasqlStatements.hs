@@ -398,7 +398,7 @@ getArticlesByCategoryId =
 -- doesn't work
 --select (articles_by_tag_id.*) :: json from
 --    (select json_agg(get_article(article_id)) from articles_tags where tag_id = $1 :: int4) as articles_by_tag_id
-getArticlesByTagId :: Statement Int32 Value
+getArticlesByTagId :: Statement (Int32, Maybe Int32) Value
 getArticlesByTagId =
     [TH.singletonStatement|
         select json_agg(articles_by_tag_id.get_article) :: json
@@ -409,6 +409,9 @@ getArticlesByTagId =
                 on articles.article_id = articles_tags.article_id
                 where tag_id = $1 :: int4
                     and is_published = true
+                order by article_id
+                limit 20    
+                offset $2 :: int4?
             ) as articles_ids_filtered
         ) as articles_by_tag_id
         |]

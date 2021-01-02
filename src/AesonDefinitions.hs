@@ -14,6 +14,7 @@ module AesonDefinitions (
     CreateTagRequest(..),
     EditTagRequest(..),
     TagIdRequest(..),
+    TagIdRequestWithOffset(..),
     CreateCommentRequest(..),
     CommentIdRequest(..),
     ArticleCommentsRequest(..),
@@ -134,6 +135,14 @@ newtype TagIdRequest = TagIdRequest {
 } deriving (Show, Generic)
 
 instance FromJSON TagIdRequest
+
+
+data TagIdRequestWithOffset = TagIdRequestWithOffset {
+    tag_id :: Int32,
+    offset :: Maybe Int32
+} deriving (Show, Generic)
+
+instance FromJSON TagIdRequestWithOffset
 
 
 

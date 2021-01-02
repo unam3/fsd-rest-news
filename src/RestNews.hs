@@ -4,7 +4,7 @@ module RestNews
     ( runWarpWithLogger
     ) where
 
-import AesonDefinitions (AuthRequest, CreateUserRequest, UserIdRequest, PromoteUserToAuthorRequest, EditAuthorRequest, AuthorIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest, CreateCommentRequest, CreateCommentRequest, CommentIdRequest, ArticleCommentsRequest, ArticleDraftRequest, ArticleDraftEditRequest, ArticleDraftIdRequest, ArticlesByCategoryIdRequest, ArticlesByTagIdListRequest, ArticlesByTitlePartRequest, ArticlesByContentPartRequest, ArticlesByAuthorNamePartRequest, ArticlesByCreationDateRequest)
+import AesonDefinitions (AuthRequest, CreateUserRequest, UserIdRequest, PromoteUserToAuthorRequest, EditAuthorRequest, AuthorIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest, TagIdRequestWithOffset, CreateCommentRequest, CreateCommentRequest, CommentIdRequest, ArticleCommentsRequest, ArticleDraftRequest, ArticleDraftEditRequest, ArticleDraftIdRequest, ArticlesByCategoryIdRequest, ArticlesByTagIdListRequest, ArticlesByTitlePartRequest, ArticlesByContentPartRequest, ArticlesByAuthorNamePartRequest, ArticlesByCreationDateRequest)
 import qualified HasqlSessions as HSS
 
 import Control.Concurrent (forkIO)
@@ -113,6 +113,7 @@ restAPI vaultKey clearSessionPartial request respond = let {
                 maybeCreateTagRequestJSON = decode requestBody :: Maybe CreateTagRequest;
                 maybeEditTagRequestJSON = decode requestBody :: Maybe EditTagRequest;
                 maybeTagIdRequestJSON = decode requestBody :: Maybe TagIdRequest;
+                maybeTagIdRequestWithOffsetJSON = decode requestBody :: Maybe TagIdRequestWithOffset;
                 maybeCreateCommentRequestJSON = decode requestBody :: Maybe CreateCommentRequest;
                 maybeCommentIdRequestJSON = decode requestBody :: Maybe CommentIdRequest;
                 maybeArticleCommentsRequestJSON = decode requestBody :: Maybe ArticleCommentsRequest;
@@ -178,7 +179,7 @@ restAPI vaultKey clearSessionPartial request respond = let {
                                 "GET" -> ifValidRequest "getArticlesByCategoryId" maybeArticlesByCategoryIdRequestJSON
                                 _ -> "Method is not implemented"
                             ["tag"] -> case method of
-                                "GET" -> ifValidRequest "getArticlesByTagId" maybeTagIdRequestJSON
+                                "GET" -> ifValidRequest "getArticlesByTagId" maybeTagIdRequestWithOffsetJSON
                                 _ -> "Method is not implemented"
                             ["tags__any"] -> case method of
                                 "GET" -> ifValidRequest "getArticlesByAnyTagId" maybeArticlesByTagIdListRequest

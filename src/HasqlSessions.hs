@@ -332,10 +332,11 @@ getArticlesByCategoryId articlesByCategoryIdRequest = let {
     sessionResults <- Session.run (Session.statement params HST.getArticlesByCategoryId) connection
     valueToUTFLBS sessionResults
 
-getArticlesByTagId :: TagIdRequest -> IO (Either Session.QueryError ByteString)
-getArticlesByTagId tagIdRequest = let {
+getArticlesByTagId :: TagIdRequestWithOffset -> IO (Either Session.QueryError ByteString)
+getArticlesByTagId tagIdRequestWithOffset = let {
     params = (
-        tag_id (tagIdRequest :: TagIdRequest)
+        tag_id (tagIdRequestWithOffset :: TagIdRequestWithOffset),
+        offset (tagIdRequestWithOffset :: TagIdRequestWithOffset)
         );
 } in do
     Right connection <- Connection.acquire connectionSettings
