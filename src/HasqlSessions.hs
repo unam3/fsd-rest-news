@@ -381,7 +381,8 @@ getArticlesByTitlePart substringRequest = let {
 getArticlesByContentPart :: ArticlesByContentPartRequest -> IO (Either Session.QueryError ByteString)
 getArticlesByContentPart substringRequest = let {
     params = (
-        content_substring (substringRequest :: ArticlesByContentPartRequest)
+        content_substring (substringRequest :: ArticlesByContentPartRequest),
+        offset (substringRequest :: ArticlesByContentPartRequest)
         );
 } in do
     Right connection <- Connection.acquire connectionSettings

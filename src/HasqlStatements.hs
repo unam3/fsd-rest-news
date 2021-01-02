@@ -473,7 +473,7 @@ getArticlesByTitlePart =
             ) as articles_by_title_part
         |]
 
-getArticlesByContentPart :: Statement Text Value
+getArticlesByContentPart :: Statement (Text, Maybe Int32) Value
 getArticlesByContentPart =
     [TH.singletonStatement|
         select json_agg(get_article(article_id)) :: json
@@ -482,6 +482,9 @@ getArticlesByContentPart =
                 where article_content ilike
                         '%' || regexp_replace(($1 :: text), '(%|_)', '', 'g') || '%'
                     and is_published = true
+                order by articles.article_id
+                limit 20    
+                offset $2 :: int4?
             ) as articles_by_content_part
         |]
 

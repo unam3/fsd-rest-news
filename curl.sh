@@ -91,7 +91,8 @@ curl -i -X GET -d '{"tags_ids": [2, 1], "offset": 1}' http://0.0.0.0:8081/articl
 curl -i -X GET -d '{"title_substring": "ve"}' http://0.0.0.0:8081/articles/in__title
 curl -i -X GET -d '{"title_substring": "ve", "offset": 1}' http://0.0.0.0:8081/articles/in__title
 
-curl -i -X GET -d '{"content_substring": "is"}' http://0.0.0.0:8081/articles/in__content
+curl -i -X GET -d '{"content_substring": "a"}' http://0.0.0.0:8081/articles/in__content
+curl -i -X GET -d '{"content_substring": "a", "offset": 1}' http://0.0.0.0:8081/articles/in__content
 
 curl -i -X GET -d '{"author_name_substring": "ph"}' http://0.0.0.0:8081/articles/in__author_name
 # "If you’re

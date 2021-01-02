@@ -225,7 +225,8 @@ data ArticlesByTitlePartRequest = ArticlesByTitlePartRequest {
 instance FromJSON ArticlesByTitlePartRequest
 
 data ArticlesByContentPartRequest = ArticlesByContentPartRequest {
-    content_substring :: Text
+    content_substring :: Text,
+    offset :: Maybe Int32
 } deriving (Show, Generic)
 
 instance FromJSON ArticlesByContentPartRequest
