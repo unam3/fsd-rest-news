@@ -562,7 +562,7 @@ getArticlesSortedByCreationDate =
         |]
 
 -- select article_id from users inner join authors on users.user_id = authors.user_id inner join articles on authors.author_id = articles.author where is_published = true order by surname asc;
-getArticlesSortedByAuthor :: Statement () Value
+getArticlesSortedByAuthor :: Statement Int32 Value
 getArticlesSortedByAuthor =
     [TH.singletonStatement|
         select json_agg(get_article(sorted.article_id)) :: json
@@ -575,6 +575,8 @@ getArticlesSortedByAuthor =
                 on authors.author_id = articles.author
                 where is_published = true
                 order by surname asc
+                limit 20
+                offset $1 :: int4
             ) as sorted
         |]
 

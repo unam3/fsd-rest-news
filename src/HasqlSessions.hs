@@ -420,11 +420,14 @@ getArticlesSortedByCreationDate request = let {
     sessionResults <- Session.run (Session.statement params HST.getArticlesSortedByCreationDate) connection
     valueToUTFLBS sessionResults
 
-getArticlesSortedByAuthor :: IO (Either Session.QueryError ByteString)
-getArticlesSortedByAuthor =
-    do
+getArticlesSortedByAuthor :: OffsetRequest -> IO (Either Session.QueryError ByteString)
+getArticlesSortedByAuthor request = let {
+    params = (
+        offset (request :: OffsetRequest)
+        );
+} in do
     Right connection <- Connection.acquire connectionSettings
-    sessionResults <- Session.run (Session.statement () HST.getArticlesSortedByAuthor) connection
+    sessionResults <- Session.run (Session.statement params HST.getArticlesSortedByAuthor) connection
     valueToUTFLBS sessionResults
 
 getArticlesSortedByCategory :: IO (Either Session.QueryError ByteString)
