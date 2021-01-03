@@ -496,10 +496,11 @@ select get_article(article_id) from articles, (
 ) as s_author_ids
 where author = s_author_ids.author_id;
 -}
-getArticlesByAuthorNamePart :: Statement Text Value
+getArticlesByAuthorNamePart :: Statement (Text, Maybe Int32) Value
 getArticlesByAuthorNamePart =
     [TH.singletonStatement|
-        select json_agg(get_article(article_id)) :: json
+        select json_agg(get_article(ordered.article_id)) :: json
+        from (select article_id
             from articles
             inner join (select authors.author_id
                 from authors
@@ -512,6 +513,9 @@ getArticlesByAuthorNamePart =
             ) as filtered_author_ids
             on author = filtered_author_ids.author_id
                 and is_published = true
+            order by articles.article_id
+            limit 20
+            offset $2 :: int4?) as ordered
         |]
 
 {-

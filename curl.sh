@@ -95,6 +95,7 @@ curl -i -X GET -d '{"content_substring": "a"}' http://0.0.0.0:8081/articles/in__
 curl -i -X GET -d '{"content_substring": "a", "offset": 1}' http://0.0.0.0:8081/articles/in__content
 
 curl -i -X GET -d '{"author_name_substring": "ph"}' http://0.0.0.0:8081/articles/in__author_name
+curl -i -X GET -d '{"author_name_substring": "ph", "offset": 1}' http://0.0.0.0:8081/articles/in__author_name
 # "If you’re
 curl -i -X GET -d '{"author_name_substring": "s"}' http://0.0.0.0:8081/articles/in__author_name
 
