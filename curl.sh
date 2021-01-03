@@ -110,6 +110,6 @@ curl -i -X GET -d '{"offset": 0}' http://0.0.0.0:8081/articles/byPhotosNumber
 
 curl -i -X GET -d '{"offset": 1}' http://0.0.0.0:8081/articles/byCreationDate
 
-curl -i -X GET http://0.0.0.0:8081/articles/sortByAuthor
+curl -i -X GET -d '{"offset": 1}' http://0.0.0.0:8081/articles/sortByAuthor
 
-curl -i -X GET http://0.0.0.0:8081/articles/sortByCategory
+curl -i -X GET -d '{"offset": 1}' http://0.0.0.0:8081/articles/sortByCategory

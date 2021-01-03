@@ -580,7 +580,7 @@ getArticlesSortedByAuthor =
             ) as sorted
         |]
 
-getArticlesSortedByCategory :: Statement () Value
+getArticlesSortedByCategory :: Statement Int32 Value
 getArticlesSortedByCategory =
     [TH.singletonStatement|
         select json_agg(get_article(sorted.article_id)) :: json
@@ -591,6 +591,8 @@ getArticlesSortedByCategory =
                 on articles.category_id = categories.category_id
                 where is_published = true
                 order by name asc
+                limit 20
+                offset $1 :: int4
             ) as sorted
         |]
 
