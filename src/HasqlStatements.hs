@@ -531,7 +531,7 @@ select article_id from articles order by coalesce(array_length(additional_photos
             | {f,o,u,r}
  main       | {f,o,u,r}
 -}
-getArticlesSortedByPhotosNumber :: Statement () Value
+getArticlesSortedByPhotosNumber :: Statement Int32 Value
 getArticlesSortedByPhotosNumber =
     [TH.singletonStatement|
         select json_agg(get_article(sorted.article_id)) :: json
@@ -542,6 +542,8 @@ getArticlesSortedByPhotosNumber =
                 order by
                     coalesce(array_length(additional_photos, 1), 0) asc,
                     main_photo = '' desc
+                limit 20
+                offset $1 :: int4
             ) as sorted
         |]
 

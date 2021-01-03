@@ -400,11 +400,14 @@ getArticlesByAuthorNamePart substringRequest = let {
     sessionResults <- Session.run (Session.statement params HST.getArticlesByAuthorNamePart) connection
     valueToUTFLBS sessionResults
 
-getArticlesSortedByPhotosNumber :: IO (Either Session.QueryError ByteString)
-getArticlesSortedByPhotosNumber =
-    do
+getArticlesSortedByPhotosNumber :: OffsetRequest -> IO (Either Session.QueryError ByteString)
+getArticlesSortedByPhotosNumber request = let {
+    params = (
+        offset (request :: OffsetRequest)
+        );
+} in do
     Right connection <- Connection.acquire connectionSettings
-    sessionResults <- Session.run (Session.statement () HST.getArticlesSortedByPhotosNumber) connection
+    sessionResults <- Session.run (Session.statement params HST.getArticlesSortedByPhotosNumber) connection
     valueToUTFLBS sessionResults
 
 getArticlesSortedByCreationDate :: IO (Either Session.QueryError ByteString)

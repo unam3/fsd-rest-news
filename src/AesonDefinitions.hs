@@ -26,7 +26,8 @@ module AesonDefinitions (
     ArticlesByTitlePartRequest(..),
     ArticlesByContentPartRequest(..),
     ArticlesByAuthorNamePartRequest(..),
-    ArticlesByCreationDateRequest(..)
+    ArticlesByCreationDateRequest(..),
+    OffsetRequest(..)
     ) where
 
 import Data.Aeson (FromJSON)
@@ -243,3 +244,10 @@ data ArticlesByCreationDateRequest = ArticlesByCreationDateRequest {
 } deriving (Show, Generic)
 
 instance FromJSON ArticlesByCreationDateRequest
+
+
+data OffsetRequest = OffsetRequest {
+    offset :: Int32
+} deriving (Show, Generic)
+
+instance FromJSON OffsetRequest

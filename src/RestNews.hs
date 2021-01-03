@@ -4,7 +4,7 @@ module RestNews
     ( runWarpWithLogger
     ) where
 
-import AesonDefinitions (AuthRequest, CreateUserRequest, UserIdRequest, PromoteUserToAuthorRequest, EditAuthorRequest, AuthorIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest, TagIdRequestWithOffset, CreateCommentRequest, CreateCommentRequest, CommentIdRequest, ArticleCommentsRequest, ArticleDraftRequest, ArticleDraftEditRequest, ArticleDraftIdRequest, ArticlesByCategoryIdRequest, ArticlesByTagIdListRequest, ArticlesByTitlePartRequest, ArticlesByContentPartRequest, ArticlesByAuthorNamePartRequest, ArticlesByCreationDateRequest)
+import AesonDefinitions (AuthRequest, CreateUserRequest, UserIdRequest, PromoteUserToAuthorRequest, EditAuthorRequest, AuthorIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest, TagIdRequestWithOffset, CreateCommentRequest, CreateCommentRequest, CommentIdRequest, ArticleCommentsRequest, ArticleDraftRequest, ArticleDraftEditRequest, ArticleDraftIdRequest, ArticlesByCategoryIdRequest, ArticlesByTagIdListRequest, ArticlesByTitlePartRequest, ArticlesByContentPartRequest, ArticlesByAuthorNamePartRequest, ArticlesByCreationDateRequest, OffsetRequest)
 import qualified HasqlSessions as HSS
 
 import Control.Concurrent (forkIO)
@@ -126,6 +126,7 @@ restAPI vaultKey clearSessionPartial request respond = let {
                 maybeArticlesByContentPartRequest = decode requestBody :: Maybe ArticlesByContentPartRequest;
                 maybeArticlesByAuthorNamePartRequest = decode requestBody :: Maybe ArticlesByAuthorNamePartRequest;
                 maybeArticlesFilteredByCreationDate = decode requestBody :: Maybe ArticlesByCreationDateRequest;
+                maybeOffsetRequest = decode requestBody :: Maybe OffsetRequest;
             } in pure (
                 if isRequestPathNotEmpty
                     then (case pathHeadChunk of
@@ -199,7 +200,9 @@ restAPI vaultKey clearSessionPartial request respond = let {
                                     maybeArticlesByAuthorNamePartRequest
                                 _ -> "Method is not implemented"
                             ["byPhotosNumber"] -> case method of
-                                "GET" -> "getArticlesSortedByPhotosNumber"
+                                "GET" -> ifValidRequest
+                                    "getArticlesSortedByPhotosNumber"
+                                    maybeOffsetRequest
                                 _ -> "Method is not implemented"
                             ["byCreationDate"] -> case method of
                                 "GET" -> "getArticlesSortedByCreationDate"
@@ -264,7 +267,7 @@ restAPI vaultKey clearSessionPartial request respond = let {
                     "getArticlesByTitlePart" -> runSession HSS.getArticlesByTitlePart
                     "getArticlesByContentPart" -> runSession HSS.getArticlesByContentPart
                     "getArticlesByAuthorNamePart" -> runSession HSS.getArticlesByAuthorNamePart
-                    "getArticlesSortedByPhotosNumber" -> HSS.getArticlesSortedByPhotosNumber
+                    "getArticlesSortedByPhotosNumber" -> runSession HSS.getArticlesSortedByPhotosNumber
                     "getArticlesSortedByCreationDate" -> HSS.getArticlesSortedByCreationDate
                     "getArticlesSortedByAuthor" -> HSS.getArticlesSortedByAuthor
                     "getArticlesSortedByCategory" -> HSS.getArticlesSortedByCategory
