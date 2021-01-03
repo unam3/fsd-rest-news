@@ -108,7 +108,7 @@ curl -i -X GET -d '{"day": "2020-12-08"}' http://0.0.0.0:8081/articles/createdAf
 # sorting
 curl -i -X GET -d '{"offset": 0}' http://0.0.0.0:8081/articles/byPhotosNumber
 
-curl -i -X GET http://0.0.0.0:8081/articles/byCreationDate
+curl -i -X GET -d '{"offset": 1}' http://0.0.0.0:8081/articles/byCreationDate
 
 curl -i -X GET http://0.0.0.0:8081/articles/sortByAuthor
 

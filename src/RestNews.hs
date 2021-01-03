@@ -205,7 +205,9 @@ restAPI vaultKey clearSessionPartial request respond = let {
                                     maybeOffsetRequest
                                 _ -> "Method is not implemented"
                             ["byCreationDate"] -> case method of
-                                "GET" -> "getArticlesSortedByCreationDate"
+                                "GET" -> ifValidRequest
+                                    "getArticlesSortedByCreationDate"
+                                    maybeOffsetRequest
                                 _ -> "Method is not implemented"
                             ["sortByAuthor"] -> case method of
                                 "GET" -> "getArticlesSortedByAuthor"
@@ -268,7 +270,7 @@ restAPI vaultKey clearSessionPartial request respond = let {
                     "getArticlesByContentPart" -> runSession HSS.getArticlesByContentPart
                     "getArticlesByAuthorNamePart" -> runSession HSS.getArticlesByAuthorNamePart
                     "getArticlesSortedByPhotosNumber" -> runSession HSS.getArticlesSortedByPhotosNumber
-                    "getArticlesSortedByCreationDate" -> HSS.getArticlesSortedByCreationDate
+                    "getArticlesSortedByCreationDate" -> runSession HSS.getArticlesSortedByCreationDate
                     "getArticlesSortedByAuthor" -> HSS.getArticlesSortedByAuthor
                     "getArticlesSortedByCategory" -> HSS.getArticlesSortedByCategory
                     "getArticlesFilteredByCreationDate" -> runSession HSS.getArticlesFilteredByCreationDate

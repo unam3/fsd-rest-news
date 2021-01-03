@@ -547,7 +547,7 @@ getArticlesSortedByPhotosNumber =
             ) as sorted
         |]
 
-getArticlesSortedByCreationDate :: Statement () Value
+getArticlesSortedByCreationDate :: Statement Int32 Value
 getArticlesSortedByCreationDate =
     [TH.singletonStatement|
         select json_agg(get_article(sorted.article_id)) :: json
@@ -556,6 +556,8 @@ getArticlesSortedByCreationDate =
                 from articles
                 where is_published = true
                 order by creation_date asc
+                limit 20
+                offset $1 :: int4
             ) as sorted
         |]
 
