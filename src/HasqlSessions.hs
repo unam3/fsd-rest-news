@@ -440,11 +440,12 @@ getArticlesSortedByCategory request = let {
     sessionResults <- Session.run (Session.statement params HST.getArticlesSortedByCategory) connection
     valueToUTFLBS sessionResults
 
-getArticlesFilteredBy :: Statement Text Value -> ArticlesByCreationDateRequest
+getArticlesFilteredBy :: Statement (Text, Maybe Int32) Value -> ArticlesByCreationDateRequest
     -> IO (Either Session.QueryError ByteString)
 getArticlesFilteredBy filterF articlesByCreationDateRequest = let {
     params = (
-        pack . showGregorian $ day (articlesByCreationDateRequest :: ArticlesByCreationDateRequest)
+        pack . showGregorian $ day (articlesByCreationDateRequest :: ArticlesByCreationDateRequest),
+        offset (articlesByCreationDateRequest :: ArticlesByCreationDateRequest)
         );
 } in do
     Right connection <- Connection.acquire connectionSettings

@@ -100,10 +100,11 @@ curl -i -X GET -d '{"author_name_substring": "ph", "offset": 1}' http://0.0.0.0:
 curl -i -X GET -d '{"author_name_substring": "s"}' http://0.0.0.0:8081/articles/in__author_name
 
 curl -i -X GET -d '{"day": "2020-12-09"}' http://0.0.0.0:8081/articles/createdAt
+curl -i -X GET -d '{"day": "2020-12-09", "offset": 1}' http://0.0.0.0:8081/articles/createdAt
 
-curl -i -X GET -d '{"day": "2020-12-10"}' http://0.0.0.0:8081/articles/createdBefore
+curl -i -X GET -d '{"day": "2020-12-10", "offset": 1}' http://0.0.0.0:8081/articles/createdBefore
 
-curl -i -X GET -d '{"day": "2020-12-08"}' http://0.0.0.0:8081/articles/createdAfter
+curl -i -X GET -d '{"day": "2020-12-08", "offset": 1}' http://0.0.0.0:8081/articles/createdAfter
 
 # sorting
 curl -i -X GET -d '{"offset": 0}' http://0.0.0.0:8081/articles/byPhotosNumber

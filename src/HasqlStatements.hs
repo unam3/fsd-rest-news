@@ -596,7 +596,7 @@ getArticlesSortedByCategory =
             ) as sorted
         |]
 
-getArticlesFilteredByCreationDate :: Statement Text Value
+getArticlesFilteredByCreationDate :: Statement (Text, Maybe Int32) Value
 getArticlesFilteredByCreationDate =
     [TH.singletonStatement|
         select json_agg(get_article(filtered.article_id)) :: json
@@ -605,10 +605,13 @@ getArticlesFilteredByCreationDate =
                 from articles
                 where is_published = true
                     and creation_date :: date = ($1 :: text) :: date
+                order by article_id
+                limit 20
+                offset $2 :: int4?
             ) as filtered
         |]
 
-getArticlesCreatedBeforeDate :: Statement Text Value
+getArticlesCreatedBeforeDate :: Statement (Text, Maybe Int32) Value
 getArticlesCreatedBeforeDate =
     [TH.singletonStatement|
         select json_agg(get_article(filtered.article_id)) :: json
@@ -617,10 +620,13 @@ getArticlesCreatedBeforeDate =
                 from articles
                 where is_published = true
                     and creation_date :: date < ($1 :: text) :: date
+                order by article_id
+                limit 20
+                offset $2 :: int4?
             ) as filtered
         |]
 
-getArticlesCreatedAfterDate :: Statement Text Value
+getArticlesCreatedAfterDate :: Statement (Text, Maybe Int32) Value
 getArticlesCreatedAfterDate =
     [TH.singletonStatement|
         select json_agg(get_article(filtered.article_id)) :: json
@@ -629,6 +635,9 @@ getArticlesCreatedAfterDate =
                 from articles
                 where is_published = true
                     and creation_date :: date > ($1 :: text) :: date
+                order by article_id
+                limit 20
+                offset $2 :: int4?
             ) as filtered
         |]
 

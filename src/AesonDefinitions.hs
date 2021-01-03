@@ -240,7 +240,8 @@ data ArticlesByAuthorNamePartRequest = ArticlesByAuthorNamePartRequest {
 instance FromJSON ArticlesByAuthorNamePartRequest
 
 data ArticlesByCreationDateRequest = ArticlesByCreationDateRequest {
-    day :: Day
+    day :: Day,
+    offset :: Maybe Int32
 } deriving (Show, Generic)
 
 instance FromJSON ArticlesByCreationDateRequest
