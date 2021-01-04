@@ -142,17 +142,24 @@ promoteUserToAuthor =
             from insert_results
         |]
 
-editAuthor :: Statement (Int32, Int32, Text) Value
+editAuthor :: Statement (Int32, Text) Value
 editAuthor =
     [TH.singletonStatement|
-        update authors
-        set user_id = $2 :: int4, description = $3 :: Text
-        where author_id = $1 :: int4
-        returning json_build_object(
-            'author_id', author_id,
-            'user_id', user_id,
-            'description', description
-            )::json
+        with update_results as (
+            update authors
+            set description = $2 :: Text
+            where author_id = $1 :: int4
+            returning *
+        ) select
+            case when count(update_results) = 0
+                then 
+                    json_build_object( 
+                        'error', 'no such author'
+                        )
+                else
+                    json_agg(update_results)
+                end :: json
+            from update_results
         |]
 
 

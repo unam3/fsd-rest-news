@@ -120,7 +120,6 @@ editAuthor :: EditAuthorRequest -> IO (Either Session.QueryError ByteString)
 editAuthor editAuthorRequest = let {
     params = (
         author_id (editAuthorRequest :: EditAuthorRequest),
-        user_id (editAuthorRequest :: EditAuthorRequest),
         description (editAuthorRequest :: EditAuthorRequest));
 } in do
     Right connection <- Connection.acquire connectionSettings

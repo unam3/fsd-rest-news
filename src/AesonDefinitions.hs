@@ -76,7 +76,6 @@ instance FromJSON PromoteUserToAuthorRequest
 
 data EditAuthorRequest = EditAuthorRequest {
     author_id :: Int32,
-    user_id :: Int32,
     description :: Text
 } deriving (Show, Generic)
 
