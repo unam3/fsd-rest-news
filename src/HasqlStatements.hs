@@ -75,12 +75,19 @@ createUser =
 deleteUser :: Statement Int32 Value
 deleteUser =
     [TH.singletonStatement|
-        delete
-        from users
-        where user_id = $1 :: int4
-        returning json_build_object( 
-            'results', 'ook'
-            )::json
+        with delete_results as (
+            delete
+            from users
+            where user_id = $1 :: int4
+            returning *
+            ) select
+                case when count(delete_results) = 0
+                then
+                    json_build_object('results', 'no such user')
+                else
+                    json_build_object('results', 'ook')
+                end :: json
+            from delete_results
         |]
 
 getUser :: Statement Int32 Value

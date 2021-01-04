@@ -12,7 +12,7 @@ SESSION=`curl -i -X POST -d '{"username": "username5", "password": "12345"}' htt
 SESSION=`curl -H 'Cookie: SESSION='${SESSION} -i -X POST -d '{"username": "username5", "password": "12345"}' http://0.0.0.0:8081/auth|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`
 
 ####
-curl -i -X POST -d '{"username": "check_user_creation", "password": "check, indeed", "name": "name", "surname": "surname", "avatar": "asd", "is_admin": false}' http://0.0.0.0:8081/users
+curl -i -X POST -H 'Cookie: SESSION='${SESSION} -d '{"username": "asdq", "password": "check, indeed", "name": "name", "surname": "surname", "avatar": "asd", "is_admin": false}' http://0.0.0.0:8081/users
 
 # test: watch in ghci output for "("put into sessions:",8,False,0)\ncookies are baked"
 SESSION=`curl -i -X POST -d '{"username": "check_user_creation", "password": "check, indeed"}' http://0.0.0.0:8081/auth|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`
@@ -20,11 +20,7 @@ SESSION=`curl -i -X POST -d '{"username": "check_user_creation", "password": "ch
 
 curl -i -H 'Cookie: SESSION='${SESSION} -X GET http://0.0.0.0:8081/users
 
-# clearSession flow
-curl -i -X DELETE -d '{"user_id": 3}' -H 'Cookie: SESSION=999a47e78d91d1339e0fe61e29bd5e7947ff266b222594' http://localhost:8081/users
-
-curl -i -X DELETE -d '{"user_id": 3}' http://0.0.0.0:8081/users
-
+curl -i -H 'Cookie: SESSION='${SESSION} -X DELETE -d '{"user_id": 11}' http://localhost:8081/users
 
 curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"user_id": 123, "description": "blob deccas"}' http://0.0.0.0:8081/authors
 
