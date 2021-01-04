@@ -113,17 +113,26 @@ deleteAuthorRole =
 promoteUserToAuthor :: Statement (Int32, Text) Value
 promoteUserToAuthor =
     [TH.singletonStatement|
-        insert
-        into authors (user_id, description)
-            values (
-                $1 :: int4,
-                $2 :: text
-                )
-        returning json_build_object(
-            'author_id', author_id,
-            'user_id', user_id,
-            'description', description
-            )::json
+        with insert_results as (
+            insert into authors (user_id, description)
+            select  
+                    $1 :: int4,
+                    $2 :: text
+                where exists (select true
+                    from users
+                    where user_id = $1 :: int4
+                    )
+            returning *
+        ) select
+            case when count(insert_results) = 0
+                then 
+                    json_build_object( 
+                        'error', 'no such user'
+                        )
+                else
+                    json_agg(insert_results)
+                end :: json
+            from insert_results
         |]
 
 editAuthor :: Statement (Int32, Int32, Text) Value
