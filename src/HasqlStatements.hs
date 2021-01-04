@@ -271,7 +271,10 @@ deleteComment =
 getArticleComments :: Statement (Int32, Maybe Int32) Value
 getArticleComments =
     [TH.singletonStatement|
-        select json_agg(ordered.*)::json
+        select case when count(ordered) = 0
+            then to_json(array[] :: int[])
+            else json_agg(ordered.*)
+            end :: json
         from (
             select
                 comment_id,
