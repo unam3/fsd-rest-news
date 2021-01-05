@@ -291,9 +291,16 @@ deleteTag =
 getTag :: Statement Int32 Value
 getTag =
     [TH.singletonStatement|
-        select json_agg(tags.*)::json
-        from tags
-        where tag_id = $1 :: int4
+        select
+            case when count(select_results) = 0
+            then json_build_object('error', 'no sush tag')
+            else json_agg(select_results.*)
+            end :: json
+        from (
+            select *
+            from tags
+            where tag_id = $1 :: int4
+        ) as select_results
         |]
 
 
