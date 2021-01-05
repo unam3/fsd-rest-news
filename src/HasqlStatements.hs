@@ -196,14 +196,19 @@ createCategory =
 updateCategory :: Statement (Int32, Text, Maybe Int32) Value
 updateCategory =
     [TH.singletonStatement|
-        update categories
-        set name = $2 :: text, parent_id = $3 :: int4?
-        where category_id = $1 :: int4
-        returning json_build_object(
-            'name', name,
-            'category_id', category_id,
-            'parent_id', parent_id
-            )::json
+        with update_results as (
+            update categories
+            set name = $2 :: text, parent_id = $3 :: int4?
+            where category_id = $1 :: int4
+            returning *
+        ) select
+            case when count(update_results) = 0
+                then 
+                    json_build_object('error', 'no such category')
+                else
+                    json_agg(update_results)
+                end :: json
+            from update_results
         |]
 
 getCategory :: Statement Int32 Value
