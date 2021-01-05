@@ -33,14 +33,11 @@ curl -i -H 'Cookie: SESSION='${SESSION} -X DELETE -d '{"author_id": 111}' http:/
 
 curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"name": "pluh", "parent_id": null}' http://0.0.0.0:8081/categories
 
-curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"name": "pluh", "parent_id": null}' http://0.0.0.0:8081/categories
-curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"name": "pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1pluh1", "parent_id": 1}' http://0.0.0.0:8081/categories
-
 curl -i -H 'Cookie: SESSION='${SESSION} -X PATCH -d '{"category_id": 7, "name": "pluh_pattched", "parent_id": null}' http://0.0.0.0:8081/categories
 
 curl -i -X GET -d '{"category_id": 1}' http://0.0.0.0:8081/categories
 
-curl -i -X DELETE -d '{"category_id": 10}' http://0.0.0.0:8081/categories
+curl -i -H 'Cookie: SESSION='${SESSION} -X DELETE -d '{"category_id": 10}' http://0.0.0.0:8081/categories
 
 
 curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"article_id": 2, "comment_text": "bluasd!"}' http://0.0.0.0:8081/comments
