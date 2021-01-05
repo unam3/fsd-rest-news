@@ -214,9 +214,15 @@ updateCategory =
 getCategory :: Statement Int32 Value
 getCategory =
     [TH.singletonStatement|
-        select json_agg(categories.*)::json
-        from categories
-        where category_id = $1 :: int4
+        select case when count(category) = 0
+            then json_build_object('error', 'no sush category')
+            else json_agg(category.*)
+            end :: json
+        from (
+            select *
+            from categories
+            where category_id = $1 :: int4
+        ) as category
         |]
 
 deleteCategory :: Statement Int32 Value
