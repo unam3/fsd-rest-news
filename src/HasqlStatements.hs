@@ -115,12 +115,19 @@ getAuthor =
 deleteAuthorRole :: Statement Int32 Value
 deleteAuthorRole =
     [TH.singletonStatement|
-        delete
-        from authors
-        where author_id = $1 :: int4
-        returning json_build_object( 
-            'results', 'ook'
-            )::json
+        with delete_results as (
+            delete
+            from authors
+            where author_id = $1 :: int4
+            returning *
+        ) select
+            case when count(delete_results) = 0
+            then
+                json_build_object('results', 'no such author')
+            else
+                json_build_object('results', 'ook')
+            end :: json
+        from delete_results
         |]
 
 promoteUserToAuthor :: Statement (Int32, Text) Value
