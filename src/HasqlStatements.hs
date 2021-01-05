@@ -414,25 +414,33 @@ publishArticleDraft =
 editArticleDraft :: Statement (Int32, Int32, Int32, Text, Text, Text, Vector Text) Value
 editArticleDraft =
     [TH.singletonStatement|
-        update articles
-        set category_id = $3 :: int4,
-            article_title = $4 :: text,
-            article_content = $5 :: text,
-            main_photo = $6 :: text,
-            additional_photos = $7 :: text[]
-        where
-            author = $1 :: int4
-            and article_id = $2 :: int4
-        returning json_build_object(
-            'article_id', article_id,
-            'author', author,
-            'category_id', category_id,
-            'article_title', article_title,
-            'article_content', article_content,
-            'is_published', is_published,
-            'main_photo', main_photo,
-            'additional_photos', additional_photos
-            )::json
+        with update_results as (
+            update articles
+            set category_id = $3 :: int4,
+                article_title = $4 :: text,
+                article_content = $5 :: text,
+                main_photo = $6 :: text,
+                additional_photos = $7 :: text[]
+            where
+                author = $1 :: int4
+                and article_id = $2 :: int4
+            returning
+                article_id,
+                author,
+                category_id,
+                article_title,
+                article_content,
+                is_published,
+                main_photo,
+                additional_photos
+        ) select
+            case when count(update_results) = 0
+                then 
+                    json_build_object('error', 'no such article')
+                else
+                    json_agg(update_results)
+                end :: json
+            from update_results
         |]
 
 getArticleDraft :: Statement (Int32, Int32) Value
