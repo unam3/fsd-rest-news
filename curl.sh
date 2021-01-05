@@ -54,7 +54,7 @@ curl -i -H 'Cookie: SESSION='${SESSION} -X PATCH -d '{"tag_id": 4, "tag_name": "
 
 curl -i -X GET -d '{"tag_id": 2}' http://0.0.0.0:8081/tags
 
-curl -i -X DELETE -d '{"tag_id": 1}' http://0.0.0.0:8081/tags
+curl -i -H 'Cookie: SESSION='${SESSION} -X DELETE -d '{"tag_id": 5}' http://0.0.0.0:8081/tags
 
 
 curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"article_title": "they dont beleive their eyes…", "category_id": 1, "article_content": "article is long enough", "tags": [1,2], "main_photo": "http://pl.uh/main", "additional_photos": ["1", "2", "3"]}' http://0.0.0.0:8081/articles

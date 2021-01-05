@@ -280,12 +280,19 @@ editTag =
 deleteTag :: Statement Int32 Value
 deleteTag =
     [TH.singletonStatement|
-        delete
-        from tags
-        where tag_id = $1 :: int4
-        returning json_build_object( 
-            'results', 'ook'
-            )::json
+        with delete_results as (
+            delete
+            from tags
+            where tag_id = $1 :: int4
+            returning *
+        ) select
+            case when count(delete_results) = 0
+            then 
+                json_build_object('error', 'no such tag')
+            else
+                json_build_object('results', 'ook')
+            end :: json
+        from delete_results
         |]
 
 getTag :: Statement Int32 Value
