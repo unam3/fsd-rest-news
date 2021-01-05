@@ -333,13 +333,20 @@ createComment =
 deleteComment :: Statement (Int32, Int32) Value
 deleteComment =
     [TH.singletonStatement|
-        delete
-        from articles_comments
-        where comment_id = $1 :: int4
-            and user_id = $2 :: int4
-        returning json_build_object( 
-            'results', 'ook'
-            )::json
+        with delete_results as (
+            delete
+            from articles_comments
+            where comment_id = $1 :: int4
+                and user_id = $2 :: int4
+            returning *
+        ) select
+            case when count(delete_results) = 0
+            then 
+                json_build_object('error', 'no such comment')
+            else
+                json_build_object('results', 'ook')
+            end :: json
+        from delete_results
         |]
 
 getArticleComments :: Statement (Int32, Maybe Int32) Value
