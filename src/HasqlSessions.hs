@@ -131,7 +131,7 @@ getAuthor authorIdRequest = let {
     params = author_id (authorIdRequest :: AuthorIdRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
-    sessionResults <- Session.run (Session.statement params HST.getUser) connection
+    sessionResults <- Session.run (Session.statement params HST.getAuthor) connection
     valueToUTFLBS sessionResults
 
 deleteAuthorRole :: AuthorIdRequest -> IO (Either Session.QueryError ByteString)

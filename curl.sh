@@ -26,7 +26,7 @@ curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"user_id": 123, "descriptio
 
 curl -i -H 'Cookie: SESSION='${SESSION} -X PATCH -d '{"author_id": 4, "description": "asd"}' http://0.0.0.0:8081/authors
 
-curl -i -X GET -d '{"author_id": 1}' http://0.0.0.0:8081/authors
+curl -i -H 'Cookie: SESSION='${SESSION} -X GET -d '{"author_id": 1}' http://0.0.0.0:8081/authors
 
 curl -i -X DELETE -d '{"author_id": 2}' http://0.0.0.0:8081/authors
 
