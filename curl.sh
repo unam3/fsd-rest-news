@@ -48,9 +48,9 @@ curl -i -X GET -d '{"article_id": 2, "offset": 1}' http://0.0.0.0:8081/comments
 curl -i -H 'Cookie: SESSION='${SESSION} -X DELETE -d '{"comment_id": 4}' http://0.0.0.0:8081/comments
 
 
-curl -i -X POST -d '{"tag_name": "pluh"}' http://0.0.0.0:8081/tags
+curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"tag_name": "pluh"}' http://0.0.0.0:8081/tags
 
-curl -i -X PATCH -d '{"tag_id": 2, "tag_name": "pluh_patched"}' http://0.0.0.0:8081/tags
+curl -i -H 'Cookie: SESSION='${SESSION} -X PATCH -d '{"tag_id": 4, "tag_name": "pluh_patched"}' http://0.0.0.0:8081/tags
 
 curl -i -X GET -d '{"tag_id": 2}' http://0.0.0.0:8081/tags
 
