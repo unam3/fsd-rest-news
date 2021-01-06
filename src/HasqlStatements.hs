@@ -489,16 +489,20 @@ deleteArticleDraft =
 getArticlesByCategoryId :: Statement (Int32, Maybe Int32) Value
 getArticlesByCategoryId =
     [TH.singletonStatement|
-        select json_agg(aid.get_article) :: json
+        select
+            case when count(select_results) = 0
+            then to_json(array[] :: int[])
+            else json_agg(get_article(select_results.article_id))
+            end :: json
         from (
-            select get_article(article_id)
+            select article_id
             from articles
             where category_id = $1 :: int4
                 and is_published = true
             order by article_id
             limit 20    
             offset $2 :: int4?
-        ) as aid
+        ) as select_results
         |]
 
 
@@ -510,59 +514,70 @@ getArticlesByCategoryId =
 getArticlesByTagId :: Statement (Int32, Maybe Int32) Value
 getArticlesByTagId =
     [TH.singletonStatement|
-        select json_agg(articles_by_tag_id.get_article) :: json
-        from (select get_article(articles_ids_filtered.article_id)
-            from (select articles.article_id
-                from articles
-                inner join articles_tags
-                on articles.article_id = articles_tags.article_id
-                where tag_id = $1 :: int4
-                    and is_published = true
-                order by article_id
-                limit 20    
-                offset $2 :: int4?
-            ) as articles_ids_filtered
-        ) as articles_by_tag_id
+        select
+            case when count(select_results) = 0
+            then to_json(array[] :: int[])
+            else json_agg(get_article(select_results.article_id))
+            end :: json
+        from (
+            select articles.article_id
+            from articles
+            inner join articles_tags
+            on articles.article_id = articles_tags.article_id
+            where tag_id = $1 :: int4
+                and is_published = true
+            order by article_id
+            limit 20    
+            offset $2 :: int4?
+        ) as select_results
         |]
 
 -- select get_article(article_id) from articles_tags where article_id = any (array[4,1]::int[]) group by article_id;
 getArticlesByAnyTagId :: Statement (Vector Int32, Maybe Int32) Value
 getArticlesByAnyTagId =
     [TH.singletonStatement|
-        select json_agg(articles_filtered.get_article) :: json
-            from (select get_article(articles_ids_filtered.article_id)
-                from (select articles.article_id
-                    from articles
-                    inner join articles_tags
-                    on articles.article_id = articles_tags.article_id
-                    where tag_id = any ($1 :: int4[])
-                        and is_published = true
-                    group by articles.article_id
-                    order by articles.article_id
-                    limit 20    
-                    offset $2 :: int4?
-                ) as articles_ids_filtered
-            ) as articles_filtered
+        select
+            case when count(select_results) = 0
+            then to_json(array[] :: int[])
+            else json_agg(get_article(select_results.article_id))
+            end :: json
+        from (
+            select articles.article_id
+            from articles
+            inner join articles_tags
+            on articles.article_id = articles_tags.article_id
+            where tag_id = any ($1 :: int4[])
+                and is_published = true
+            group by articles.article_id
+            order by articles.article_id
+            limit 20    
+            offset $2 :: int4?
+        ) as select_results
         |]
 
 -- select get_article(article_id) from (select article_id, array_agg(tag_id) as id_array from articles_tags group by article_id) as articles_tags_agg where id_array @> (array[2,1]::int[]);
 getArticlesByAllTagId :: Statement (Vector Int32, Maybe Int32) Value
 getArticlesByAllTagId =
     [TH.singletonStatement|
-        select json_agg(get_article) :: json
-            from (select get_article(articles_tags.article_id)
-                from articles
-                inner join (select article_id, array_agg(tag_id) as id_array
-                    from articles_tags
-                    group by article_id
-                ) as articles_tags
-                on articles.article_id = articles_tags.article_id
-                where id_array @> ($1 :: int4[])
-                    and is_published = true
-                order by articles.article_id
-                limit 20    
-                offset $2 :: int4?
-            ) as articles_tags_agg
+        select
+            case when count(select_results) = 0
+            then to_json(array[] :: int[])
+            else json_agg(get_article(select_results.article_id))
+            end :: json
+        from (
+            select articles_tags.article_id
+            from articles
+            inner join (select article_id, array_agg(tag_id) as id_array
+                from articles_tags
+                group by article_id
+            ) as articles_tags
+            on articles.article_id = articles_tags.article_id
+            where id_array @> ($1 :: int4[])
+                and is_published = true
+            order by articles.article_id
+            limit 20    
+            offset $2 :: int4?
+        ) as select_results
         |]
 
 -- select * from articles where article_title like '%ve%';
@@ -570,31 +585,41 @@ getArticlesByAllTagId =
 getArticlesByTitlePart :: Statement (Text, Maybe Int32) Value
 getArticlesByTitlePart =
     [TH.singletonStatement|
-        select json_agg(get_article(article_id)) :: json
-            from (select article_id
-                from articles
-                where article_title ilike
-                        '%' || regexp_replace(($1 :: text), '(%|_)', '', 'g') || '%'
-                    and is_published = true
-                order by articles.article_id
-                limit 20    
-                offset $2 :: int4?
-            ) as articles_by_title_part
+        select
+            case when count(select_results) = 0
+            then to_json(array[] :: int[])
+            else json_agg(get_article(select_results.article_id))
+            end :: json
+        from (
+            select article_id
+            from articles
+            where article_title ilike
+                    '%' || regexp_replace(($1 :: text), '(%|_)', '', 'g') || '%'
+                and is_published = true
+            order by articles.article_id
+            limit 20    
+            offset $2 :: int4?
+        ) as select_results
         |]
 
 getArticlesByContentPart :: Statement (Text, Maybe Int32) Value
 getArticlesByContentPart =
     [TH.singletonStatement|
-        select json_agg(get_article(article_id)) :: json
-            from (select article_id
-                from articles
-                where article_content ilike
-                        '%' || regexp_replace(($1 :: text), '(%|_)', '', 'g') || '%'
-                    and is_published = true
-                order by articles.article_id
-                limit 20    
-                offset $2 :: int4?
-            ) as articles_by_content_part
+        select
+            case when count(select_results) = 0
+            then to_json(array[] :: int[])
+            else json_agg(get_article(select_results.article_id))
+            end :: json
+        from (
+            select article_id
+            from articles
+            where article_content ilike
+                    '%' || regexp_replace(($1 :: text), '(%|_)', '', 'g') || '%'
+                and is_published = true
+            order by articles.article_id
+            limit 20    
+            offset $2 :: int4?
+        ) as select_results
         |]
 
 {-
@@ -608,8 +633,13 @@ where author = s_author_ids.author_id;
 getArticlesByAuthorNamePart :: Statement (Text, Maybe Int32) Value
 getArticlesByAuthorNamePart =
     [TH.singletonStatement|
-        select json_agg(get_article(ordered.article_id)) :: json
-        from (select article_id
+        select
+            case when count(select_results) = 0
+            then to_json(array[] :: int[])
+            else json_agg(get_article(select_results.article_id))
+            end :: json
+        from (
+            select article_id
             from articles
             inner join (select authors.author_id
                 from authors
@@ -624,7 +654,8 @@ getArticlesByAuthorNamePart =
                 and is_published = true
             order by articles.article_id
             limit 20
-            offset $2 :: int4?) as ordered
+            offset $2 :: int4?
+        ) as select_results
         |]
 
 {-
@@ -643,111 +674,139 @@ select article_id from articles order by coalesce(array_length(additional_photos
 getArticlesSortedByPhotosNumber :: Statement Int32 Value
 getArticlesSortedByPhotosNumber =
     [TH.singletonStatement|
-        select json_agg(get_article(sorted.article_id)) :: json
-            from (
-                select article_id
-                from articles
-                where is_published = true
-                order by
-                    coalesce(array_length(additional_photos, 1), 0) asc,
-                    main_photo = '' desc
-                limit 20
-                offset $1 :: int4
-            ) as sorted
+        select
+            case when count(select_results) = 0
+            then to_json(array[] :: int[])
+            else json_agg(get_article(select_results.article_id))
+            end :: json
+        from (
+            select article_id
+            from articles
+            where is_published = true
+            order by
+                coalesce(array_length(additional_photos, 1), 0) asc,
+                main_photo = '' desc
+            limit 20
+            offset $1 :: int4
+        ) as select_results
         |]
 
 getArticlesSortedByCreationDate :: Statement Int32 Value
 getArticlesSortedByCreationDate =
     [TH.singletonStatement|
-        select json_agg(get_article(sorted.article_id)) :: json
-            from (
-                select article_id
-                from articles
-                where is_published = true
-                order by creation_date asc
-                limit 20
-                offset $1 :: int4
-            ) as sorted
+        select
+            case when count(select_results) = 0
+            then to_json(array[] :: int[])
+            else json_agg(get_article(select_results.article_id))
+            end :: json
+        from (
+            select article_id
+            from articles
+            where is_published = true
+            order by creation_date asc
+            limit 20
+            offset $1 :: int4
+        ) as select_results
         |]
 
 -- select article_id from users inner join authors on users.user_id = authors.user_id inner join articles on authors.author_id = articles.author where is_published = true order by surname asc;
 getArticlesSortedByAuthor :: Statement Int32 Value
 getArticlesSortedByAuthor =
     [TH.singletonStatement|
-        select json_agg(get_article(sorted.article_id)) :: json
-            from (
-                select article_id
-                from users
-                inner join authors
-                on users.user_id = authors.user_id
-                inner join articles
-                on authors.author_id = articles.author
-                where is_published = true
-                order by surname asc
-                limit 20
-                offset $1 :: int4
-            ) as sorted
+        select
+            case when count(select_results) = 0
+            then to_json(array[] :: int[])
+            else json_agg(get_article(select_results.article_id))
+            end :: json
+        from (
+            select article_id
+            from users
+            inner join authors
+            on users.user_id = authors.user_id
+            inner join articles
+            on authors.author_id = articles.author
+            where is_published = true
+            order by surname asc
+            limit 20
+            offset $1 :: int4
+        ) as select_results
         |]
 
 getArticlesSortedByCategory :: Statement Int32 Value
 getArticlesSortedByCategory =
     [TH.singletonStatement|
-        select json_agg(get_article(sorted.article_id)) :: json
-            from (
-                select article_id
-                from articles
-                inner join categories
-                on articles.category_id = categories.category_id
-                where is_published = true
-                order by name asc
-                limit 20
-                offset $1 :: int4
-            ) as sorted
+        select
+            case when count(select_results) = 0
+            then to_json(array[] :: int[])
+            else json_agg(get_article(select_results.article_id))
+            end :: json
+        from (
+            select article_id
+            from articles
+            inner join categories
+            on articles.category_id = categories.category_id
+            where is_published = true
+            order by name asc
+            limit 20
+            offset $1 :: int4
+        ) as select_results
         |]
 
 getArticlesFilteredByCreationDate :: Statement (Text, Maybe Int32) Value
 getArticlesFilteredByCreationDate =
     [TH.singletonStatement|
-        select json_agg(get_article(filtered.article_id)) :: json
-            from (
-                select article_id
-                from articles
-                where is_published = true
-                    and creation_date :: date = ($1 :: text) :: date
-                order by article_id
-                limit 20
-                offset $2 :: int4?
-            ) as filtered
+        select
+            case when count(select_results) = 0
+            then to_json(array[] :: int[])
+            else json_agg(get_article(select_results.article_id))
+            end :: json
+        from (
+            select article_id
+            from articles
+            where is_published = true
+                and creation_date :: date = ($1 :: text) :: date
+            order by article_id
+            limit 20
+            offset $2 :: int4?
+        ) as select_results
         |]
 
 getArticlesCreatedBeforeDate :: Statement (Text, Maybe Int32) Value
 getArticlesCreatedBeforeDate =
     [TH.singletonStatement|
-        select json_agg(get_article(filtered.article_id)) :: json
-            from (
-                select article_id
-                from articles
-                where is_published = true
-                    and creation_date :: date < ($1 :: text) :: date
-                order by article_id
-                limit 20
-                offset $2 :: int4?
-            ) as filtered
+        select
+            case when count(select_results) = 0
+            then to_json(array[] :: int[])
+            else json_agg(get_article(select_results.article_id))
+            end :: json
+        from (
+            select article_id
+            from articles
+            where is_published = true
+                and creation_date :: date < ($1 :: text) :: date
+            order by article_id
+            limit 20
+            offset $2 :: int4?
+        ) as select_results
         |]
 
 getArticlesCreatedAfterDate :: Statement (Text, Maybe Int32) Value
 getArticlesCreatedAfterDate =
     [TH.singletonStatement|
-        select json_agg(get_article(filtered.article_id)) :: json
-            from (
-                select article_id
-                from articles
-                where is_published = true
-                    and creation_date :: date > ($1 :: text) :: date
-                order by article_id
-                limit 20
-                offset $2 :: int4?
-            ) as filtered
+        select
+            case when count(select_results) = 0
+            then to_json(array[] :: int[])
+            else json_agg(get_article(select_results.article_id))
+            end :: json
+        from (
+            select article_id
+            from articles
+            where is_published = true
+                and creation_date :: date > ($1 :: text) :: date
+            order by article_id
+            limit 20
+            offset $2 :: int4?
+        ) as select_results
         |]
 
 {-
