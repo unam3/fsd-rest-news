@@ -103,7 +103,7 @@ getAuthor =
     [TH.singletonStatement|
         select case when count(author) = 0
             then json_build_object('error', 'no sush author')
-            else json_agg(author.*)
+            else json_agg(author.*) -> 0
             end :: json
         from (
             select *
@@ -146,11 +146,9 @@ promoteUserToAuthor =
         ) select
             case when count(insert_results) = 0
                 then 
-                    json_build_object( 
-                        'error', 'no such user'
-                        )
+                    json_build_object('error', 'no such user')
                 else
-                    json_agg(insert_results)
+                    json_agg(insert_results) -> 0
                 end :: json
             from insert_results
         |]
@@ -166,11 +164,9 @@ editAuthor =
         ) select
             case when count(update_results) = 0
                 then 
-                    json_build_object( 
-                        'error', 'no such author'
-                        )
+                    json_build_object('error', 'no such author')
                 else
-                    json_agg(update_results)
+                    json_agg(update_results) -> 0
                 end :: json
             from update_results
         |]
@@ -206,7 +202,7 @@ updateCategory =
                 then 
                     json_build_object('error', 'no such category')
                 else
-                    json_agg(update_results)
+                    json_agg(update_results) -> 0
                 end :: json
             from update_results
         |]
@@ -216,7 +212,7 @@ getCategory =
     [TH.singletonStatement|
         select case when count(category) = 0
             then json_build_object('error', 'no sush category')
-            else json_agg(category.*)
+            else json_agg(category.*) -> 0
             end :: json
         from (
             select *
@@ -272,7 +268,7 @@ editTag =
                 then 
                     json_build_object('error', 'no such tag')
                 else
-                    json_agg(update_results)
+                    json_agg(update_results) -> 0
                 end :: json
             from update_results
         |]
@@ -301,7 +297,7 @@ getTag =
         select
             case when count(select_results) = 0
             then json_build_object('error', 'no sush tag')
-            else json_agg(select_results.*)
+            else json_agg(select_results.*) -> 0
             end :: json
         from (
             select *
@@ -448,7 +444,7 @@ editArticleDraft =
                 then 
                     json_build_object('error', 'no such article')
                 else
-                    json_agg(update_results)
+                    json_agg(update_results) -> 0
                 end :: json
             from update_results
         |]
