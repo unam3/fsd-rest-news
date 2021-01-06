@@ -289,7 +289,9 @@ restAPI vaultKey clearSessionPartial request respond = let {
 
             processedResults <- pure (case results of
                 (Right ulbs) -> ulbs
-                _ -> "left sth" :: UTFLBS.ByteString)
+                _ -> case errorOrSessionName of
+                    "auth" -> "wrong username/password" :: UTFLBS.ByteString
+                    _ -> "left sth" :: UTFLBS.ByteString)
             let {
                 httpStatus = (case errorOrSessionName of
                     "Endpoint needed" -> H.status404
