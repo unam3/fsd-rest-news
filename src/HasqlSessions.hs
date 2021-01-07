@@ -83,8 +83,7 @@ createUser createUserRequest = let {
         password (createUserRequest :: CreateUserRequest),
         name (createUserRequest :: CreateUserRequest),
         surname createUserRequest,
-        avatar createUserRequest,
-        is_admin createUserRequest
+        avatar createUserRequest
         );
 } in do
     Right connection <- Connection.acquire connectionSettings

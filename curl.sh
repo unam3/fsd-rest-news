@@ -11,8 +11,7 @@ SESSION=`curl -i -X POST -d '{"username": "username", "password": "12345"}' http
 SESSION=`curl -i -X POST -d '{"username": "username5", "password": "12345"}' http://0.0.0.0:8081/auth|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`
 SESSION=`curl -H 'Cookie: SESSION='${SESSION} -i -X POST -d '{"username": "username5", "password": "12345"}' http://0.0.0.0:8081/auth|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`
 
-####
-curl -i -X POST -H 'Cookie: SESSION='${SESSION} -d '{"username": "asdq", "password": "check, indeed", "name": "name", "surname": "surname", "avatar": "asd", "is_admin": false}' http://0.0.0.0:8081/users
+curl -i -X POST -d '{"username": "asdq", "password": "check, indeed", "name": "name", "surname": "surname", "avatar": "asd"}' http://0.0.0.0:8081/users
 
 # test: watch in ghci output for "("put into sessions:",8,False,0)\ncookies are baked"
 SESSION=`curl -i -X POST -d '{"username": "check_user_creation", "password": "check, indeed"}' http://0.0.0.0:8081/auth|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`

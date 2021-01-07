@@ -42,8 +42,7 @@ data CreateUserRequest = CreateUserRequest {
     password :: Text,
     name :: Text,
     surname :: Text,
-    avatar :: Text,
-    is_admin :: Bool
+    avatar :: Text
 } deriving (Show, Generic)
 
 instance FromJSON CreateUserRequest
