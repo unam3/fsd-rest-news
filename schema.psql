@@ -145,7 +145,7 @@ where article_id = 8;
 
 create table articles_tags (
     tag_id          integer references tags (tag_id),
-    article_id      integer references articles (article_id),
+    article_id      integer references articles (article_id) on delete cascade,
     primary key (tag_id, article_id)
 );
 
