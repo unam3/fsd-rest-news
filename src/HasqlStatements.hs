@@ -840,9 +840,9 @@ from
     (SELECT user_id FROM users WHERE username = lower('username4') AND password = crypt('12345', password)) as matched_user
     where users.user_id = matched_user.user_id;
 -}
-getCredentials :: Statement (Text, Text) (Int32, Bool, Int32)
+getCredentials :: Statement (Text, Text) (Maybe (Int32, Bool, Int32))
 getCredentials =
-    [TH.singletonStatement|
+    [TH.maybeStatement|
         select
             users.user_id :: int4,
             users.is_admin :: bool,

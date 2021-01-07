@@ -52,24 +52,29 @@ restAPI vaultKey clearSessionPartial request respond = let {
         pathHeadChunk = head pathTextChunks;
         method = requestMethod request;
         Just (sessionLookup, sessionInsert) = Vault.lookup vaultKey (vault request);
-        processCredentials :: Either QueryError (Int32, Bool, Int32) -> IO (Either QueryError UTFLBS.ByteString);
-        processCredentials sessionResults = let {
-            (user_id, is_admin, author_id) = fromRight (0, False, 0) sessionResults;
-        } in
+        processCredentials
+            :: Either QueryError (Maybe (Int32, Bool, Int32))
+            -> IO (Either QueryError UTFLBS.ByteString);
+        processCredentials sessionResults =
+            case sessionResults of
+                Right maybeSessionResults -> case maybeSessionResults of
+                    Just (user_id, is_admin, author_id) ->
+                        (do
+                            session_user_id <- sessionLookup "user_id"
+                            when
+                                (session_user_id /= Nothing)
+                                (debugM "rest-news" "invaliting session"
+                                    >> clearSessionPartial request)
+                            )
+                        >> (debugM "rest-news" $ show ("put into sessions:" :: String, user_id, is_admin, author_id))
+                        >> (sessionInsert "is_admin" $ show is_admin)
+                        >> (sessionInsert "user_id" $ show user_id)
+                        >> (sessionInsert "author_id" $ show author_id)
+                        >> pure (fmap (const "cookies are baked") sessionResults);
+                    Nothing -> pure $ fmap (const "sdf dsf") sessionResults
+                leftQueryError -> pure $ fmap (const "some error!") leftQueryError
             -- clearSession will fail if request has no associated session with cookies:
             -- https://github.com/hce/postgresql-session/blob/master/src/Network/Wai/Session/PostgreSQL.hs#L232
-            (do
-                session_user_id <- sessionLookup "user_id"
-                when
-                    (session_user_id /= Nothing)
-                    (debugM "rest-news" "invaliting session"
-                        >> clearSessionPartial request)
-                )
-            >> (debugM "rest-news" $ show ("put into sessions:" :: String, user_id, is_admin, author_id))
-            >> (sessionInsert "is_admin" $ show is_admin)
-            >> (sessionInsert "user_id" $ show user_id)
-            >> (sessionInsert "author_id" $ show author_id)
-            >> pure (fmap (const "cookies are baked") sessionResults);
     } in bracket_
         (debugM "rest-news" "Allocating scarce resource")
         (debugM "rest-news" "Cleaning up")

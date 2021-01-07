@@ -460,7 +460,7 @@ getArticlesCreatedAfterDate :: ArticlesByCreationDateRequest -> IO (Either Sessi
 getArticlesCreatedAfterDate = getArticlesFilteredBy HST.getArticlesCreatedAfterDate
 
 
-getCredentials :: AuthRequest -> IO (Either Session.QueryError (Int32, Bool, Int32))
+getCredentials :: AuthRequest -> IO (Either Session.QueryError (Maybe (Int32, Bool, Int32)))
 getCredentials authRequest = let {
     params = (
         username (authRequest :: AuthRequest),
