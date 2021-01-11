@@ -39,8 +39,7 @@ module HasqlSessions (
     getArticlesFilteredByCreationDate,
     getArticlesCreatedBeforeDate,
     getArticlesCreatedAfterDate,
-    getCredentials,
-    getCredentials'
+    getCredentials
     ) where
 
 import Data.Aeson (Value, encode)
@@ -520,19 +519,8 @@ getArticlesCreatedAfterDate :: ArticlesByCreationDateRequest -> IO (Either Sessi
 getArticlesCreatedAfterDate = getArticlesFilteredBy HST.getArticlesCreatedAfterDate
 
 
-getCredentials :: AuthRequest -> IO (Either Session.QueryError (Int32, Bool, Int32))
+getCredentials :: AuthRequest -> IO (Either Session.QueryError (Int32, Bool, Int32), Maybe ByteString)
 getCredentials authRequest = let {
-    params = (
-        username (authRequest :: AuthRequest),
-        password (authRequest :: AuthRequest)
-        );
-} in do
-    Right connection <- Connection.acquire connectionSettings
-    sessionResults <- Session.run (Session.statement params HST.getCredentials) connection
-    pure sessionResults
-
-getCredentials' :: AuthRequest -> IO (Either Session.QueryError (Int32, Bool, Int32), Maybe ByteString)
-getCredentials' authRequest = let {
     params = (
         username (authRequest :: AuthRequest),
         password (authRequest :: AuthRequest)

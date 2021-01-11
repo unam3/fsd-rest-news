@@ -242,15 +242,15 @@ restAPI vaultKey clearSessionPartial request respond = let {
                 runSession session = (session . fromJust $ decode requestBody);
                 sessionAuthorId = (read sessionAuthorIdString :: Int32);
                 sessionResults = case errorOrSessionName of
-                    --"createUser" -> runSession HSS.createUser
-                    --"getUser" -> HSS.getUser (read sessionUserId :: Int32)
-                    --"deleteUser" -> runSession HSS.deleteUser
-                    "auth" -> runSession HSS.getCredentials'
+                    "auth" -> runSession HSS.getCredentials
                         >>= (\ (eitherSessionResult, errorForClient) ->
                             (processCredentials eitherSessionResult
                             >>= (\ processedCreds -> pure (processedCreds, errorForClient))
                             )
                         )
+                    --"createUser" -> runSession HSS.createUser
+                    --"getUser" -> HSS.getUser (read sessionUserId :: Int32)
+                    --"deleteUser" -> runSession HSS.deleteUser
                     --"promoteUserToAuthor" -> runSession HSS.promoteUserToAuthor;
                     --"editAuthor" -> runSession HSS.editAuthor
                     --"getAuthor" -> runSession HSS.getAuthor
