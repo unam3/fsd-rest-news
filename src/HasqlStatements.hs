@@ -52,41 +52,31 @@ import Hasql.Statement (Statement(..))
 createUser :: Statement (Text, Text, Text, Text, Text) Value
 createUser =
     [TH.singletonStatement|
-        with insert_results as (
-            insert
-            into users (
-                username,
-                password,
-                name,
-                surname,
-                avatar,
-                is_admin
-                )
-            values (
-                $1 :: text,
-                crypt($2 :: text, gen_salt('bf', 8)),
-                $3 :: text,
-                $4 :: text,
-                $5 :: text,
-                false
-                )
-            on conflict (username)
-                do nothing
-            returning
-                user_id,
-                name,
-                surname,
-                avatar,
-                creation_date,
-                is_admin
-        ) select
-            case when count(insert_results) = 0
-                then 
-                    json_build_object('error', 'user with this username already exists')
-                else
-                    json_agg(insert_results) -> 0
-                end :: json
-            from insert_results
+        insert
+        into users (
+            username,
+            password,
+            name,
+            surname,
+            avatar,
+            is_admin
+            )
+        values (
+            $1 :: text,
+            crypt($2 :: text, gen_salt('bf', 8)),
+            $3 :: text,
+            $4 :: text,
+            $5 :: text,
+            false
+            )
+        returning json_build_object(
+            'user_id', user_id,
+            'name', name,
+            'surname', surname,
+            'avatar', avatar,
+            'creation_date', creation_date,
+            'is_admin', is_admin
+            )::json
         |]
 
 deleteUser :: Statement Int32 Value

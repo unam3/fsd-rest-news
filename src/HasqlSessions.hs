@@ -39,7 +39,8 @@ module HasqlSessions (
     getArticlesFilteredByCreationDate,
     getArticlesCreatedBeforeDate,
     getArticlesCreatedAfterDate,
-    getCredentials
+    getCredentials,
+    getCredentials'
     ) where
 
 import Data.Aeson (Value, encode)
@@ -75,6 +76,69 @@ valueToUTFLBS = pure . fmap encode
 connectionSettings :: Connection.Settings
 connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
 
+processError :: Either Session.QueryError resultsType -> Maybe String
+{-
+Left (
+    QueryError
+        "WITH delete_results AS (DELETE FROM categories WHERE category_id = $1 :: int4 RETURNING *) SELECT CASE WHEN count(delete_results) = 0 THEN json_build_object('error', 'no such category') ELSE json_build_object('results', 'ook') END :: json FROM delete_results"
+        ["1"]
+        (
+            ResultError (
+                ServerError
+                    "23503"
+                    "update or delete on table \"categories\" violates foreign key constraint \"categories_parent_id_fkey\" on table \"categories\""
+                    (Just "Key (category_id)=(1) is still referenced from table \"categories\".")
+                    Nothing
+            )
+        )
+)
+-}
+processError (Left (Session.QueryError _ _ (Session.ResultError (Session.ServerError "23503" _ _ _)))) = Just "23503"
+{-
+Left (
+    QueryError
+        "INSERT INTO users (username, password, name, surname, avatar, is_admin) VALUES ($1 :: text, crypt($2 :: text, gen_salt('bf', 8)), $3 :: text, $4 :: text, $5 :: text, FALSE) RETURNING json_build_object('user_id', user_id, 'name', name, 'surname', surname, 'avatar', avatar, 'creation_date', creation_date, 'is_admin', is_admin) :: json"
+        ["\"asdq\"","\"check, indeed\"","\"name\"","\"surname\"","\"asd\""]
+        (
+            ResultError (
+                ServerError
+                    "23505"
+                    "duplicate key value violates unique constraint \"users_username_key\""
+                    (Just "Key (username)=(asdq) already exists.")
+                    Nothing
+            )
+        )
+)
+-}
+processError (Left (Session.QueryError _ _ (Session.ResultError (Session.ServerError "23505" _ _ _)))) = Just "23505"
+{-
+Left (
+    QueryError
+        "SELECT users.user_id :: int4, users.is_admin :: bool, COALESCE (authors.author_id, 0) :: int4 FROM users LEFT JOIN authors ON authors.user_id = users.user_id, (SELECT user_id FROM users WHERE username = lower($1 :: text) AND password = crypt($2 :: text, password)) AS matched_user WHERE users.user_id = matched_user.user_id"
+        ["\"usasdername5\"","\"12345\""]
+        (
+            ResultError (
+                UnexpectedAmountOfRows 0
+            )
+        )
+)
+-}
+processError (Left (Session.QueryError _ _ (Session.ResultError (Session.UnexpectedAmountOfRows 0)))) = Just "0"
+processError _ = Nothing
+
+-- params and statement type are different
+--runSession params statement =
+--    Right connection <- Connection.acquire connectionSettings
+--    sessionResults <- Session.run (Session.statement params statement) connection
+
+--getConnection :: IO (Either Connection.ConnectionError Connection.Connection)
+--getConnection = --Connection.acquire connectionSettings
+--    do
+--    eitherConnection <- Connection.acquire connectionSettings
+--    pure $ case eitherConnection of
+--        Right connection -> connection
+--        Left connectionError -> error $ show connectionError
+--        --Left Connection.ConnectionError -> undefined
 
 createUser :: CreateUserRequest -> IO (Either Session.QueryError ByteString)
 createUser createUserRequest = let {
@@ -209,10 +273,6 @@ getTag :: TagIdRequest -> IO (Either Session.QueryError ByteString)
 getTag getTagRequest = let {
     params = tag_id (getTagRequest :: TagIdRequest);
 } in do
-    --acquireResults <- Connection.acquire connectionSettings
-    --case acquireResults of
-    --    Left connectionError -> error $ show connectionError
-    --    Right connection -> Connection.acquire connectionSettings
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getTag) connection
     valueToUTFLBS sessionResults
@@ -471,4 +531,18 @@ getCredentials authRequest = let {
     sessionResults <- Session.run (Session.statement params HST.getCredentials) connection
     pure sessionResults
 
-
+getCredentials' :: AuthRequest -> IO (Either Session.QueryError (Int32, Bool, Int32), Maybe ByteString)
+getCredentials' authRequest = let {
+    params = (
+        username (authRequest :: AuthRequest),
+        password (authRequest :: AuthRequest)
+        );
+} in do
+    Right connection <- Connection.acquire connectionSettings
+    sessionResults <- Session.run (Session.statement params HST.getCredentials) connection
+    pure (
+        sessionResults,
+        case processError sessionResults of
+            Just "0" -> Just "wrong username/password"
+            _ -> Nothing
+        )
