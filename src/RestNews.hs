@@ -248,7 +248,7 @@ restAPI vaultKey clearSessionPartial request respond = let {
                             >>= (\ processedCreds -> pure (processedCreds, errorForClient))
                             )
                         )
-                    --"createUser" -> runSession HSS.createUser
+                    "createUser" -> runSession HSS.createUser
                     --"getUser" -> HSS.getUser (read sessionUserId :: Int32)
                     --"deleteUser" -> runSession HSS.deleteUser
                     --"promoteUserToAuthor" -> runSession HSS.promoteUserToAuthor;
@@ -290,7 +290,7 @@ restAPI vaultKey clearSessionPartial request respond = let {
 
             debugM "rest-news" (case fst results of
                 Right ulbs -> UTFLBS.toString ulbs
-                leftErr -> show leftErr
+                leftErr -> show (snd results, leftErr)
                 )
 
             processedResults <- pure (case fst results of

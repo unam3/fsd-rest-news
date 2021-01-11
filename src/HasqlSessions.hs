@@ -69,8 +69,8 @@ import qualified HasqlStatements as HST
 -- Text
 --(fmap (fmap (UTFLBS.fromString . unpack))) $ Session.run (Session.statement params HST.createUser) connection
 
-valueToUTFLBS :: Either Session.QueryError Value -> IO (Either Session.QueryError ByteString)
-valueToUTFLBS = pure . fmap encode
+valueToUTFLBS :: Either Session.QueryError Value -> Either Session.QueryError ByteString
+valueToUTFLBS = fmap encode
 
 connectionSettings :: Connection.Settings
 connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
@@ -139,7 +139,7 @@ processError _ = Nothing
 --        Left connectionError -> error $ show connectionError
 --        --Left Connection.ConnectionError -> undefined
 
-createUser :: CreateUserRequest -> IO (Either Session.QueryError ByteString)
+createUser :: CreateUserRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 createUser createUserRequest = let {
     params = (
         username (createUserRequest :: CreateUserRequest),
@@ -151,24 +151,39 @@ createUser createUserRequest = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.createUser) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
-deleteUser :: UserIdRequest -> IO (Either Session.QueryError ByteString)
+deleteUser :: UserIdRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 deleteUser deleteUserRequest = let {
     params = user_id (deleteUserRequest :: UserIdRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.deleteUser) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
-getUser :: Int32 -> IO (Either Session.QueryError ByteString)
+getUser :: Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 getUser userId = do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement userId HST.getUser) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
 
-promoteUserToAuthor :: PromoteUserToAuthorRequest -> IO (Either Session.QueryError ByteString)
+promoteUserToAuthor :: PromoteUserToAuthorRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 promoteUserToAuthor promoteUserToAuthorRequest = let {
     params = (
         user_id (promoteUserToAuthorRequest :: PromoteUserToAuthorRequest),
@@ -176,9 +191,14 @@ promoteUserToAuthor promoteUserToAuthorRequest = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.promoteUserToAuthor) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
-editAuthor :: EditAuthorRequest -> IO (Either Session.QueryError ByteString)
+editAuthor :: EditAuthorRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 editAuthor editAuthorRequest = let {
     params = (
         author_id (editAuthorRequest :: EditAuthorRequest),
@@ -186,25 +206,40 @@ editAuthor editAuthorRequest = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.editAuthor) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
-getAuthor :: AuthorIdRequest -> IO (Either Session.QueryError ByteString)
+getAuthor :: AuthorIdRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 getAuthor authorIdRequest = let {
     params = author_id (authorIdRequest :: AuthorIdRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getAuthor) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
-deleteAuthorRole :: AuthorIdRequest -> IO (Either Session.QueryError ByteString)
+deleteAuthorRole :: AuthorIdRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 deleteAuthorRole authorIdRequest = let {
     params = author_id (authorIdRequest :: AuthorIdRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.deleteAuthorRole) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
-createCategory :: CreateCategoryRequest -> IO (Either Session.QueryError ByteString)
+createCategory :: CreateCategoryRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 createCategory createCategoryRequest = let {
     params = (
         name (createCategoryRequest :: CreateCategoryRequest),
@@ -213,9 +248,14 @@ createCategory createCategoryRequest = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.createCategory) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
-updateCategory :: UpdateCategoryRequest -> IO (Either Session.QueryError ByteString)
+updateCategory :: UpdateCategoryRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 updateCategory updateCategoryRequest = let {
     params = (
         category_id (updateCategoryRequest :: UpdateCategoryRequest),
@@ -225,59 +265,94 @@ updateCategory updateCategoryRequest = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.updateCategory) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
-getCategory :: CategoryIdRequest -> IO (Either Session.QueryError ByteString)
+getCategory :: CategoryIdRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 getCategory categoryIdRequest = let {
     params = category_id (categoryIdRequest :: CategoryIdRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getCategory) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
-deleteCategory :: CategoryIdRequest -> IO (Either Session.QueryError ByteString)
+deleteCategory :: CategoryIdRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 deleteCategory categoryIdRequest = let {
     params = category_id (categoryIdRequest :: CategoryIdRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.deleteCategory) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
 
-createTag :: CreateTagRequest -> IO (Either Session.QueryError ByteString)
+createTag :: CreateTagRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 createTag createTagRequest = let {
     params = tag_name (createTagRequest :: CreateTagRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.createTag) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
-editTag :: EditTagRequest -> IO (Either Session.QueryError ByteString)
+editTag :: EditTagRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 editTag editTagRequest = let {
     params = (tag_id (editTagRequest :: EditTagRequest), tag_name (editTagRequest :: EditTagRequest));
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.editTag) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
-deleteTag :: TagIdRequest -> IO (Either Session.QueryError ByteString)
+deleteTag :: TagIdRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 deleteTag deleteTagRequest = let {
     params = tag_id (deleteTagRequest :: TagIdRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.deleteTag) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
-getTag :: TagIdRequest -> IO (Either Session.QueryError ByteString)
+getTag :: TagIdRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 getTag getTagRequest = let {
     params = tag_id (getTagRequest :: TagIdRequest);
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getTag) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
 
-createComment :: CreateCommentRequest -> Int32 -> IO (Either Session.QueryError ByteString)
+createComment :: CreateCommentRequest -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 createComment createCommentRequest user_id' = let {
     params = (
         article_id (createCommentRequest :: CreateCommentRequest),
@@ -287,9 +362,14 @@ createComment createCommentRequest user_id' = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.createComment) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
-deleteComment :: CommentIdRequest -> Int32 -> IO (Either Session.QueryError ByteString)
+deleteComment :: CommentIdRequest -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 deleteComment deleteCommentRequest user_id' = let {
     params = (
         comment_id (deleteCommentRequest :: CommentIdRequest),
@@ -298,9 +378,14 @@ deleteComment deleteCommentRequest user_id' = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.deleteComment) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
-getArticleComments :: ArticleCommentsRequest -> IO (Either Session.QueryError ByteString)
+getArticleComments :: ArticleCommentsRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 getArticleComments articleCommentsRequest = let {
     params = (
         article_id (articleCommentsRequest :: ArticleCommentsRequest),
@@ -309,10 +394,15 @@ getArticleComments articleCommentsRequest = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticleComments) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
 
-createArticleDraft :: ArticleDraftRequest -> Int32 -> IO (Either Session.QueryError ByteString)
+createArticleDraft :: ArticleDraftRequest -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 createArticleDraft articleDraftRequest author_id' = let {
     params = (
         author_id',
@@ -326,9 +416,14 @@ createArticleDraft articleDraftRequest author_id' = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.createArticleDraft) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
-publishArticleDraft :: ArticleDraftIdRequest -> Int32 -> IO (Either Session.QueryError ByteString)
+publishArticleDraft :: ArticleDraftIdRequest -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 publishArticleDraft articleDraftIdRequest author_id' = let {
     params = (
         author_id',
@@ -337,9 +432,14 @@ publishArticleDraft articleDraftIdRequest author_id' = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.publishArticleDraft) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
-editArticleDraft :: ArticleDraftEditRequest -> Int32 -> IO (Either Session.QueryError ByteString)
+editArticleDraft :: ArticleDraftEditRequest -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 editArticleDraft articleDraftEditRequest author_id' = let {
     params = (
         author_id',
@@ -353,9 +453,14 @@ editArticleDraft articleDraftEditRequest author_id' = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.editArticleDraft) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
-getArticleDraft :: ArticleDraftIdRequest -> Int32 -> IO (Either Session.QueryError ByteString)
+getArticleDraft :: ArticleDraftIdRequest -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 getArticleDraft articleDraftIdRequest author_id' = let {
     params = (
         article_id (articleDraftIdRequest :: ArticleDraftIdRequest),
@@ -364,9 +469,14 @@ getArticleDraft articleDraftIdRequest author_id' = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticleDraft) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
-deleteArticleDraft :: ArticleDraftIdRequest -> Int32 -> IO (Either Session.QueryError ByteString)
+deleteArticleDraft :: ArticleDraftIdRequest -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 deleteArticleDraft articleDraftIdRequest author_id' = let {
     params = (
         article_id (articleDraftIdRequest :: ArticleDraftIdRequest),
@@ -375,10 +485,15 @@ deleteArticleDraft articleDraftIdRequest author_id' = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.deleteArticleDraft) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
 
-getArticlesByCategoryId :: ArticlesByCategoryIdRequest -> IO (Either Session.QueryError ByteString)
+getArticlesByCategoryId :: ArticlesByCategoryIdRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 getArticlesByCategoryId articlesByCategoryIdRequest = let {
     params = (
         category_id (articlesByCategoryIdRequest :: ArticlesByCategoryIdRequest),
@@ -387,9 +502,14 @@ getArticlesByCategoryId articlesByCategoryIdRequest = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesByCategoryId) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
-getArticlesByTagId :: TagIdRequestWithOffset -> IO (Either Session.QueryError ByteString)
+getArticlesByTagId :: TagIdRequestWithOffset -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 getArticlesByTagId tagIdRequestWithOffset = let {
     params = (
         tag_id (tagIdRequestWithOffset :: TagIdRequestWithOffset),
@@ -398,10 +518,15 @@ getArticlesByTagId tagIdRequestWithOffset = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesByTagId) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
 
-getArticlesByAnyTagId :: ArticlesByTagIdListRequest -> IO (Either Session.QueryError ByteString)
+getArticlesByAnyTagId :: ArticlesByTagIdListRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 getArticlesByAnyTagId tagIdsRequest = let {
     params = (
         tags_ids (tagIdsRequest :: ArticlesByTagIdListRequest),
@@ -410,9 +535,14 @@ getArticlesByAnyTagId tagIdsRequest = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesByAnyTagId) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
-getArticlesByAllTagId :: ArticlesByTagIdListRequest -> IO (Either Session.QueryError ByteString)
+getArticlesByAllTagId :: ArticlesByTagIdListRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 getArticlesByAllTagId tagIdsRequest = let {
     params = (
         tags_ids (tagIdsRequest :: ArticlesByTagIdListRequest),
@@ -421,9 +551,14 @@ getArticlesByAllTagId tagIdsRequest = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesByAllTagId) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
-getArticlesByTitlePart :: ArticlesByTitlePartRequest -> IO (Either Session.QueryError ByteString)
+getArticlesByTitlePart :: ArticlesByTitlePartRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 getArticlesByTitlePart substringRequest = let {
     params = (
         title_substring (substringRequest :: ArticlesByTitlePartRequest),
@@ -433,9 +568,14 @@ getArticlesByTitlePart substringRequest = let {
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesByTitlePart) connection
     --Data.Text.IO.putStrLn . pack $ show sessionResults
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
-getArticlesByContentPart :: ArticlesByContentPartRequest -> IO (Either Session.QueryError ByteString)
+getArticlesByContentPart :: ArticlesByContentPartRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 getArticlesByContentPart substringRequest = let {
     params = (
         content_substring (substringRequest :: ArticlesByContentPartRequest),
@@ -444,9 +584,14 @@ getArticlesByContentPart substringRequest = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesByContentPart) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
-getArticlesByAuthorNamePart :: ArticlesByAuthorNamePartRequest -> IO (Either Session.QueryError ByteString)
+getArticlesByAuthorNamePart :: ArticlesByAuthorNamePartRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 getArticlesByAuthorNamePart substringRequest = let {
     params = (
         author_name_substring (substringRequest :: ArticlesByAuthorNamePartRequest),
@@ -455,9 +600,14 @@ getArticlesByAuthorNamePart substringRequest = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesByAuthorNamePart) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
-getArticlesSortedByPhotosNumber :: OffsetRequest -> IO (Either Session.QueryError ByteString)
+getArticlesSortedByPhotosNumber :: OffsetRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 getArticlesSortedByPhotosNumber request = let {
     params = (
         offset (request :: OffsetRequest)
@@ -465,9 +615,14 @@ getArticlesSortedByPhotosNumber request = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesSortedByPhotosNumber) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
-getArticlesSortedByCreationDate :: OffsetRequest -> IO (Either Session.QueryError ByteString)
+getArticlesSortedByCreationDate :: OffsetRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 getArticlesSortedByCreationDate request = let {
     params = (
         offset (request :: OffsetRequest)
@@ -475,9 +630,14 @@ getArticlesSortedByCreationDate request = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesSortedByCreationDate) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
-getArticlesSortedByAuthor :: OffsetRequest -> IO (Either Session.QueryError ByteString)
+getArticlesSortedByAuthor :: OffsetRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 getArticlesSortedByAuthor request = let {
     params = (
         offset (request :: OffsetRequest)
@@ -485,9 +645,14 @@ getArticlesSortedByAuthor request = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesSortedByAuthor) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
-getArticlesSortedByCategory :: OffsetRequest -> IO (Either Session.QueryError ByteString)
+getArticlesSortedByCategory :: OffsetRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 getArticlesSortedByCategory request = let {
     params = (
         offset (request :: OffsetRequest)
@@ -495,10 +660,15 @@ getArticlesSortedByCategory request = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesSortedByCategory) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
 getArticlesFilteredBy :: Statement (Text, Maybe Int32) Value -> ArticlesByCreationDateRequest
-    -> IO (Either Session.QueryError ByteString)
+    -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 getArticlesFilteredBy filterF articlesByCreationDateRequest = let {
     params = (
         pack . showGregorian $ day (articlesByCreationDateRequest :: ArticlesByCreationDateRequest),
@@ -507,15 +677,20 @@ getArticlesFilteredBy filterF articlesByCreationDateRequest = let {
 } in do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params filterF) connection
-    valueToUTFLBS sessionResults
+    pure (
+        valueToUTFLBS sessionResults,
+        case processError sessionResults of
+            --Just "23505" -> Just "user with this username already exists"
+            _ -> Nothing
+        )
 
-getArticlesFilteredByCreationDate :: ArticlesByCreationDateRequest -> IO (Either Session.QueryError ByteString)
+getArticlesFilteredByCreationDate :: ArticlesByCreationDateRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 getArticlesFilteredByCreationDate = getArticlesFilteredBy HST.getArticlesFilteredByCreationDate
 
-getArticlesCreatedBeforeDate :: ArticlesByCreationDateRequest -> IO (Either Session.QueryError ByteString)
+getArticlesCreatedBeforeDate :: ArticlesByCreationDateRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 getArticlesCreatedBeforeDate = getArticlesFilteredBy HST.getArticlesCreatedBeforeDate
 
-getArticlesCreatedAfterDate :: ArticlesByCreationDateRequest -> IO (Either Session.QueryError ByteString)
+getArticlesCreatedAfterDate :: ArticlesByCreationDateRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 getArticlesCreatedAfterDate = getArticlesFilteredBy HST.getArticlesCreatedAfterDate
 
 
