@@ -123,6 +123,8 @@ Left (
 )
 -}
 processError (Left (Session.QueryError _ _ (Session.ResultError (Session.UnexpectedAmountOfRows 0)))) = Just "0"
+-- (Nothing,Left (QueryError "SELECT json_agg(users.*) :: json FROM users WHERE user_id = $1 :: int4" ["20"] (ResultError (RowError 0 UnexpectedNull))))
+processError (Left (Session.QueryError _ _ (Session.ResultError (Session.RowError 0 Session.UnexpectedNull)))) = Just "0"
 processError _ = Nothing
 
 -- params and statement type are different
@@ -175,10 +177,11 @@ getUser :: Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 getUser userId = do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement userId HST.getUser) connection
+    print (processError sessionResults)
     pure (
         valueToUTFLBS sessionResults,
         case processError sessionResults of
-            --Just "23505" -> Just "user with this username already exists"
+            Just "0" -> Just "such user does not exist"
             _ -> Nothing
         )
 
