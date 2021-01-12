@@ -196,7 +196,8 @@ promoteUserToAuthor promoteUserToAuthorRequest = let {
     pure (
         valueToUTFLBS sessionResults,
         case processError sessionResults of
-            --Just "23505" -> Just "user with this username already exists"
+            Just "23503" -> Just "{\"error\": \"such user does not exist\"}"
+            Just "23505" -> Just "{\"error\": \"such user is already an author\"}"
             _ -> Nothing
         )
 
