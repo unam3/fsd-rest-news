@@ -156,7 +156,7 @@ createUser createUserRequest = let {
     pure (
         valueToUTFLBS sessionResults,
         case processError sessionResults of
-            Just "23505" -> Just "user with this username already exists"
+            Just "23505" -> Just "{\"error\": \"user with this username already exists\"}"
             _ -> Nothing
         )
 
@@ -169,7 +169,7 @@ deleteUser deleteUserRequest = let {
     pure (
         valueToUTFLBS sessionResults,
         case processError sessionResults of
-            --Just "23505" -> Just "user with this username already exists"
+            Just "0" -> Just "{\"error\": \"such user does not exist\"}"
             _ -> Nothing
         )
 
@@ -177,11 +177,10 @@ getUser :: Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 getUser userId = do
     Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement userId HST.getUser) connection
-    print (processError sessionResults)
     pure (
         valueToUTFLBS sessionResults,
         case processError sessionResults of
-            Just "0" -> Just "such user does not exist"
+            Just "0" -> Just "{\"error\": \"such user does not exist\"}"
             _ -> Nothing
         )
 

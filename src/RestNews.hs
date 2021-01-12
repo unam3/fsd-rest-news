@@ -250,7 +250,7 @@ restAPI vaultKey clearSessionPartial request respond = let {
                         )
                     "createUser" -> runSession HSS.createUser
                     "getUser" -> HSS.getUser (read sessionUserId :: Int32)
-                    --"deleteUser" -> runSession HSS.deleteUser
+                    "deleteUser" -> runSession HSS.deleteUser
                     --"promoteUserToAuthor" -> runSession HSS.promoteUserToAuthor;
                     --"editAuthor" -> runSession HSS.editAuthor
                     --"getAuthor" -> runSession HSS.getAuthor
