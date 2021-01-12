@@ -93,7 +93,15 @@ deleteUser =
 getUser :: Statement Int32 Value
 getUser =
     [TH.singletonStatement|
-        select json_agg(users.*) :: json
+        select 
+            json_build_object(
+                'user_id', user_id,
+                'name', name,
+                'surname', surname,
+                'avatar', avatar,
+                'creation_date', creation_date,
+                'is_admin', is_admin
+                )::json
         from users
         where user_id = $1 :: int4
         |]
