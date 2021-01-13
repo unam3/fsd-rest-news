@@ -109,15 +109,9 @@ getUser =
 getAuthor :: Statement Int32 Value
 getAuthor =
     [TH.singletonStatement|
-        select case when count(author) = 0
-            then json_build_object('error', 'no sush author')
-            else json_agg(author.*) -> 0
-            end :: json
-        from (
-            select *
-            from authors
-            where author_id = $1 :: int4
-        ) as author
+        select json_agg(authors.*) :: json
+        from authors
+        where author_id = $1 :: int4
         |]
 
 deleteAuthorRole :: Statement Int32 Value
