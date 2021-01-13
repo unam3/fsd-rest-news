@@ -282,7 +282,7 @@ getCategory categoryIdRequest = let {
     pure (
         valueToUTFLBS sessionResults,
         case processError sessionResults of
-            --Just "23505" -> Just "user with this username already exists"
+            Just "0" -> Just "{\"error\": \"no such category\"}"
             _ -> Nothing
         )
 
