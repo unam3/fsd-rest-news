@@ -221,19 +221,13 @@ createTag =
 editTag :: Statement (Int32, Text) Value
 editTag =
     [TH.singletonStatement|
-        with update_results as (
-            update tags
-            set tag_name = $2 :: text
-            where tag_id = $1 :: int4
-            returning *
-        ) select
-            case when count(update_results) = 0
-                then 
-                    json_build_object('error', 'no such tag')
-                else
-                    json_agg(update_results) -> 0
-                end :: json
-            from update_results
+        update tags
+        set tag_name = $2 :: text
+        where tag_id = $1 :: int4
+        returning json_build_object(
+            'tag_name', tag_name,
+            'tag_id', tag_id
+            )::json
         |]
 
 deleteTag :: Statement Int32 Value

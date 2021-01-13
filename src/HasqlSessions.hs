@@ -309,9 +309,7 @@ createTag createTagRequest = let {
     sessionResults <- Session.run (Session.statement params HST.createTag) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
-            --Just "23505" -> Just "user with this username already exists"
-            _ -> Nothing
+        Nothing
         )
 
 editTag :: EditTagRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
@@ -323,7 +321,7 @@ editTag editTagRequest = let {
     pure (
         valueToUTFLBS sessionResults,
         case processError sessionResults of
-            --Just "23505" -> Just "user with this username already exists"
+            Just "0" -> Just "{\"error\": \"no such tag\"}"
             _ -> Nothing
         )
 
