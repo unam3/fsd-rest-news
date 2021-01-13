@@ -109,7 +109,7 @@ getUser =
 getAuthor :: Statement Int32 Value
 getAuthor =
     [TH.singletonStatement|
-        select json_agg(authors.*) :: json
+        select to_json(authors.*) :: json
         from authors
         where author_id = $1 :: int4
         |]
