@@ -196,19 +196,10 @@ getCategory =
 deleteCategory :: Statement Int32 Value
 deleteCategory =
     [TH.singletonStatement|
-        with delete_results as (
-            delete
-            from categories
-            where category_id = $1 :: int4
-            returning *
-        ) select
-            case when count(delete_results) = 0
-            then 
-                json_build_object('error', 'no such category')
-            else
-                json_build_object('results', 'ook')
-            end :: json
-        from delete_results
+        delete
+        from categories
+        where category_id = $1 :: int4
+        returning json_build_object('results', 'ook') :: json
         |]
 
 

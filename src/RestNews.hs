@@ -258,7 +258,7 @@ restAPI vaultKey clearSessionPartial request respond = let {
                     "createCategory" -> runSession HSS.createCategory
                     "updateCategory" -> runSession HSS.updateCategory
                     "getCategory" -> runSession HSS.getCategory
-                    --"deleteCategory" -> runSession HSS.deleteCategory
+                    "deleteCategory" -> runSession HSS.deleteCategory
                     --"createTag" -> runSession HSS.createTag
                     --"editTag" -> runSession HSS.editTag
                     --"getTag" -> runSession HSS.getTag
