@@ -233,24 +233,12 @@ editTag =
 deleteTag :: Statement Int32 Value
 deleteTag =
     [TH.singletonStatement|
-        with delete_results as (
-            delete
-            from tags
-            where tag_id = $1 :: int4
-                and not exists (
-                    select *
-                    from articles_tags
-                    where tag_id = $1 :: int4
-                    )
-            returning *
-        ) select
-            case when count(delete_results) = 0
-            then 
-                json_build_object('error', 'this tag is referenced by an article or doesn''t exist')
-            else
-                json_build_object('results', 'ook')
-            end :: json
-        from delete_results
+        delete
+        from tags
+        where tag_id = $1 :: int4
+        returning json_build_object( 
+            'results', 'ook'
+            ) :: json
         |]
 
 getTag :: Statement Int32 Value
