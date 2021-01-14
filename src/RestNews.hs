@@ -271,20 +271,20 @@ restAPI vaultKey clearSessionPartial request respond = let {
                     "publishArticleDraft" -> runSession HSS.publishArticleDraft sessionAuthorId
                     "getArticleDraft" -> runSession HSS.getArticleDraft sessionAuthorId
                     "deleteArticleDraft" -> runSession HSS.deleteArticleDraft sessionAuthorId
-                    --"getArticlesByCategoryId" -> runSession HSS.getArticlesByCategoryId
-                    --"getArticlesByTagId" -> runSession HSS.getArticlesByTagId
-                    --"getArticlesByAnyTagId" -> runSession HSS.getArticlesByAnyTagId
-                    --"getArticlesByAllTagId" -> runSession HSS.getArticlesByAllTagId
-                    --"getArticlesByTitlePart" -> runSession HSS.getArticlesByTitlePart
-                    --"getArticlesByContentPart" -> runSession HSS.getArticlesByContentPart
-                    --"getArticlesByAuthorNamePart" -> runSession HSS.getArticlesByAuthorNamePart
-                    --"getArticlesSortedByPhotosNumber" -> runSession HSS.getArticlesSortedByPhotosNumber
-                    --"getArticlesSortedByCreationDate" -> runSession HSS.getArticlesSortedByCreationDate
-                    --"getArticlesSortedByAuthor" -> runSession HSS.getArticlesSortedByAuthor
-                    --"getArticlesSortedByCategory" -> runSession HSS.getArticlesSortedByCategory
-                    --"getArticlesFilteredByCreationDate" -> runSession HSS.getArticlesFilteredByCreationDate
-                    --"getArticlesCreatedBeforeDate" -> runSession HSS.getArticlesCreatedBeforeDate
-                    --"getArticlesCreatedAfterDate" -> runSession HSS.getArticlesCreatedAfterDate
+                    "getArticlesByCategoryId" -> runSession HSS.getArticlesByCategoryId
+                    "getArticlesByTagId" -> runSession HSS.getArticlesByTagId
+                    "getArticlesByAnyTagId" -> runSession HSS.getArticlesByAnyTagId
+                    "getArticlesByAllTagId" -> runSession HSS.getArticlesByAllTagId
+                    "getArticlesByTitlePart" -> runSession HSS.getArticlesByTitlePart
+                    "getArticlesByContentPart" -> runSession HSS.getArticlesByContentPart
+                    "getArticlesByAuthorNamePart" -> runSession HSS.getArticlesByAuthorNamePart
+                    "getArticlesSortedByPhotosNumber" -> runSession HSS.getArticlesSortedByPhotosNumber
+                    "getArticlesSortedByCreationDate" -> runSession HSS.getArticlesSortedByCreationDate
+                    "getArticlesSortedByAuthor" -> runSession HSS.getArticlesSortedByAuthor
+                    "getArticlesSortedByCategory" -> runSession HSS.getArticlesSortedByCategory
+                    "getArticlesFilteredByCreationDate" -> runSession HSS.getArticlesFilteredByCreationDate
+                    "getArticlesCreatedBeforeDate" -> runSession HSS.getArticlesCreatedBeforeDate
+                    "getArticlesCreatedAfterDate" -> runSession HSS.getArticlesCreatedAfterDate
                     nonMatched -> pure (Right $ UTFLBS.fromString nonMatched, Just $ UTFLBS.fromString nonMatched);
                 } in sessionResults
 

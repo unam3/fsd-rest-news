@@ -381,6 +381,7 @@ deleteArticleDraft =
         |]
 
 
+-- we can't easily distinguish nonexistent category_id and no articles with category_id
 getArticlesByCategoryId :: Statement (Int32, Maybe Int32) Value
 getArticlesByCategoryId =
     [TH.singletonStatement|

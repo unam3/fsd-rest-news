@@ -502,9 +502,7 @@ getArticlesByCategoryId articlesByCategoryIdRequest = let {
     sessionResults <- Session.run (Session.statement params HST.getArticlesByCategoryId) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
-            --Just "23505" -> Just "user with this username already exists"
-            _ -> Nothing
+        Nothing
         )
 
 getArticlesByTagId :: TagIdRequestWithOffset -> IO (Either Session.QueryError ByteString, Maybe ByteString)
@@ -518,9 +516,7 @@ getArticlesByTagId tagIdRequestWithOffset = let {
     sessionResults <- Session.run (Session.statement params HST.getArticlesByTagId) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
-            --Just "23505" -> Just "user with this username already exists"
-            _ -> Nothing
+        Nothing
         )
 
 
@@ -535,9 +531,7 @@ getArticlesByAnyTagId tagIdsRequest = let {
     sessionResults <- Session.run (Session.statement params HST.getArticlesByAnyTagId) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
-            --Just "23505" -> Just "user with this username already exists"
-            _ -> Nothing
+        Nothing
         )
 
 getArticlesByAllTagId :: ArticlesByTagIdListRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
@@ -551,9 +545,7 @@ getArticlesByAllTagId tagIdsRequest = let {
     sessionResults <- Session.run (Session.statement params HST.getArticlesByAllTagId) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
-            --Just "23505" -> Just "user with this username already exists"
-            _ -> Nothing
+        Nothing
         )
 
 getArticlesByTitlePart :: ArticlesByTitlePartRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
@@ -568,9 +560,7 @@ getArticlesByTitlePart substringRequest = let {
     --Data.Text.IO.putStrLn . pack $ show sessionResults
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
-            --Just "23505" -> Just "user with this username already exists"
-            _ -> Nothing
+        Nothing
         )
 
 getArticlesByContentPart :: ArticlesByContentPartRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
@@ -584,9 +574,7 @@ getArticlesByContentPart substringRequest = let {
     sessionResults <- Session.run (Session.statement params HST.getArticlesByContentPart) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
-            --Just "23505" -> Just "user with this username already exists"
-            _ -> Nothing
+        Nothing
         )
 
 getArticlesByAuthorNamePart :: ArticlesByAuthorNamePartRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
@@ -600,9 +588,7 @@ getArticlesByAuthorNamePart substringRequest = let {
     sessionResults <- Session.run (Session.statement params HST.getArticlesByAuthorNamePart) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
-            --Just "23505" -> Just "user with this username already exists"
-            _ -> Nothing
+        Nothing
         )
 
 getArticlesSortedByPhotosNumber :: OffsetRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
@@ -615,9 +601,7 @@ getArticlesSortedByPhotosNumber request = let {
     sessionResults <- Session.run (Session.statement params HST.getArticlesSortedByPhotosNumber) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
-            --Just "23505" -> Just "user with this username already exists"
-            _ -> Nothing
+        Nothing
         )
 
 getArticlesSortedByCreationDate :: OffsetRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
@@ -630,9 +614,7 @@ getArticlesSortedByCreationDate request = let {
     sessionResults <- Session.run (Session.statement params HST.getArticlesSortedByCreationDate) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
-            --Just "23505" -> Just "user with this username already exists"
-            _ -> Nothing
+        Nothing
         )
 
 getArticlesSortedByAuthor :: OffsetRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
@@ -645,9 +627,7 @@ getArticlesSortedByAuthor request = let {
     sessionResults <- Session.run (Session.statement params HST.getArticlesSortedByAuthor) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
-            --Just "23505" -> Just "user with this username already exists"
-            _ -> Nothing
+        Nothing
         )
 
 getArticlesSortedByCategory :: OffsetRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
@@ -660,9 +640,7 @@ getArticlesSortedByCategory request = let {
     sessionResults <- Session.run (Session.statement params HST.getArticlesSortedByCategory) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
-            --Just "23505" -> Just "user with this username already exists"
-            _ -> Nothing
+        Nothing
         )
 
 getArticlesFilteredBy :: Statement (Text, Maybe Int32) Value -> ArticlesByCreationDateRequest
@@ -677,9 +655,7 @@ getArticlesFilteredBy filterF articlesByCreationDateRequest = let {
     sessionResults <- Session.run (Session.statement params filterF) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
-            --Just "23505" -> Just "user with this username already exists"
-            _ -> Nothing
+        Nothing
         )
 
 getArticlesFilteredByCreationDate :: ArticlesByCreationDateRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
