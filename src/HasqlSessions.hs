@@ -397,9 +397,7 @@ getArticleComments articleCommentsRequest = let {
     sessionResults <- Session.run (Session.statement params HST.getArticleComments) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
-            --Just "23505" -> Just "user with this username already exists"
-            _ -> Nothing
+        Nothing
         )
 
 
@@ -419,9 +417,7 @@ createArticleDraft articleDraftRequest author_id' = let {
     sessionResults <- Session.run (Session.statement params HST.createArticleDraft) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
-            --Just "23505" -> Just "user with this username already exists"
-            _ -> Nothing
+        Nothing
         )
 
 publishArticleDraft :: ArticleDraftIdRequest -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
@@ -457,7 +453,8 @@ editArticleDraft articleDraftEditRequest author_id' = let {
     pure (
         valueToUTFLBS sessionResults,
         case processError sessionResults of
-            --Just "23505" -> Just "user with this username already exists"
+            Just "23503" -> Just "{\"error\": \"no such category\"}"
+            Just "0" -> Just "{\"error\": \"no such article\"}"
             _ -> Nothing
         )
 
