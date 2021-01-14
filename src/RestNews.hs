@@ -270,7 +270,7 @@ restAPI vaultKey clearSessionPartial request respond = let {
                     "editArticleDraft" -> runSession HSS.editArticleDraft sessionAuthorId
                     "publishArticleDraft" -> runSession HSS.publishArticleDraft sessionAuthorId
                     "getArticleDraft" -> runSession HSS.getArticleDraft sessionAuthorId
-                    --"deleteArticleDraft" -> runSession HSS.deleteArticleDraft sessionAuthorId
+                    "deleteArticleDraft" -> runSession HSS.deleteArticleDraft sessionAuthorId
                     --"getArticlesByCategoryId" -> runSession HSS.getArticlesByCategoryId
                     --"getArticlesByTagId" -> runSession HSS.getArticlesByTagId
                     --"getArticlesByAnyTagId" -> runSession HSS.getArticlesByAnyTagId

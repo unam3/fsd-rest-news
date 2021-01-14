@@ -372,21 +372,12 @@ getArticleDraft =
 deleteArticleDraft :: Statement (Int32, Int32) Value
 deleteArticleDraft =
     [TH.singletonStatement|
-        with delete_results as (
-            delete
-            from articles
-            where article_id = $1 :: int4
-                and author = $2 :: int4
-                and is_published = false
-            returning true
-            ) select
-                case when count(delete_results) = 0
-                then
-                    json_build_object('results', 'no such article')
-                else
-                    json_build_object('results', 'ook')
-                end :: json
-            from delete_results
+        delete
+        from articles
+        where article_id = $1 :: int4
+            and author = $2 :: int4
+            and is_published = false
+        returning json_build_object('results', 'ook') :: json
         |]
 
 
