@@ -363,17 +363,10 @@ editArticleDraft =
 getArticleDraft :: Statement (Int32, Int32) Value
 getArticleDraft =
     [TH.singletonStatement|
-        select
-            case when count(select_results) = 0
-            then json_build_object('error', 'no sush article')
-            else json_agg(select_results) -> 0
-            end :: json
-        from (
-            select get_article(article_id)
-            from articles
-            where article_id = $1 :: int4
-                and author = $2 :: int4
-        ) as select_results
+        select get_article(article_id) :: json
+        from articles
+        where article_id = $1 :: int4
+            and author = $2 :: int4
         |]
 
 deleteArticleDraft :: Statement (Int32, Int32) Value
