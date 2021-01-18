@@ -72,3 +72,5 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - rest-news
+    - hspec
+    - process == 1.6.9.0
