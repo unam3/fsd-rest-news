@@ -12,6 +12,7 @@ getSession =
         ioResponse = readProcess
             "curl"
             [
+                "-s",
                 "-i",
                 "-X", "POST",
                 "-d", "{\"username\": \"username\", \"password\": \"12345\"}",
@@ -32,6 +33,7 @@ curl method session dashDData url =
     let {
         initialData = 
             [
+                "-s",
                 "-X", method,
                 url
                 ];
@@ -81,38 +83,40 @@ spec :: Spec
 spec = do
     --runWarpWithLogger
 
-    describe "auth user" .
+    describe "auth" $ do
          it "recognize existing user credentials"
-         $ auth
-         >>= (`shouldBe` "cookies are baked")
+             $ auth
+             >>= (`shouldBe` "cookies are baked")
 
-    describe "auth with wrong creds" .
-         it "return error"
-         $ authMustFail
-         >>= (`shouldBe` "wrong username/password")
+         it "return error when wrong creds"
+             $ authMustFail
+             >>= (`shouldBe` "wrong username/password")
 
-    describe "createUser" .
+    --str <- createUser >>= take 6
+    --describe "createUser" .
+    --     it "create user"
+    --     $ shouldBe str "{\"name"
+
+    describe "createUser" $ do
          it "create user"
-         -- {"name":"name","is_admin":false,"creation_date":"2021-01-19T14:30:26.911449","surname":"surname","user_id":35,"avatar":"asd"}
-         $ createUser
-         >>= (`shouldBe` "{\"name")
-            . take 6
+             -- {"name":"name","is_admin":false,"creation_date":"2021-01-19T14:30:26.911449","surname":"surname","user_id":35,"avatar":"asd"}
+             $ createUser
+             >>= (`shouldBe` "{\"name")
+                . take 6
 
-    describe "createUser with already existed user data" .
-         it "create user will return error"
-         $ createUser
-         >>= (`shouldBe` "{\"error\": \"user with this username already exists\"}")
+         it "create user will return error if such user already exists"
+             $ createUser
+             >>= (`shouldBe` "{\"error\": \"user with this username already exists\"}")
 
     -- getUser
 
-    describe "delete existing user" .
-         it "successful user deletion"
-         $ getSession
-         >>= deleteUser
-         >>= (`shouldBe` "{\"results\": \"ook\"}")
+    describe "deleteUser" $ do
+         it "successfully delete user"
+             $ getSession
+             >>= deleteUser
+             >>= (`shouldBe` "{\"results\":\"ook\"}")
 
-    describe "delete non-existent user" .
-         it "successful user deletion"
-         $ getSession
-         >>= deleteUser
-         >>= (`shouldBe` "{\"error\": \"such user does not exist\"}")
+         it "returns error on non-existent user"
+             $ getSession
+             >>= deleteUser
+             >>= (`shouldBe` "{\"error\": \"such user does not exist\"}")
