@@ -72,6 +72,13 @@ createUser = curl
     "{\"username\": \"createUserTest1\", \"password\": \"check, indeed\", \"name\": \"name\", \"surname\": \"surname\", \"avatar\": \"asd\"}"
     "http://0.0.0.0:8081/users"
 
+getUser :: String -> IO String
+getUser session = curl
+    "GET"
+    session
+    []
+    "http://0.0.0.0:8081/users"
+
 deleteUser :: String -> IO String
 deleteUser session = curl
     "DELETE"
@@ -108,7 +115,12 @@ spec = do
              $ createUser
              >>= (`shouldBe` "{\"error\": \"user with this username already exists\"}")
 
-    -- getUser
+    describe "getUser" $ do
+         it "get user information"
+             $ getSession
+             >>= getUser
+             >>= (`shouldBe` "{\"name\":\"Scott\",\"is_admin\":true,\"creation_date\":\"2021-01-08T19:05:24.751993\",\"surname\":\"Adams\",\"user_id\":1,\"avatar\":\"http://pluh/meh.jpg\"}")
+
 
     describe "deleteUser" $ do
          it "successfully delete user"
