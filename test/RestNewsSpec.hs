@@ -86,6 +86,13 @@ replaceComasWithNewlines = map (
         else char
         )
 
+promoteUserToAuthor :: String -> String -> IO String
+promoteUserToAuthor params session = curl
+    "POST"
+    session
+    params
+    "http://0.0.0.0:8081/authors"
+
 deleteUser :: String -> String -> IO String
 deleteUser params session = curl
     "DELETE"
@@ -128,9 +135,16 @@ spec = do
             >>= (`shouldBe` "{\"name\":\"Scott\",\"is_admin\":true,\"creation_date\":\"2021-01-08T19:05:24.751993\",\"surname\":\"Adams\",\"user_id\":1,\"avatar\":\"http://pluh/meh.jpg\"}")
 
 
-    let userIdJSON = let {
-        user_id_section = (!! 4) . lines $ replaceComasWithNewlines createUserResult;
-    } in concat ["{", user_id_section, "}"]
+    let userIdJSONSection = (!! 4) . lines $ replaceComasWithNewlines createUserResult;
+
+    let userIdJSON = concat ["{", userIdJSONSection, "}"]
+
+
+    describe "promoteUserToAuthor" $ do
+        it "successfully makes author"
+            $ do pendingWith "remove author resolution: 23503 update or delete on table \"users\" violates foreign key constraint \"authors_user_id_fkey\" on table \"authors\" (Just \"Key (user_id)=(124) is still referenced from table \"authors\"."
+            -- $ promoteUserToAuthor (concat ["{", userIdJSONSection, ", \"description\": \"blob deccas\"}"]) session
+            -- >>= (`shouldStartWith` "{\"author_id\":")
 
 
     describe "deleteUser" $ do
