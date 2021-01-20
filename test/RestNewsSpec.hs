@@ -120,10 +120,11 @@ spec = do
             $ createUser
             >>= (`shouldBe` "{\"error\": \"user with this username already exists\"}")
 
+    session <- runIO getSession
+
     describe "getUser" $ do
         it "get user information"
-            $ getSession
-            >>= getUser
+            $ getUser session
             >>= (`shouldBe` "{\"name\":\"Scott\",\"is_admin\":true,\"creation_date\":\"2021-01-08T19:05:24.751993\",\"surname\":\"Adams\",\"user_id\":1,\"avatar\":\"http://pluh/meh.jpg\"}")
 
 
@@ -131,13 +132,12 @@ spec = do
         user_id_section = (!! 4) . lines $ replaceComasWithNewlines createUserResult;
     } in concat ["{", user_id_section, "}"]
 
+
     describe "deleteUser" $ do
         it "successfully delete user"
-            $ getSession
-            >>= deleteUser userIdJSON
+            $ deleteUser userIdJSON session
             >>= (`shouldBe` "{\"results\":\"ook\"}")
 
         it "returns error on non-existent user"
-            $ getSession
-            >>= deleteUser userIdJSON
+            $ deleteUser userIdJSON session
             >>= (`shouldBe` "{\"error\": \"such user does not exist\"}")
