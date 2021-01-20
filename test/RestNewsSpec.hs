@@ -142,9 +142,16 @@ spec = do
 
     describe "promoteUserToAuthor" $ do
         it "successfully makes author"
-            $ do pendingWith "remove author resolution: 23503 update or delete on table \"users\" violates foreign key constraint \"authors_user_id_fkey\" on table \"authors\" (Just \"Key (user_id)=(124) is still referenced from table \"authors\"."
-            -- $ promoteUserToAuthor (concat ["{", userIdJSONSection, ", \"description\": \"blob deccas\"}"]) session
-            -- >>= (`shouldStartWith` "{\"author_id\":")
+            $ promoteUserToAuthor (concat ["{", userIdJSONSection, ", \"description\": \"blob deccas\"}"]) session
+            >>= (`shouldStartWith` "{\"author_id\":")
+
+        it "call with same params returns error"
+            $ promoteUserToAuthor (concat ["{", userIdJSONSection, ", \"description\": \"blob deccas\"}"]) session
+            >>= (`shouldBe` "{\"error\": \"such user is already an author\"}")
+
+        it "call with non-existent user_id"
+             $ promoteUserToAuthor "{\"user_id\": 123456, \"description\": \"blob deccas\"}" session
+             >>= (`shouldBe` "{\"error\": \"such user does not exist\"}")
 
 
     describe "deleteUser" $ do
