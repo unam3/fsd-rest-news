@@ -69,7 +69,7 @@ createUser :: IO String
 createUser = curl
     "POST"
     []
-    "{\"username\": \"createUserTest1\", \"password\": \"check, indeed\", \"name\": \"name\", \"surname\": \"surname\", \"avatar\": \"asd\"}"
+    "{\"username\": \"createUserTest2\", \"password\": \"check, indeed\", \"name\": \"name\", \"surname\": \"surname\", \"avatar\": \"asd\"}"
     "http://0.0.0.0:8081/users"
 
 getUser :: String -> IO String
@@ -79,12 +79,20 @@ getUser session = curl
     []
     "http://0.0.0.0:8081/users"
 
-deleteUser :: String -> IO String
-deleteUser session = curl
+replaceComasWithNewlines :: String -> String
+replaceComasWithNewlines = map (
+    \ char -> if char == ','
+        then '\n'
+        else char
+        )
+
+deleteUser :: String -> String -> IO String
+deleteUser params session = curl
     "DELETE"
     session
-    "{\"user_id\": 12345}"
+    params
     "http://0.0.0.0:8081/users"
+
 
 spec :: Spec
 spec = do
@@ -98,17 +106,15 @@ spec = do
             $ authMustFail
             >>= (`shouldBe` "wrong username/password")
 
-    --str <- createUser >>= take 6
-    --describe "createUser" .
-    --     it "create user"
-    --     $ shouldBe str "{\"name"
+
+    createUserResult <- runIO createUser
+    -- runIO $ print createUserResult
 
     describe "createUser" $ do
+
         it "create user"
             -- {"name":"name","is_admin":false,"creation_date":"2021-01-19T14:30:26.911449","surname":"surname","user_id":35,"avatar":"asd"}
-            $ createUser
-            >>= (`shouldBe` "{\"name")
-               . take 6
+            $ shouldStartWith createUserResult "{\"name"
 
         it "create user will return error if such user already exists"
             $ createUser
@@ -121,13 +127,17 @@ spec = do
             >>= (`shouldBe` "{\"name\":\"Scott\",\"is_admin\":true,\"creation_date\":\"2021-01-08T19:05:24.751993\",\"surname\":\"Adams\",\"user_id\":1,\"avatar\":\"http://pluh/meh.jpg\"}")
 
 
+    let userIdJSON = let {
+        user_id_section = (!! 4) . lines $ replaceComasWithNewlines createUserResult;
+    } in concat ["{", user_id_section, "}"]
+
     describe "deleteUser" $ do
         it "successfully delete user"
             $ getSession
-            >>= deleteUser
+            >>= deleteUser userIdJSON
             >>= (`shouldBe` "{\"results\":\"ook\"}")
 
         it "returns error on non-existent user"
             $ getSession
-            >>= deleteUser
+            >>= deleteUser userIdJSON
             >>= (`shouldBe` "{\"error\": \"such user does not exist\"}")
