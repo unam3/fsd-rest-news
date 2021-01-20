@@ -93,6 +93,13 @@ promoteUserToAuthor params session = curl
     params
     "http://0.0.0.0:8081/authors"
 
+deleteAuthorRole :: String -> String -> IO String
+deleteAuthorRole params session = curl
+    "DELETE"
+    session
+    params
+    "http://0.0.0.0:8081/authors"
+
 deleteUser :: String -> String -> IO String
 deleteUser params session = curl
     "DELETE"
@@ -118,7 +125,6 @@ spec = do
     -- runIO $ print createUserResult
 
     describe "createUser" $ do
-
         it "create user"
             -- {"name":"name","is_admin":false,"creation_date":"2021-01-19T14:30:26.911449","surname":"surname","user_id":35,"avatar":"asd"}
             $ shouldStartWith createUserResult "{\"name"
@@ -132,18 +138,19 @@ spec = do
     describe "getUser" $ do
         it "get user information"
             $ getUser session
-            >>= (`shouldBe` "{\"name\":\"Scott\",\"is_admin\":true,\"creation_date\":\"2021-01-08T19:05:24.751993\",\"surname\":\"Adams\",\"user_id\":1,\"avatar\":\"http://pluh/meh.jpg\"}")
+            >>= (`shouldStartWith` "{\"name")
 
 
     let userIdJSONSection = (!! 4) . lines $ replaceComasWithNewlines createUserResult;
 
     let userIdJSON = concat ["{", userIdJSONSection, "}"]
 
+    promoteUserToAuthorResult <- runIO
+        $ promoteUserToAuthor (concat ["{", userIdJSONSection, ", \"description\": \"blob deccas\"}"]) session
 
     describe "promoteUserToAuthor" $ do
         it "successfully makes author"
-            $ promoteUserToAuthor (concat ["{", userIdJSONSection, ", \"description\": \"blob deccas\"}"]) session
-            >>= (`shouldStartWith` "{\"author_id\":")
+            $ shouldStartWith promoteUserToAuthorResult "{\"author_id\":"
 
         it "call with same params returns error"
             $ promoteUserToAuthor (concat ["{", userIdJSONSection, ", \"description\": \"blob deccas\"}"]) session
@@ -152,6 +159,19 @@ spec = do
         it "call with non-existent user_id"
              $ promoteUserToAuthor "{\"user_id\": 123456, \"description\": \"blob deccas\"}" session
              >>= (`shouldBe` "{\"error\": \"such user does not exist\"}")
+
+
+    let authorIdJSONSection = head . lines $ replaceComasWithNewlines promoteUserToAuthorResult;
+
+    
+    describe "deleteAuthorRole" $ do
+        it "successfully deletes author role"
+            $ deleteAuthorRole (concat [authorIdJSONSection, "}"]) session
+            >>= (`shouldBe` "{\"results\":\"ook\"}")
+
+        it "return error message if no such author"
+            $ deleteAuthorRole "{\"author_id\":123456}" session
+            >>= (`shouldBe` "{\"error\": \"such author does not exist\"}")
 
 
     describe "deleteUser" $ do
