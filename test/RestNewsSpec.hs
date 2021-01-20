@@ -88,16 +88,15 @@ deleteUser session = curl
 
 spec :: Spec
 spec = do
-    --runWarpWithLogger
-
+    -- beforeAll_ runWarpWithLogger $ do
     describe "auth" $ do
-         it "recognize existing user credentials"
-             $ auth
-             >>= (`shouldBe` "cookies are baked")
+        it "recognize existing user credentials"
+            $ auth
+            >>= (`shouldBe` "cookies are baked")
 
-         it "return error when wrong creds"
-             $ authMustFail
-             >>= (`shouldBe` "wrong username/password")
+        it "return error when wrong creds"
+            $ authMustFail
+            >>= (`shouldBe` "wrong username/password")
 
     --str <- createUser >>= take 6
     --describe "createUser" .
@@ -105,30 +104,30 @@ spec = do
     --     $ shouldBe str "{\"name"
 
     describe "createUser" $ do
-         it "create user"
-             -- {"name":"name","is_admin":false,"creation_date":"2021-01-19T14:30:26.911449","surname":"surname","user_id":35,"avatar":"asd"}
-             $ createUser
-             >>= (`shouldBe` "{\"name")
-                . take 6
+        it "create user"
+            -- {"name":"name","is_admin":false,"creation_date":"2021-01-19T14:30:26.911449","surname":"surname","user_id":35,"avatar":"asd"}
+            $ createUser
+            >>= (`shouldBe` "{\"name")
+               . take 6
 
-         it "create user will return error if such user already exists"
-             $ createUser
-             >>= (`shouldBe` "{\"error\": \"user with this username already exists\"}")
+        it "create user will return error if such user already exists"
+            $ createUser
+            >>= (`shouldBe` "{\"error\": \"user with this username already exists\"}")
 
     describe "getUser" $ do
-         it "get user information"
-             $ getSession
-             >>= getUser
-             >>= (`shouldBe` "{\"name\":\"Scott\",\"is_admin\":true,\"creation_date\":\"2021-01-08T19:05:24.751993\",\"surname\":\"Adams\",\"user_id\":1,\"avatar\":\"http://pluh/meh.jpg\"}")
+        it "get user information"
+            $ getSession
+            >>= getUser
+            >>= (`shouldBe` "{\"name\":\"Scott\",\"is_admin\":true,\"creation_date\":\"2021-01-08T19:05:24.751993\",\"surname\":\"Adams\",\"user_id\":1,\"avatar\":\"http://pluh/meh.jpg\"}")
 
 
     describe "deleteUser" $ do
-         it "successfully delete user"
-             $ getSession
-             >>= deleteUser
-             >>= (`shouldBe` "{\"results\":\"ook\"}")
+        it "successfully delete user"
+            $ getSession
+            >>= deleteUser
+            >>= (`shouldBe` "{\"results\":\"ook\"}")
 
-         it "returns error on non-existent user"
-             $ getSession
-             >>= deleteUser
-             >>= (`shouldBe` "{\"error\": \"such user does not exist\"}")
+        it "returns error on non-existent user"
+            $ getSession
+            >>= deleteUser
+            >>= (`shouldBe` "{\"error\": \"such user does not exist\"}")
