@@ -93,6 +93,13 @@ promoteUserToAuthor params session = curl
     params
     "http://0.0.0.0:8081/authors"
 
+editAuthor :: String -> String -> IO String
+editAuthor params session = curl
+    "PATCH"
+    session
+    params
+    "http://0.0.0.0:8081/authors"
+
 deleteAuthorRole :: String -> String -> IO String
 deleteAuthorRole params session = curl
     "DELETE"
@@ -162,6 +169,15 @@ spec = do
 
 
     let authorIdJSONSection = head . lines $ replaceComasWithNewlines promoteUserToAuthorResult;
+
+    describe "editAuthor" $ do
+        it "successfully edit author description"
+            $ editAuthor (concat [authorIdJSONSection, ", \"description\": \"asd\"}"]) session
+            >>= (`shouldStartWith` "{\"author_id\":")
+
+        it "return error message if no such author"
+            $ editAuthor (concat ["{\"author_id\": 123456, \"description\": \"asd\"}"]) session
+            >>= (`shouldBe` "{\"error\": \"such author does not exist\"}")
 
     
     describe "deleteAuthorRole" $ do
