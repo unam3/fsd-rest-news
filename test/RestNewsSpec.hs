@@ -93,6 +93,13 @@ promoteUserToAuthor params session = curl
     params
     "http://0.0.0.0:8081/authors"
 
+getAuthor :: String -> String -> IO String
+getAuthor params session = curl
+    "GET"
+    session
+    params
+    "http://0.0.0.0:8081/authors"
+
 editAuthor :: String -> String -> IO String
 editAuthor params session = curl
     "PATCH"
@@ -170,6 +177,16 @@ spec = do
 
     let authorIdJSONSection = head . lines $ replaceComasWithNewlines promoteUserToAuthorResult;
 
+    describe "getAuthor" $ do
+        it "successfully get author"
+            $ getAuthor (authorIdJSONSection ++ "}") session
+            >>= (`shouldStartWith` "{\"author_id\":")
+
+        it "return error message if no such author"
+            $ getAuthor "{\"author_id\": 123456, \"description\": \"asd\"}" session
+            >>= (`shouldBe` "{\"error\": \"such author does not exist\"}")
+
+    
     describe "editAuthor" $ do
         it "successfully edit author description"
             $ editAuthor (authorIdJSONSection ++ ", \"description\": \"asd\"}") session
