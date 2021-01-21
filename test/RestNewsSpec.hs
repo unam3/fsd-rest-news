@@ -40,7 +40,7 @@ curl method session dashDData url =
         dataWithCookies = 
             (case session of
                 [] -> initialData
-                _ -> "-H" : concat ["Cookie: SESSION=", session] : initialData);
+                _ -> "-H" : ("Cookie: SESSION=" ++ session) : initialData);
         options =
             (case dashDData of
                 [] -> dataWithCookies
@@ -142,7 +142,7 @@ spec = do
 
     session <- runIO getSession
 
-    describe "getUser" $ do
+    describe "getUser" $
         it "get user information"
             $ getUser session
             >>= (`shouldStartWith` "{\"name")
@@ -172,17 +172,17 @@ spec = do
 
     describe "editAuthor" $ do
         it "successfully edit author description"
-            $ editAuthor (concat [authorIdJSONSection, ", \"description\": \"asd\"}"]) session
+            $ editAuthor (authorIdJSONSection ++ ", \"description\": \"asd\"}") session
             >>= (`shouldStartWith` "{\"author_id\":")
 
         it "return error message if no such author"
-            $ editAuthor (concat ["{\"author_id\": 123456, \"description\": \"asd\"}"]) session
+            $ editAuthor "{\"author_id\": 123456, \"description\": \"asd\"}" session
             >>= (`shouldBe` "{\"error\": \"such author does not exist\"}")
 
     
     describe "deleteAuthorRole" $ do
         it "successfully deletes author role"
-            $ deleteAuthorRole (concat [authorIdJSONSection, "}"]) session
+            $ deleteAuthorRole (authorIdJSONSection ++ "}") session
             >>= (`shouldBe` "{\"results\":\"ook\"}")
 
         it "return error message if no such author"
