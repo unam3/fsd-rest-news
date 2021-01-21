@@ -121,6 +121,34 @@ deleteUser params session = curl
     params
     "http://0.0.0.0:8081/users"
 
+createCategory :: String -> String -> IO String
+createCategory params session = curl
+    "POST"
+    session
+    params
+    "http://0.0.0.0:8081/categories"
+
+getCategory :: String -> IO String
+getCategory params = curl
+    "GET"
+    []
+    params
+    "http://0.0.0.0:8081/categories"
+
+updateCategory :: String -> String -> IO String
+updateCategory params session = curl
+    "PATCH"
+    session
+    params
+    "http://0.0.0.0:8081/categories"
+
+deleteCategory :: String -> String -> IO String
+deleteCategory params session = curl
+    "DELETE"
+    session
+    params
+    "http://0.0.0.0:8081/categories"
+
 
 spec :: Spec
 spec = do
@@ -215,3 +243,47 @@ spec = do
         it "returns error on non-existent user"
             $ deleteUser userIdJSON session
             >>= (`shouldBe` "{\"error\": \"such user does not exist\"}")
+
+
+    createCategoryResult <- runIO
+        $ createCategory "{\"name\": \"pluh\", \"parent_id\": null}" session
+
+    let categoryIdJSONSection = head . lines $ replaceComasWithNewlines createCategoryResult;
+
+    describe "createCategory" $ do
+        it "creates category"
+            $ shouldStartWith createCategoryResult "{\"category_id\":"
+
+
+    describe "getCategory" $ do
+        it "get category"
+            $ getCategory (categoryIdJSONSection ++ "}")
+            >>= (`shouldStartWith` "{\"category_id\":")
+
+        it "returns error on non-existent category"
+            $ getCategory "{\"category_id\": 123456}"
+            >>= (`shouldBe` "{\"error\": \"no such category\"}")
+
+
+    describe "updateCategory" $ do
+        it "update category"
+            $ updateCategory (categoryIdJSONSection ++ ", \"name\": \"pluh_pattched\", \"parent_id\": null}") session
+            >>= (`shouldStartWith` "{\"category_id\":")
+
+        it "returns error on non-existent category"
+            $ updateCategory "{\"category_id\": 123456, \"name\": \"pluh_pattched\", \"parent_id\": null}" session
+            >>= (`shouldBe` "{\"error\": \"no such category\"}")
+
+
+    describe "deleteCategory" $ do
+        it "deletes category"
+            $ deleteCategory (categoryIdJSONSection ++ "}") session
+            >>= (`shouldBe` "{\"results\":\"ook\"}")
+
+        it "returns error on non-existent category"
+            $ deleteCategory "{\"category_id\": 123456}" session
+            >>= (`shouldBe` "{\"error\": \"no such category\"}")
+
+        it "returns error if category is referenced in DB"
+            $ deleteCategory "{\"category_id\": 1}" session
+            >>= (`shouldBe` "{\"error\": \"category is in use\"}")
