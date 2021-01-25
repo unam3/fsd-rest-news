@@ -149,6 +149,34 @@ deleteCategory params session = curl
     params
     "http://0.0.0.0:8081/categories"
 
+createTag :: String -> String -> IO String
+createTag params session = curl
+    "POST"
+    session
+    params
+    "http://0.0.0.0:8081/tags"
+
+editTag :: String -> String -> IO String
+editTag params session = curl
+    "PATCH"
+    session
+    params
+    "http://0.0.0.0:8081/tags"
+
+getTag :: String -> IO String
+getTag params = curl
+    "GET"
+    []
+    params
+    "http://0.0.0.0:8081/tags"
+
+deleteTag :: String -> String -> IO String
+deleteTag params session = curl
+    "DELETE"
+    session
+    params
+    "http://0.0.0.0:8081/tags"
+
 
 spec :: Spec
 spec = do
@@ -250,7 +278,7 @@ spec = do
 
     let categoryIdJSONSection = head . lines $ replaceComasWithNewlines createCategoryResult;
 
-    describe "createCategory" $ do
+    describe "createCategory" $
         it "creates category"
             $ shouldStartWith createCategoryResult "{\"category_id\":"
 
@@ -287,3 +315,59 @@ spec = do
         it "returns error if category is referenced in DB"
             $ deleteCategory "{\"category_id\": 1}" session
             >>= (`shouldBe` "{\"error\": \"category is in use\"}")
+
+
+    createTagResult <- runIO
+        $ createTag "{\"tag_name\": \"test tag\"}" session
+
+    let tagIdJSONSection = last . lines $ replaceComasWithNewlines createTagResult;
+
+    describe "createTag" $ do
+        it "creates tag"
+            $ shouldStartWith createTagResult "{\"tag_name\":"
+
+        it "returns error if tag already exists"
+            $ createTag "{\"tag_name\": \"test tag\"}" session
+            >>= (`shouldBe` "{\"error\": \"tag with such name already exists\"}")
+
+
+    before_
+        (createTag "{\"tag_name\": \"test tag1\"}" session >> pure ())
+
+        $ describe "editTag" $ do
+            it "edit"
+                $ editTag ("{\"tag_name\": \"test tasd\"," ++ tagIdJSONSection) session
+                >>= (`shouldStartWith` "{\"tag_name\":")
+
+            it "returns error if tag with such name already exist"
+                $ editTag ("{\"tag_name\": \"test tag1\"," ++ tagIdJSONSection) session
+                >>= (`shouldBe` "{\"error\": \"tag with such name already exists\"}")
+
+            it "returns error if tag does not exists"
+                $ editTag "{\"tag_id\": 12345,\"tag_name\": \"test ta\"}" session
+                >>= (`shouldBe` "{\"error\": \"no such tag\"}")
+
+
+    describe "getTag" $ do
+        it "get"
+            $ getTag ("{" ++ tagIdJSONSection)
+            >>= (`shouldStartWith`  "{\"tag_name\":")
+
+        it "returns error if tag does not exists"
+            $ getTag "{\"tag_id\": 12345}"
+            >>= (`shouldBe` "{\"error\": \"no such tag\"}")
+
+
+    describe "deleteTag" $ do
+        it "delete"
+            $ deleteTag ("{" ++ tagIdJSONSection) session
+            >>= (`shouldBe` "{\"results\":\"ook\"}")
+
+        it "returns error if tag does not exists"
+            $ deleteTag "{\"tag_id\": 12345}" session
+            >>= (`shouldBe` "{\"error\": \"no such tag\"}")
+
+        it "returns error if tag is referenced by an article"
+            $ pendingWith "createArticle with such tag, use it's atricle_id here"
+            -- $ deleteTag "{\"tag_id\": 12345}" session
+            -- >>= (`shouldBe` "{\"error\": \"tag is referenced by an article\"}")

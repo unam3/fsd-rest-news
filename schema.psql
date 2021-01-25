@@ -61,7 +61,7 @@ INSERT INTO categories (name, parent_id) VALUES
 
 create table tags (
     tag_id          integer generated always as identity primary key,
-    tag_name        varchar(80) not null
+    tag_name        varchar(80) not null unique
 );
 
 INSERT INTO tags (tag_name) VALUES
