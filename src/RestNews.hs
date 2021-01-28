@@ -62,14 +62,14 @@ restAPI vaultKey clearSessionPartial request respond = let {
                 session_user_id <- sessionLookup "user_id"
                 when
                     (session_user_id /= Nothing)
-                    (debugM "rest-news" "invaliting session"
+                    (debugM "rest-news" "invalidating session"
                         >> clearSessionPartial request)
                 )
             >> (debugM "rest-news" $ show ("put into sessions:" :: String, user_id, is_admin, author_id))
             >> (sessionInsert "is_admin" $ show is_admin)
             >> (sessionInsert "user_id" $ show user_id)
             >> (sessionInsert "author_id" $ show author_id)
-            >> pure (fmap (const "cookies are baked") sessionResults);
+            >> (pure $ fmap (const "cookies are baked") sessionResults);
     } in bracket_
         (debugM "rest-news" "Allocating scarce resource")
         (debugM "rest-news" "Cleaning up")
@@ -242,10 +242,15 @@ restAPI vaultKey clearSessionPartial request respond = let {
                 runSession session = (session . fromJust $ decode requestBody);
                 sessionAuthorId = (read sessionAuthorIdString :: Int32);
                 sessionResults = case errorOrSessionName of
+                    "auth" -> runSession HSS.getCredentials
+                        >>= (\ (eitherSessionResult, errorForClient) ->
+                            (processCredentials eitherSessionResult
+                            >>= (\ processedCreds -> pure (processedCreds, errorForClient))
+                            )
+                        )
                     "createUser" -> runSession HSS.createUser
                     "getUser" -> HSS.getUser (read sessionUserId :: Int32)
                     "deleteUser" -> runSession HSS.deleteUser
-                    "auth" -> runSession HSS.getCredentials >>= processCredentials
                     "promoteUserToAuthor" -> runSession HSS.promoteUserToAuthor;
                     "editAuthor" -> runSession HSS.editAuthor
                     "getAuthor" -> runSession HSS.getAuthor
@@ -280,18 +285,20 @@ restAPI vaultKey clearSessionPartial request respond = let {
                     "getArticlesFilteredByCreationDate" -> runSession HSS.getArticlesFilteredByCreationDate
                     "getArticlesCreatedBeforeDate" -> runSession HSS.getArticlesCreatedBeforeDate
                     "getArticlesCreatedAfterDate" -> runSession HSS.getArticlesCreatedAfterDate
-                    nonMatched -> pure . pure $ UTFLBS.fromString nonMatched;
+                    nonMatched -> pure (Right $ UTFLBS.fromString nonMatched, Just $ UTFLBS.fromString nonMatched);
                 } in sessionResults
-            resultsString <- pure (case results of
-                (Right ulbs) -> UTFLBS.toString ulbs
-                leftErr -> show leftErr)
-            debugM "rest-news" resultsString
 
-            processedResults <- pure (case results of
-                (Right ulbs) -> ulbs
-                _ -> case errorOrSessionName of
-                    "auth" -> "wrong username/password" :: UTFLBS.ByteString
-                    _ -> "left sth" :: UTFLBS.ByteString)
+            debugM "rest-news" (case fst results of
+                Right ulbs -> UTFLBS.toString ulbs
+                leftErr -> show (snd results, leftErr)
+                )
+
+            processedResults <- pure (case fst results of
+                Right ulbs -> ulbs
+                _ -> case snd results of
+                    Just errorForClient -> errorForClient
+                    -- there must not be any QueryError!
+                    _ -> undefined)
             let {
                 httpStatus = (case errorOrSessionName of
                     "Endpoint needed" -> H.status404

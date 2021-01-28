@@ -52,65 +52,56 @@ import Hasql.Statement (Statement(..))
 createUser :: Statement (Text, Text, Text, Text, Text) Value
 createUser =
     [TH.singletonStatement|
-        with insert_results as (
-            insert
-            into users (
-                username,
-                password,
-                name,
-                surname,
-                avatar,
-                is_admin
-                )
-            values (
-                $1 :: text,
-                crypt($2 :: text, gen_salt('bf', 8)),
-                $3 :: text,
-                $4 :: text,
-                $5 :: text,
-                false
-                )
-            on conflict (username)
-                do nothing
-            returning
-                user_id,
-                name,
-                surname,
-                avatar,
-                creation_date,
-                is_admin
-        ) select
-            case when count(insert_results) = 0
-                then 
-                    json_build_object('error', 'user with this username already exists')
-                else
-                    json_agg(insert_results) -> 0
-                end :: json
-            from insert_results
+        insert
+        into users (
+            username,
+            password,
+            name,
+            surname,
+            avatar,
+            is_admin
+            )
+        values (
+            $1 :: text,
+            crypt($2 :: text, gen_salt('bf', 8)),
+            $3 :: text,
+            $4 :: text,
+            $5 :: text,
+            false
+            )
+        returning json_build_object(
+            'user_id', user_id,
+            'name', name,
+            'surname', surname,
+            'avatar', avatar,
+            'creation_date', creation_date,
+            'is_admin', is_admin
+            )::json
         |]
 
 deleteUser :: Statement Int32 Value
 deleteUser =
     [TH.singletonStatement|
-        with delete_results as (
-            delete
-            from users
-            where user_id = $1 :: int4
-            returning *
-            ) select
-                case when count(delete_results) = 0
-                then
-                    json_build_object('results', 'no such user')
-                else
-                    json_build_object('results', 'ook')
-                end :: json
-            from delete_results
+        delete
+        from users
+        where user_id = $1 :: int4
+        returning json_build_object( 
+            'results', 'ook'
+            )::json
         |]
 
 getUser :: Statement Int32 Value
 getUser =
     [TH.singletonStatement|
-        select json_agg(users.*) :: json
+        select 
+            json_build_object(
+                'user_id', user_id,
+                'name', name,
+                'surname', surname,
+                'avatar', avatar,
+                'creation_date', creation_date,
+                'is_admin', is_admin
+                )::json
         from users
         where user_id = $1 :: int4
         |]
@@ -118,74 +109,49 @@ getUser =
 getAuthor :: Statement Int32 Value
 getAuthor =
     [TH.singletonStatement|
-        select case when count(author) = 0
-            then json_build_object('error', 'no sush author')
-            else json_agg(author.*) -> 0
-            end :: json
-        from (
-            select *
-            from authors
-            where author_id = $1 :: int4
-        ) as author
+        select to_json(authors.*) :: json
+        from authors
+        where author_id = $1 :: int4
         |]
 
 deleteAuthorRole :: Statement Int32 Value
 deleteAuthorRole =
     [TH.singletonStatement|
-        with delete_results as (
-            delete
-            from authors
-            where author_id = $1 :: int4
-            returning *
-        ) select
-            case when count(delete_results) = 0
-            then
-                json_build_object('results', 'no such author')
-            else
-                json_build_object('results', 'ook')
-            end :: json
-        from delete_results
+        delete
+        from authors
+        where author_id = $1 :: int4
+        returning json_build_object( 
+            'results', 'ook'
+            )::json
         |]
 
 promoteUserToAuthor :: Statement (Int32, Text) Value
 promoteUserToAuthor =
     [TH.singletonStatement|
-        with insert_results as (
-            insert into authors (user_id, description)
-            select  
-                    $1 :: int4,
-                    $2 :: text
-                where exists (select true
-                    from users
-                    where user_id = $1 :: int4
-                    )
-            returning *
-        ) select
-            case when count(insert_results) = 0
-                then 
-                    json_build_object('error', 'no such user')
-                else
-                    json_agg(insert_results) -> 0
-                end :: json
-            from insert_results
+        insert
+        into authors (user_id, description)
+            values (
+                $1 :: int4,
+                $2 :: text
+                )
+        returning json_build_object(
+            'author_id', author_id,
+            'user_id', user_id,
+            'description', description
+            )::json
         |]
 
 editAuthor :: Statement (Int32, Text) Value
 editAuthor =
     [TH.singletonStatement|
-        with update_results as (
-            update authors
-            set description = $2 :: Text
-            where author_id = $1 :: int4
-            returning *
-        ) select
-            case when count(update_results) = 0
-                then 
-                    json_build_object('error', 'no such author')
-                else
-                    json_agg(update_results) -> 0
-                end :: json
-            from update_results
+        update authors
+        set description = $2 :: Text
+        where author_id = $1 :: int4
+        returning json_build_object(
+            'author_id', author_id,
+            'user_id', user_id,
+            'description', description
+            )::json
         |]
 
 
@@ -209,51 +175,31 @@ createCategory =
 updateCategory :: Statement (Int32, Text, Maybe Int32) Value
 updateCategory =
     [TH.singletonStatement|
-        with update_results as (
-            update categories
-            set name = $2 :: text, parent_id = $3 :: int4?
-            where category_id = $1 :: int4
-            returning *
-        ) select
-            case when count(update_results) = 0
-                then 
-                    json_build_object('error', 'no such category')
-                else
-                    json_agg(update_results) -> 0
-                end :: json
-            from update_results
+        update categories
+        set name = $2 :: text, parent_id = $3 :: int4?
+        where category_id = $1 :: int4
+        returning json_build_object(
+            'name', name,
+            'category_id', category_id,
+            'parent_id', parent_id
+            )::json
         |]
 
 getCategory :: Statement Int32 Value
 getCategory =
     [TH.singletonStatement|
-        select case when count(category) = 0
-            then json_build_object('error', 'no sush category')
-            else json_agg(category.*) -> 0
-            end :: json
-        from (
-            select *
-            from categories
-            where category_id = $1 :: int4
-        ) as category
+        select to_json(categories.*)::json
+        from categories
+        where category_id = $1 :: int4
         |]
 
 deleteCategory :: Statement Int32 Value
 deleteCategory =
     [TH.singletonStatement|
-        with delete_results as (
-            delete
-            from categories
-            where category_id = $1 :: int4
-            returning *
-        ) select
-            case when count(delete_results) = 0
-            then 
-                json_build_object('error', 'no such category')
-            else
-                json_build_object('results', 'ook')
-            end :: json
-        from delete_results
+        delete
+        from categories
+        where category_id = $1 :: int4
+        returning json_build_object('results', 'ook') :: json
         |]
 
 
@@ -275,57 +221,32 @@ createTag =
 editTag :: Statement (Int32, Text) Value
 editTag =
     [TH.singletonStatement|
-        with update_results as (
-            update tags
-            set tag_name = $2 :: text
-            where tag_id = $1 :: int4
-            returning *
-        ) select
-            case when count(update_results) = 0
-                then 
-                    json_build_object('error', 'no such tag')
-                else
-                    json_agg(update_results) -> 0
-                end :: json
-            from update_results
+        update tags
+        set tag_name = $2 :: text
+        where tag_id = $1 :: int4
+        returning json_build_object(
+            'tag_name', tag_name,
+            'tag_id', tag_id
+            )::json
         |]
 
 deleteTag :: Statement Int32 Value
 deleteTag =
     [TH.singletonStatement|
-        with delete_results as (
-            delete
-            from tags
-            where tag_id = $1 :: int4
-                and not exists (
-                    select *
-                    from articles_tags
-                    where tag_id = $1 :: int4
-                    )
-            returning *
-        ) select
-            case when count(delete_results) = 0
-            then 
-                json_build_object('error', 'this tag is referenced by an article or doesn''t exist')
-            else
-                json_build_object('results', 'ook')
-            end :: json
-        from delete_results
+        delete
+        from tags
+        where tag_id = $1 :: int4
+        returning json_build_object( 
+            'results', 'ook'
+            ) :: json
         |]
 
 getTag :: Statement Int32 Value
 getTag =
     [TH.singletonStatement|
-        select
-            case when count(select_results) = 0
-            then json_build_object('error', 'no sush tag')
-            else json_agg(select_results.*) -> 0
-            end :: json
-        from (
-            select *
-            from tags
-            where tag_id = $1 :: int4
-        ) as select_results
+        select to_json(tags.*)::json
+        from tags
+        where tag_id = $1 :: int4
         |]
 
 
@@ -351,20 +272,13 @@ createComment =
 deleteComment :: Statement (Int32, Int32) Value
 deleteComment =
     [TH.singletonStatement|
-        with delete_results as (
-            delete
-            from articles_comments
-            where comment_id = $1 :: int4
-                and user_id = $2 :: int4
-            returning *
-        ) select
-            case when count(delete_results) = 0
-            then 
-                json_build_object('error', 'no such comment')
-            else
-                json_build_object('results', 'ook')
-            end :: json
-        from delete_results
+        delete
+        from articles_comments
+        where comment_id = $1 :: int4
+            and user_id = $2 :: int4
+        returning json_build_object( 
+            'results', 'ook'
+            ) :: json
         |]
 
 getArticleComments :: Statement (Int32, Maybe Int32) Value
@@ -414,100 +328,60 @@ createArticleDraft =
 publishArticleDraft :: Statement (Int32, Int32) Value
 publishArticleDraft =
     [TH.singletonStatement|
-        with update_results as (
-            update articles
-            set is_published = true
-            where
-                author = $1 :: int4
-                and article_id = $2 :: int4
-            returning
-                article_id,
-                author,
-                category_id,
-                article_title,
-                article_content,
-                is_published,
-                main_photo,
-                additional_photos
-        ) select
-            case when count(update_results) = 0
-                then 
-                    json_build_object('error', 'no such article')
-                else
-                    json_agg(update_results.*) -> 0
-                end :: json
-            from update_results
+        update articles
+        set is_published = true
+        where
+            author = $1 :: int4
+            and article_id = $2 :: int4
+        returning json_build_object('results', 'ook') :: json
         |]
 
 editArticleDraft :: Statement (Int32, Int32, Int32, Text, Text, Text, Vector Text) Value
 editArticleDraft =
     [TH.singletonStatement|
-        with update_results as (
-            update articles
-            set category_id = $3 :: int4,
-                article_title = $4 :: text,
-                article_content = $5 :: text,
-                main_photo = $6 :: text,
-                additional_photos = $7 :: text[]
-            where
-                author = $1 :: int4
-                and article_id = $2 :: int4
-            returning
-                article_id,
-                author,
-                category_id,
-                article_title,
-                article_content,
-                is_published,
-                main_photo,
-                additional_photos
-        ) select
-            case when count(update_results) = 0
-                then 
-                    json_build_object('error', 'no such article')
-                else
-                    json_agg(update_results) -> 0
-                end :: json
-            from update_results
+        update articles
+        set category_id = $3 :: int4,
+            article_title = $4 :: text,
+            article_content = $5 :: text,
+            main_photo = $6 :: text,
+            additional_photos = $7 :: text[]
+        where
+            author = $1 :: int4
+            and article_id = $2 :: int4
+        returning json_build_object(
+            'article_id', article_id,
+            'author', author,
+            'category_id', category_id,
+            'article_title', article_title,
+            'article_content', article_content,
+            'is_published', is_published,
+            'main_photo', main_photo,
+            'additional_photos', additional_photos
+            ) :: json
         |]
 
 getArticleDraft :: Statement (Int32, Int32) Value
 getArticleDraft =
     [TH.singletonStatement|
-        select
-            case when count(select_results) = 0
-            then json_build_object('error', 'no sush article')
-            else json_agg(select_results) -> 0
-            end :: json
-        from (
-            select get_article(article_id)
-            from articles
-            where article_id = $1 :: int4
-                and author = $2 :: int4
-        ) as select_results
+        select get_article(article_id) :: json
+        from articles
+        where article_id = $1 :: int4
+            and author = $2 :: int4
         |]
 
 deleteArticleDraft :: Statement (Int32, Int32) Value
 deleteArticleDraft =
     [TH.singletonStatement|
-        with delete_results as (
-            delete
-            from articles
-            where article_id = $1 :: int4
-                and author = $2 :: int4
-                and is_published = false
-            returning true
-            ) select
-                case when count(delete_results) = 0
-                then
-                    json_build_object('results', 'no such article')
-                else
-                    json_build_object('results', 'ook')
-                end :: json
-            from delete_results
+        delete
+        from articles
+        where article_id = $1 :: int4
+            and author = $2 :: int4
+            and is_published = false
+        returning json_build_object('results', 'ook') :: json
         |]
 
 
+-- we can't easily distinguish nonexistent category_id and no articles with category_id
 getArticlesByCategoryId :: Statement (Int32, Maybe Int32) Value
 getArticlesByCategoryId =
     [TH.singletonStatement|
