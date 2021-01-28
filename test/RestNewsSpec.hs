@@ -177,6 +177,41 @@ deleteTag params session = curl
     params
     "http://0.0.0.0:8081/tags"
 
+createArticleDraft :: String -> String -> IO String
+createArticleDraft params session = curl
+    "POST"
+    session
+    params
+    "http://0.0.0.0:8081/articles"
+
+editArticleDraft :: String -> String -> IO String
+editArticleDraft params session = curl
+    "PATCH"
+    session
+    params
+    "http://0.0.0.0:8081/articles"
+
+getArticleDraft :: String -> String -> IO String
+getArticleDraft params session = curl
+    "GET"
+    session
+    params
+    "http://0.0.0.0:8081/articles"
+
+publishArticleDraft :: String -> String -> IO String
+publishArticleDraft params session = curl
+    "POST"
+    session
+    params
+    "http://0.0.0.0:8081/articles"
+
+deleteArticleDraft :: String -> String -> IO String
+deleteArticleDraft params session = curl
+    "DELETE"
+    session
+    params
+    "http://0.0.0.0:8081/articles"
+
 
 spec :: Spec
 spec = do
@@ -317,6 +352,76 @@ spec = do
             >>= (`shouldBe` "{\"error\": \"category is in use\"}")
 
 
+    createArticleDraftResult <- runIO
+        $ createArticleDraft "{\"article_title\": \"they dont beleive their eyes…\", \"category_id\": 1, \"article_content\": \"article is long enough\", \"tags\": [], \"main_photo\": \"http://pl.uh/main\", \"additional_photos\": [\"1\", \"2\", \"3\"]}" session
+
+    -- runIO . print . lines $ replaceComasWithNewlines createArticleDraftResult
+
+    let articleIdJSONSection = (!! 6) . lines $ replaceComasWithNewlines createArticleDraftResult;
+
+    describe "createArticleDraft" $ do
+        it "creates article draft"
+            $ shouldStartWith createArticleDraftResult "{\"article_content\""
+
+        it "returns error if no such tags"
+            $ pendingWith "implement in sql"
+
+        it "returns error if no such category"
+            $ pendingWith "implement in sql"
+
+    describe "editArticleDraft" $ do
+        it "edits article draft"
+            $ editArticleDraft
+                ("{\"article_title\": \"they dont beleive their eyes…\", \"category_id\": 1, \"article_content\": \"article is long enough\", \"tags\": [1], \"main_photo\": \"http://pl.uh/main\", \"additional_photos\": [\"1\", \"2\", \"3\"], " ++ articleIdJSONSection ++ "}")
+                session
+            >>= (`shouldStartWith` "{\"article_content")
+
+        it "returns error if no such tags"
+            $ pendingWith "implement in hasql session"
+
+        it "returns error if no such category"
+            $ pendingWith "implement in hasql session"
+
+
+    describe "getArticleDraft" $ do
+        it "get article"
+            $ getArticleDraft ("{" ++ articleIdJSONSection ++ "}") session
+            >>= (`shouldStartWith` "{\"article_content")
+
+        it "returns error if no such article"
+            $ getArticleDraft ("{\"article_id\":123456}") session
+            >>= (`shouldStartWith` "{\"error\": \"no such article\"}")
+
+
+    describe "publishArticleDraft" $ do
+        it "publish article"
+            $ publishArticleDraft ("{" ++ articleIdJSONSection ++ "}") session
+            >>= (`shouldBe` "{\"results\":\"ook\"}")
+
+        it "returns error if no such article"
+            $ publishArticleDraft ("{\"article_id\":123456}") session
+            >>= (`shouldBe` "{\"error\": \"no such article\"}")
+
+
+    createArticleDraftResult1 <- runIO
+        $ createArticleDraft "{\"article_title\": \"they dont beleive their eyes…\", \"category_id\": 1, \"article_content\": \"article is long enough\", \"tags\": [], \"main_photo\": \"http://pl.uh/main\", \"additional_photos\": [\"1\", \"2\", \"3\"]}" session
+
+    let articleIdJSONSection1 = (!! 6) . lines $ replaceComasWithNewlines createArticleDraftResult1;
+
+    describe "deleteArticleDraft" $ do
+        it "delete article draft"
+            $ deleteArticleDraft ("{" ++ articleIdJSONSection1 ++ "}") session
+            >>= (`shouldBe` "{\"results\":\"ook\"}")
+
+        it "published article can't be deleted"
+            $ deleteArticleDraft ("{" ++ articleIdJSONSection ++ "}") session
+            >>= (`shouldBe` "{\"error\": \"no such article\"}")
+
+        it "returns error if no such article"
+            $ deleteArticleDraft ("{\"article_id\":123456}") session
+            >>= (`shouldBe` "{\"error\": \"no such article\"}")
+
+
     createTagResult <- runIO
         $ createTag "{\"tag_name\": \"test tag\"}" session
 
@@ -371,3 +476,5 @@ spec = do
             $ pendingWith "createArticle with such tag, use it's atricle_id here"
             -- $ deleteTag "{\"tag_id\": 12345}" session
             -- >>= (`shouldBe` "{\"error\": \"tag is referenced by an article\"}")
+
+        
