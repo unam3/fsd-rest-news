@@ -420,7 +420,9 @@ createArticleDraft articleDraftRequest author_id' = let {
     sessionResults <- Session.run (Session.statement params HST.createArticleDraft) connection
     pure (
         valueToUTFLBS sessionResults,
-        Nothing
+        case processError sessionResults of
+            --Just "23503" -> Just "{\"error\": \"no such tag/category\"}"
+            _ -> Nothing
         )
 
 publishArticleDraft :: ArticleDraftIdRequest -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
@@ -448,7 +450,8 @@ editArticleDraft articleDraftEditRequest author_id' = let {
         article_title (articleDraftEditRequest :: ArticleDraftEditRequest),
         article_content (articleDraftEditRequest :: ArticleDraftEditRequest),
         main_photo (articleDraftEditRequest :: ArticleDraftEditRequest),
-        additional_photos (articleDraftEditRequest :: ArticleDraftEditRequest)
+        additional_photos (articleDraftEditRequest :: ArticleDraftEditRequest),
+        tags (articleDraftEditRequest :: ArticleDraftEditRequest)
         );
 } in do
     Right connection <- Connection.acquire connectionSettings

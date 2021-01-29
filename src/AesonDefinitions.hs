@@ -187,7 +187,8 @@ data ArticleDraftEditRequest = ArticleDraftEditRequest {
     article_title :: Text,
     article_content :: Text,
     main_photo :: Text,
-    additional_photos :: Vector Text
+    additional_photos :: Vector Text,
+    tags :: Vector Int32
 } deriving (Show, Generic)
 
 instance FromJSON ArticleDraftEditRequest
