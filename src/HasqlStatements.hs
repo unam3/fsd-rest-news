@@ -337,7 +337,6 @@ publishArticleDraft =
         |]
 
 editArticleDraft :: Statement (Int32, Int32, Int32, Text, Text, Text, Vector Text, Vector Int32) Value
--- delete all if empty $8
 editArticleDraft =
     [TH.singletonStatement|
         with inserted_tags as (
@@ -345,15 +344,25 @@ editArticleDraft =
             (tag_id, article_id)
             (select unnest($8 :: int4[]), $2 :: int4)
             on conflict (tag_id, article_id) do nothing
-        ), deleted_tags as (
+        ), deleted_tags_if_empty_array as (
+            delete from articles_tags
+            using (
+                select tag_id
+                from articles_tags
+                where articles_tags.article_id = $2 :: int4
+                    and coalesce(array_length($8 :: int4[], 1), 0) = 0
+            ) as tags_to_delete
+            where article_id = $2 :: int4
+                and articles_tags.tag_id = tags_to_delete.tag_id
+        ), deleted_tags_that_not_in_array as (
             delete from articles_tags
             using (
                 select tag_id
                 from articles_tags,
-                    (select (unnest($8 :: int4[] :: int[]))) as tags_to_assign
-                    where articles_tags.article_id = $2 :: int4
-                        and tag_id != tags_to_assign.unnest
-                    group by tag_id
+                    unnest($8 :: int4[] :: int[]) as tags_to_assign
+                where articles_tags.article_id = $2 :: int4
+                    and tag_id != tags_to_assign
+                group by tag_id
             ) as tags_to_delete
             where article_id = $2 :: int4
                 and articles_tags.tag_id = tags_to_delete.tag_id
