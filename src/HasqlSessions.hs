@@ -428,8 +428,15 @@ createArticleDraft articleDraftRequest author_id' = let {
     sessionResults <- Session.run (Session.statement params HST.createArticleDraft) connection
     pure (
         valueToUTFLBS sessionResults,
-        case getErrorCode sessionResults of
-            --Just "23503" -> Just "{\"error\": \"no such tag/category\"}"
+        case getError sessionResults of
+            Just ("23503", details) ->
+                let {
+                    detailsPrefix = fmap (take 12) details;
+                } in case detailsPrefix of
+                    Just "Key (tag_id)" -> Just "{\"error\": \"no such tag\"}"
+                    Just "Key (categor" -> Just "{\"error\": \"no such category\"}"
+                    _ -> error $ show details
+            Just ("0", Nothing) -> Just "{\"error\": \"no such article\"}"
             _ -> Nothing
         )
 
@@ -467,14 +474,13 @@ editArticleDraft articleDraftEditRequest author_id' = let {
     pure (
         valueToUTFLBS sessionResults,
         case getError sessionResults of
-            --Just ("23503", details) -> Nothing
             Just ("23503", details) ->
                 let {
                     detailsPrefix = fmap (take 12) details;
                 } in case detailsPrefix of
                     Just "Key (tag_id)" -> Just "{\"error\": \"no such tag\"}"
                     Just "Key (categor" -> Just "{\"error\": \"no such category\"}"
-                    e -> error $ show details
+                    _ -> error $ show details
             Just ("0", Nothing) -> Just "{\"error\": \"no such article\"}"
             _ -> Nothing
         )

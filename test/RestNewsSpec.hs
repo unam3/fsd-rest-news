@@ -363,11 +363,17 @@ spec = do
         it "creates article draft"
             $ shouldStartWith createArticleDraftResult "{\"article_content\""
 
-        it "returns error if no such tags"
-            $ pendingWith "implement in sql"
+        it "returns error if no such tag"
+            $ createArticleDraft
+                "{\"article_title\": \"they dont beleive their eyes…\", \"category_id\": 1, \"article_content\": \"article is long enough\", \"tags\": [123344], \"main_photo\": \"http://pl.uh/main\", \"additional_photos\": [\"1\", \"2\", \"3\"]}"
+                session
+            >>= (`shouldBe` "{\"error\": \"no such tag\"}")
 
         it "returns error if no such category"
-            $ pendingWith "implement in sql"
+            $ createArticleDraft
+                "{\"article_title\": \"they dont beleive their eyes…\", \"category_id\": 1123, \"article_content\": \"article is long enough\", \"tags\": [], \"main_photo\": \"http://pl.uh/main\", \"additional_photos\": [\"1\", \"2\", \"3\"]}"
+                session
+            >>= (`shouldBe` "{\"error\": \"no such category\"}")
 
     describe "editArticleDraft" $ do
         it "edits article draft"
@@ -383,7 +389,6 @@ spec = do
             >>= (`shouldBe` "{\"error\": \"no such tag\"}")
 
         it "returns error if no such category"
-            -- $ pendingWith "implement in hasql session"
             $ editArticleDraft
                 ("{\"article_title\": \"they dont beleive their eyes…\", \"category_id\": 11234, \"article_content\": \"article is long enough\", \"tags\": [1], \"main_photo\": \"http://pl.uh/main\", \"additional_photos\": [\"1\", \"2\", \"3\"], " ++ articleIdJSONSection ++ "}")
                 session
