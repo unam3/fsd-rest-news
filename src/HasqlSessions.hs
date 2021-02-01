@@ -44,6 +44,7 @@ module HasqlSessions (
 
 import Data.Aeson (Value, encode)
 import Data.ByteString.Lazy.UTF8 (ByteString)
+import Data.ByteString.Internal (unpackChars)
 import Data.Int (Int32)
 import Data.Text (Text, pack)
 --import Data.Text.IO (putStrLn)
@@ -75,7 +76,7 @@ valueToUTFLBS = fmap encode
 connectionSettings :: Connection.Settings
 connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
 
-processError :: Either Session.QueryError resultsType -> Maybe String
+getError :: Either Session.QueryError resultsType -> Maybe (String, Maybe String)
 {-
 Left (
     QueryError
@@ -92,7 +93,8 @@ Left (
         )
 )
 -}
-processError (Left (Session.QueryError _ _ (Session.ResultError (Session.ServerError "23503" _ _ _)))) = Just "23503"
+getError (Left (Session.QueryError _ _ (Session.ResultError (Session.ServerError "23503" _ details _)))) =
+    Just ("23503", fmap unpackChars details)
 {-
 Left (
     QueryError
@@ -109,7 +111,8 @@ Left (
         )
 )
 -}
-processError (Left (Session.QueryError _ _ (Session.ResultError (Session.ServerError "23505" _ _ _)))) = Just "23505"
+getError (Left (Session.QueryError _ _ (Session.ResultError (Session.ServerError "23505" _ details _)))) =
+    Just ("23505", fmap unpackChars details)
 {-
 Left (
     QueryError
@@ -122,10 +125,12 @@ Left (
         )
 )
 -}
-processError (Left (Session.QueryError _ _ (Session.ResultError (Session.UnexpectedAmountOfRows 0)))) = Just "0"
+getError (Left (Session.QueryError _ _ (Session.ResultError (Session.UnexpectedAmountOfRows 0)))) =
+    Just ("0", Nothing)
 -- (Nothing,Left (QueryError "SELECT json_agg(users.*) :: json FROM users WHERE user_id = $1 :: int4" ["20"] (ResultError (RowError 0 UnexpectedNull))))
-processError (Left (Session.QueryError _ _ (Session.ResultError (Session.RowError 0 Session.UnexpectedNull)))) = Just "0"
-processError _ = Nothing
+getError (Left (Session.QueryError _ _ (Session.ResultError (Session.RowError 0 Session.UnexpectedNull)))) =
+    Just ("0", Nothing)
+getError _ = Nothing
 
 -- params and statement type are different
 --runSession params statement =
@@ -141,6 +146,9 @@ processError _ = Nothing
 --        Left connectionError -> error $ show connectionError
 --        --Left Connection.ConnectionError -> undefined
 
+getErrorCode :: Either Session.QueryError resultsType -> Maybe String
+getErrorCode = fmap fst . getError
+
 createUser :: CreateUserRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 createUser createUserRequest = let {
     params = (
@@ -155,7 +163,7 @@ createUser createUserRequest = let {
     sessionResults <- Session.run (Session.statement params HST.createUser) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
+        case getErrorCode sessionResults of
             Just "23505" -> Just "{\"error\": \"user with this username already exists\"}"
             _ -> Nothing
         )
@@ -168,7 +176,7 @@ deleteUser deleteUserRequest = let {
     sessionResults <- Session.run (Session.statement params HST.deleteUser) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
+        case getErrorCode sessionResults of
             Just "0" -> Just "{\"error\": \"such user does not exist\"}"
             _ -> Nothing
         )
@@ -179,7 +187,7 @@ getUser userId = do
     sessionResults <- Session.run (Session.statement userId HST.getUser) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
+        case getErrorCode sessionResults of
             Just "0" -> Just "{\"error\": \"such user does not exist\"}"
             _ -> Nothing
         )
@@ -195,7 +203,7 @@ promoteUserToAuthor promoteUserToAuthorRequest = let {
     sessionResults <- Session.run (Session.statement params HST.promoteUserToAuthor) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
+        case getErrorCode sessionResults of
             Just "23503" -> Just "{\"error\": \"such user does not exist\"}"
             Just "23505" -> Just "{\"error\": \"such user is already an author\"}"
             _ -> Nothing
@@ -211,7 +219,7 @@ editAuthor editAuthorRequest = let {
     sessionResults <- Session.run (Session.statement params HST.editAuthor) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
+        case getErrorCode sessionResults of
             Just "0" -> Just "{\"error\": \"such author does not exist\"}"
             _ -> Nothing
         )
@@ -224,7 +232,7 @@ getAuthor authorIdRequest = let {
     sessionResults <- Session.run (Session.statement params HST.getAuthor) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
+        case getErrorCode sessionResults of
             Just "0" -> Just "{\"error\": \"such author does not exist\"}"
             _ -> Nothing
         )
@@ -237,7 +245,7 @@ deleteAuthorRole authorIdRequest = let {
     sessionResults <- Session.run (Session.statement params HST.deleteAuthorRole) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
+        case getErrorCode sessionResults of
             Just "0" -> Just "{\"error\": \"such author does not exist\"}"
             _ -> Nothing
         )
@@ -268,7 +276,7 @@ updateCategory updateCategoryRequest = let {
     sessionResults <- Session.run (Session.statement params HST.updateCategory) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
+        case getErrorCode sessionResults of
             Just "0" -> Just "{\"error\": \"no such category\"}"
             _ -> Nothing
         )
@@ -281,7 +289,7 @@ getCategory categoryIdRequest = let {
     sessionResults <- Session.run (Session.statement params HST.getCategory) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
+        case getErrorCode sessionResults of
             Just "0" -> Just "{\"error\": \"no such category\"}"
             _ -> Nothing
         )
@@ -294,7 +302,7 @@ deleteCategory categoryIdRequest = let {
     sessionResults <- Session.run (Session.statement params HST.deleteCategory) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
+        case getErrorCode sessionResults of
             Just "23503" -> Just "{\"error\": \"category is in use\"}"
             Just "0" -> Just "{\"error\": \"no such category\"}"
             _ -> Nothing
@@ -309,7 +317,7 @@ createTag createTagRequest = let {
     sessionResults <- Session.run (Session.statement params HST.createTag) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
+        case getErrorCode sessionResults of
             Just "23505" -> Just "{\"error\": \"tag with such name already exists\"}"
             _ -> Nothing
         )
@@ -322,7 +330,7 @@ editTag editTagRequest = let {
     sessionResults <- Session.run (Session.statement params HST.editTag) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
+        case getErrorCode sessionResults of
             Just "23505" -> Just "{\"error\": \"tag with such name already exists\"}"
             Just "0" -> Just "{\"error\": \"no such tag\"}"
             _ -> Nothing
@@ -336,7 +344,7 @@ deleteTag deleteTagRequest = let {
     sessionResults <- Session.run (Session.statement params HST.deleteTag) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
+        case getErrorCode sessionResults of
             Just "23503" -> Just "{\"error\": \"tag is referenced by article\"}"
             Just "0" -> Just "{\"error\": \"no such tag\"}"
             _ -> Nothing
@@ -350,7 +358,7 @@ getTag getTagRequest = let {
     sessionResults <- Session.run (Session.statement params HST.getTag) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
+        case getErrorCode sessionResults of
             Just "0" -> Just "{\"error\": \"no such tag\"}"
             _ -> Nothing
         )
@@ -368,7 +376,7 @@ createComment createCommentRequest user_id' = let {
     sessionResults <- Session.run (Session.statement params HST.createComment) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
+        case getErrorCode sessionResults of
             Just "23503" -> Just "{\"error\": \"no such article\"}"
             _ -> Nothing
         )
@@ -384,7 +392,7 @@ deleteComment deleteCommentRequest user_id' = let {
     sessionResults <- Session.run (Session.statement params HST.deleteComment) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
+        case getErrorCode sessionResults of
             Just "0" -> Just "{\"error\": \"no such comment\"}"
             _ -> Nothing
         )
@@ -420,7 +428,7 @@ createArticleDraft articleDraftRequest author_id' = let {
     sessionResults <- Session.run (Session.statement params HST.createArticleDraft) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
+        case getErrorCode sessionResults of
             --Just "23503" -> Just "{\"error\": \"no such tag/category\"}"
             _ -> Nothing
         )
@@ -436,7 +444,7 @@ publishArticleDraft articleDraftIdRequest author_id' = let {
     sessionResults <- Session.run (Session.statement params HST.publishArticleDraft) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
+        case getErrorCode sessionResults of
             Just "0" -> Just "{\"error\": \"no such article\"}"
             _ -> Nothing
         )
@@ -458,9 +466,16 @@ editArticleDraft articleDraftEditRequest author_id' = let {
     sessionResults <- Session.run (Session.statement params HST.editArticleDraft) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
-            Just "23503" -> Just "{\"error\": \"no such category\"}"
-            Just "0" -> Just "{\"error\": \"no such article\"}"
+        case getError sessionResults of
+            --Just ("23503", details) -> Nothing
+            Just ("23503", details) ->
+                let {
+                    detailsPrefix = fmap (take 12) details;
+                } in case detailsPrefix of
+                    Just "Key (tag_id)" -> Just "{\"error\": \"no such tag\"}"
+                    Just "Key (categor" -> Just "{\"error\": \"no such category\"}"
+                    e -> error $ show details
+            Just ("0", Nothing) -> Just "{\"error\": \"no such article\"}"
             _ -> Nothing
         )
 
@@ -475,7 +490,7 @@ getArticleDraft articleDraftIdRequest author_id' = let {
     sessionResults <- Session.run (Session.statement params HST.getArticleDraft) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
+        case getErrorCode sessionResults of
             Just "0" -> Just "{\"error\": \"no such article\"}"
             _ -> Nothing
         )
@@ -491,7 +506,7 @@ deleteArticleDraft articleDraftIdRequest author_id' = let {
     sessionResults <- Session.run (Session.statement params HST.deleteArticleDraft) connection
     pure (
         valueToUTFLBS sessionResults,
-        case processError sessionResults of
+        case getErrorCode sessionResults of
             Just "0" -> Just "{\"error\": \"no such article\"}"
             _ -> Nothing
         )
@@ -685,7 +700,7 @@ getCredentials authRequest = let {
     sessionResults <- Session.run (Session.statement params HST.getCredentials) connection
     pure (
         sessionResults,
-        case processError sessionResults of
+        case getErrorCode sessionResults of
             Just "0" -> Just "wrong username/password"
             _ -> Nothing
         )

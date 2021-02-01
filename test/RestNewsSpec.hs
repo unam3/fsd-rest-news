@@ -377,7 +377,10 @@ spec = do
             >>= (`shouldStartWith` "{\"article_content")
 
         it "returns error if no such tags"
-            $ pendingWith "implement in hasql session"
+            $ editArticleDraft
+                ("{\"article_title\": \"they dont beleive their eyes…\", \"category_id\": 1, \"article_content\": \"article is long enough\", \"tags\": [11234], \"main_photo\": \"http://pl.uh/main\", \"additional_photos\": [\"1\", \"2\", \"3\"], " ++ articleIdJSONSection ++ "}")
+                session
+            >>= (`shouldBe` "{\"error\": \"no such tag\"}")
 
         it "returns error if no such category"
             -- $ pendingWith "implement in hasql session"
