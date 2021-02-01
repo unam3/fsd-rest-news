@@ -345,7 +345,7 @@ deleteTag deleteTagRequest = let {
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
-            Just "23503" -> Just "{\"error\": \"tag is referenced by article\"}"
+            Just "23503" -> Just "{\"error\": \"tag is referenced by an article\"}"
             Just "0" -> Just "{\"error\": \"no such tag\"}"
             _ -> Nothing
         )

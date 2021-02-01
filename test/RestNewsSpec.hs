@@ -475,6 +475,18 @@ spec = do
             >>= (`shouldBe` "{\"error\": \"no such tag\"}")
 
 
+    createTagResult1 <- runIO
+        $ createTag "{\"tag_name\": \"test tag pluh\"}" session
+
+    let tagId = init . drop (length ("\"tag_id\":" :: String)) . last . lines $ replaceComasWithNewlines createTagResult1;
+
+    createArticleDraftResult2 <- runIO
+        $ createArticleDraft
+            ("{\"article_title\": \"they dont beleive their eyes…\", \"category_id\": 1, \"article_content\": \"article is long enough\", \"main_photo\": \"http://pl.uh/main\", \"additional_photos\": [\"1\", \"2\", \"3\"], \"tags\": ["
+                ++ tagId
+                ++ "]}")
+            session
+
     describe "deleteTag" $ do
         it "delete"
             $ deleteTag ("{" ++ tagIdJSONSection) session
@@ -485,8 +497,7 @@ spec = do
             >>= (`shouldBe` "{\"error\": \"no such tag\"}")
 
         it "returns error if tag is referenced by an article"
-            $ pendingWith "createArticle with such tag, use it's atricle_id here"
-            -- $ deleteTag "{\"tag_id\": 12345}" session
-            -- >>= (`shouldBe` "{\"error\": \"tag is referenced by an article\"}")
+            $ deleteTag ("{\"tag_id\": " ++ tagId ++ "}") session
+            >>= (`shouldBe` "{\"error\": \"tag is referenced by an article\"}")
 
         
