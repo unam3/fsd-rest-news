@@ -261,7 +261,9 @@ createCategory createCategoryRequest = let {
     sessionResults <- Session.run (Session.statement params HST.createCategory) connection
     pure (
         valueToUTFLBS sessionResults,
-        Nothing
+        case getErrorCode sessionResults of
+            Just "23503" -> Just "{\"error\": \"parent category does not exist\"}"
+            _ -> Nothing
         )
 
 updateCategory :: UpdateCategoryRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)

@@ -313,9 +313,13 @@ spec = do
 
     let categoryIdJSONSection = head . lines $ replaceComasWithNewlines createCategoryResult;
 
-    describe "createCategory" $
+    describe "createCategory" $ do
         it "creates category"
             $ shouldStartWith createCategoryResult "{\"category_id\":"
+
+        it "returns error if non-existent parent category"
+            $ createCategory "{\"name\": \"pluh\", \"parent_id\": 12345}" session
+            >>= (`shouldBe` "{\"error\": \"parent category does not exist\"}")
 
 
     describe "getCategory" $ do
