@@ -77,7 +77,7 @@ restAPI vaultKey clearSessionPartial request respond = let {
             maybeUserId <- sessionLookup "user_id"
             maybeIsAdmin <- sessionLookup "is_admin"
             maybeAuthorId <- sessionLookup "author_id"
-            let sessionUserId = getIdString maybeUserId
+            let sessionUserIdString = getIdString maybeUserId
             let sessionAuthorIdString = getIdString maybeAuthorId
 
             debugM "rest-news" $ show request
@@ -95,7 +95,7 @@ restAPI vaultKey clearSessionPartial request respond = let {
                 passSessionNameIfAdmin sessionName = if isAdmin maybeIsAdmin
                     then sessionName
                     else "No such endpoint";
-                passIfHasUserId sessionName = if sessionUserId /= "0"
+                passIfHasUserId sessionName = if sessionUserIdString /= "0"
                     then sessionName
                     else "No such endpoint";
                 passIfHasAuthorId sessionName = if sessionAuthorIdString /= "0"
@@ -241,6 +241,7 @@ restAPI vaultKey clearSessionPartial request respond = let {
             results <- let {
                 runSession session = (session . fromJust $ decode requestBody);
                 sessionAuthorId = (read sessionAuthorIdString :: Int32);
+                sessionUserId = (read sessionUserIdString :: Int32);
                 sessionResults = case errorOrSessionName of
                     "auth" -> runSession HSS.getCredentials
                         >>= (\ (eitherSessionResult, errorForClient) ->
@@ -249,7 +250,7 @@ restAPI vaultKey clearSessionPartial request respond = let {
                             )
                         )
                     "createUser" -> runSession HSS.createUser
-                    "getUser" -> HSS.getUser (read sessionUserId :: Int32)
+                    "getUser" -> HSS.getUser sessionUserId
                     "deleteUser" -> runSession HSS.deleteUser
                     "promoteUserToAuthor" -> runSession HSS.promoteUserToAuthor;
                     "editAuthor" -> runSession HSS.editAuthor
@@ -263,8 +264,8 @@ restAPI vaultKey clearSessionPartial request respond = let {
                     "editTag" -> runSession HSS.editTag
                     "getTag" -> runSession HSS.getTag
                     "deleteTag" -> runSession HSS.deleteTag
-                    "createComment" -> runSession HSS.createComment sessionAuthorId
-                    "deleteComment" -> runSession HSS.deleteComment sessionAuthorId
+                    "createComment" -> runSession HSS.createComment sessionUserId
+                    "deleteComment" -> runSession HSS.deleteComment sessionUserId
                     "getArticleComments" -> runSession HSS.getArticleComments
                     "createArticleDraft" -> runSession HSS.createArticleDraft sessionAuthorId
                     "editArticleDraft" -> runSession HSS.editArticleDraft sessionAuthorId
