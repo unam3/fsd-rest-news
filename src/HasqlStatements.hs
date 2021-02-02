@@ -281,6 +281,7 @@ deleteComment =
             ) :: json
         |]
 
+-- by sql error we can't distinguish between no comments and no such article, so we return empty array
 getArticleComments :: Statement (Int32, Maybe Int32) Value
 getArticleComments =
     [TH.singletonStatement|

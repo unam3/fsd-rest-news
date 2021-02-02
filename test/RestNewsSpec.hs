@@ -3,7 +3,7 @@
 module RestNewsSpec where
 
 import System.Process (readProcess)
-import RestNews (runWarpWithLogger)
+--import RestNews (runWarpWithLogger)
 import Test.Hspec
 
 getSession :: IO String
@@ -211,6 +211,27 @@ deleteArticleDraft params session = curl
     session
     params
     "http://0.0.0.0:8081/articles"
+
+createComment :: String -> String -> IO String
+createComment params session = curl
+    "POST"
+    session
+    params
+    "http://0.0.0.0:8081/comments"
+
+getArticleComments :: String -> IO String
+getArticleComments params = curl
+    "GET"
+    []
+    params
+    "http://0.0.0.0:8081/comments"
+
+deleteComment :: String -> String -> IO String
+deleteComment params session = curl
+    "DELETE"
+    session
+    params
+    "http://0.0.0.0:8081/comments"
 
 
 spec :: Spec
@@ -484,24 +505,62 @@ spec = do
 
     let tagId = init . drop (length ("\"tag_id\":" :: String)) . last . lines $ replaceComasWithNewlines createTagResult1;
 
-    createArticleDraftResult2 <- runIO
-        $ createArticleDraft
+    before_
+        (createArticleDraft
             ("{\"article_title\": \"they dont beleive their eyes…\", \"category_id\": 1, \"article_content\": \"article is long enough\", \"main_photo\": \"http://pl.uh/main\", \"additional_photos\": [\"1\", \"2\", \"3\"], \"tags\": ["
                 ++ tagId
                 ++ "]}")
             session
+        >> pure ())
 
-    describe "deleteTag" $ do
-        it "delete"
-            $ deleteTag ("{" ++ tagIdJSONSection) session
-            >>= (`shouldBe` "{\"results\":\"ook\"}")
+        $ describe "deleteTag" $ do
+            it "delete"
+                $ deleteTag ("{" ++ tagIdJSONSection) session
+                >>= (`shouldBe` "{\"results\":\"ook\"}")
 
-        it "returns error if tag does not exists"
-            $ deleteTag "{\"tag_id\": 12345}" session
-            >>= (`shouldBe` "{\"error\": \"no such tag\"}")
+            it "returns error if tag does not exists"
+                $ deleteTag "{\"tag_id\": 12345}" session
+                >>= (`shouldBe` "{\"error\": \"no such tag\"}")
 
-        it "returns error if tag is referenced by an article"
-            $ deleteTag ("{\"tag_id\": " ++ tagId ++ "}") session
-            >>= (`shouldBe` "{\"error\": \"tag is referenced by an article\"}")
+            it "returns error if tag is referenced by an article"
+                $ deleteTag ("{\"tag_id\": " ++ tagId ++ "}") session
+                >>= (`shouldBe` "{\"error\": \"tag is referenced by an article\"}")
 
         
+    createCommentResult <- runIO
+        $ createComment "{\"article_id\": 1, \"comment_text\": \"bluasd!\"}" session
+
+    -- {"comment_id":12,"user_id":1,"article_id":1,"comment_text":"bluasd!"}
+    let commentIdJSONSection = (!! 0) . lines $ replaceComasWithNewlines createCommentResult;
+
+    describe "createComment" $ do
+        it "creates article comment"
+            $ shouldStartWith createCommentResult "{\"comment_id\""
+
+        it "returns error if no such article"
+            $ createComment
+                "{\"article_id\": 12345, \"comment_text\": \"bluasd!\"}"
+                session
+            >>= (`shouldBe` "{\"error\": \"no such article\"}")
+
+    describe "getArticleComments" $ do
+        it "get article comments"
+            $ getArticleComments "{\"article_id\": 1}"
+            >>= (`shouldStartWith` "[{\"comment_id\"")
+
+        it "returns empty array if no such article"
+            $ getArticleComments "{\"article_id\": 12345}"
+            >>= (`shouldBe` "[]")
+
+    describe "deleteComment" $ do
+        it "delete article comment"
+            $ deleteComment
+                (commentIdJSONSection ++ "}")
+                session
+            >>= (`shouldBe` "{\"results\":\"ook\"}")
+
+        it "returns error if no such comment"
+            $ deleteComment
+                "{\"comment_id\": 12345}"
+                session
+            >>= (`shouldBe` "{\"error\": \"no such comment\"}")
