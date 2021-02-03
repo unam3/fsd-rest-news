@@ -281,6 +281,7 @@ deleteComment =
             ) :: json
         |]
 
+-- by sql error we can't distinguish between no comments and no such article, so we return empty array
 getArticleComments :: Statement (Int32, Maybe Int32) Value
 getArticleComments =
     [TH.singletonStatement|
@@ -336,9 +337,37 @@ publishArticleDraft =
         returning json_build_object('results', 'ook') :: json
         |]
 
-editArticleDraft :: Statement (Int32, Int32, Int32, Text, Text, Text, Vector Text) Value
+editArticleDraft :: Statement (Int32, Int32, Int32, Text, Text, Text, Vector Text, Vector Int32) Value
 editArticleDraft =
     [TH.singletonStatement|
+        with inserted_tags as (
+            insert into articles_tags
+            (tag_id, article_id)
+            (select unnest($8 :: int4[]), $2 :: int4)
+            on conflict (tag_id, article_id) do nothing
+        ), deleted_tags_if_empty_array as (
+            delete from articles_tags
+            using (
+                select tag_id
+                from articles_tags
+                where articles_tags.article_id = $2 :: int4
+                    and coalesce(array_length($8 :: int4[], 1), 0) = 0
+            ) as tags_to_delete
+            where article_id = $2 :: int4
+                and articles_tags.tag_id = tags_to_delete.tag_id
+        ), deleted_tags_that_not_in_array as (
+            delete from articles_tags
+            using (
+                select tag_id
+                from articles_tags,
+                    unnest($8 :: int4[] :: int[]) as tags_to_assign
+                where articles_tags.article_id = $2 :: int4
+                    and tag_id != tags_to_assign
+                group by tag_id
+            ) as tags_to_delete
+            where article_id = $2 :: int4
+                and articles_tags.tag_id = tags_to_delete.tag_id
+        )
         update articles
         set category_id = $3 :: int4,
             article_title = $4 :: text,

@@ -28,6 +28,21 @@ stack build
 stack exec rest-news-exe
 ```
 
+## Tests
+
+
+To run tests you need to (1) run rest news, (2) before each tests run create proper db-structure and (3) run stack tests:
+
+```
+stack build
+
+stack exec rest-news-exe
+
+psql -h 0.0.0.0 -W -f schema.psql rest-news-db rest-news-user
+
+stack test
+```
+
 ## Known limitations
 
 - Deletion of inexistent entity will return response with 200 HTTP status code.
