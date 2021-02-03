@@ -236,7 +236,6 @@ deleteComment params session = curl
 
 spec :: Spec
 spec = do
-    -- beforeAll_ runWarpWithLogger $ do
     describe "auth" $ do
         it "recognize existing user credentials"
             $ auth
@@ -248,7 +247,6 @@ spec = do
 
 
     createUserResult <- runIO createUser
-    -- runIO $ print createUserResult
 
     describe "createUser" $ do
         it "create user"
@@ -380,8 +378,6 @@ spec = do
     createArticleDraftResult <- runIO
         $ createArticleDraft "{\"article_title\": \"they dont beleive their eyes…\", \"category_id\": 1, \"article_content\": \"article is long enough\", \"tags\": [], \"main_photo\": \"http://pl.uh/main\", \"additional_photos\": [\"1\", \"2\", \"3\"]}" session
 
-    -- runIO . print . lines $ replaceComasWithNewlines createArticleDraftResult
-
     let articleIdJSONSection = (!! 6) . lines $ replaceComasWithNewlines createArticleDraftResult;
 
     describe "createArticleDraft" $ do
@@ -426,7 +422,7 @@ spec = do
             >>= (`shouldStartWith` "{\"article_content")
 
         it "returns error if no such article"
-            $ getArticleDraft ("{\"article_id\":123456}") session
+            $ getArticleDraft "{\"article_id\":123456}" session
             >>= (`shouldStartWith` "{\"error\": \"no such article\"}")
 
 
@@ -436,7 +432,7 @@ spec = do
             >>= (`shouldBe` "{\"results\":\"ook\"}")
 
         it "returns error if no such article"
-            $ publishArticleDraft ("{\"article_id\":123456}") session
+            $ publishArticleDraft "{\"article_id\":123456}" session
             >>= (`shouldBe` "{\"error\": \"no such article\"}")
 
 
@@ -455,7 +451,7 @@ spec = do
             >>= (`shouldBe` "{\"error\": \"no such article\"}")
 
         it "returns error if no such article"
-            $ deleteArticleDraft ("{\"article_id\":123456}") session
+            $ deleteArticleDraft "{\"article_id\":123456}" session
             >>= (`shouldBe` "{\"error\": \"no such article\"}")
 
 
