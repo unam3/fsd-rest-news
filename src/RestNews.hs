@@ -318,7 +318,7 @@ runWarp = let {
     simpleConnection <- (dbconnect >>= fromSimpleConnection)
     -- IO (SessionStore IO String String)
     store <- dbStore simpleConnection defaultSettings
-    void (purger simpleConnection defaultSettings)
+    --void (purger simpleConnection defaultSettings)
     void (
         let {
             clearSessionPartial = clearSession simpleConnection "SESSION";
