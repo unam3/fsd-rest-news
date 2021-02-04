@@ -7,7 +7,6 @@ module RestNews
 import AesonDefinitions (AuthRequest, CreateUserRequest, UserIdRequest, PromoteUserToAuthorRequest, EditAuthorRequest, AuthorIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest, TagIdRequestWithOffset, CreateCommentRequest, CreateCommentRequest, CommentIdRequest, ArticleCommentsRequest, ArticleDraftRequest, ArticleDraftEditRequest, ArticleDraftIdRequest, ArticlesByCategoryIdRequest, ArticlesByTagIdListRequest, ArticlesByTitlePartRequest, ArticlesByContentPartRequest, ArticlesByAuthorNamePartRequest, ArticlesByCreationDateRequest, OffsetRequest)
 import qualified HasqlSessions as HSS
 
-import Control.Concurrent (forkIO)
 import Control.Exception (bracket_)
 import Control.Monad (void, when)
 import Data.Aeson (decode)
@@ -19,7 +18,7 @@ import qualified Data.Vault.Lazy as Vault
 import Database.PostgreSQL.Simple (Connection, ConnectInfo(..), connectPostgreSQL, postgreSQLConnectionString)
 import Hasql.Session (QueryError)
 import qualified Network.HTTP.Types as H
-import Network.Wai (Application, Response, ResponseReceived, Request, pathInfo, requestMethod, responseLBS, strictRequestBody, vault)
+import Network.Wai (Application, Request, pathInfo, requestMethod, responseLBS, strictRequestBody, vault)
 import Network.Wai.Application.Static
 import Network.Wai.Handler.Warp (Port, run)
 import Network.Wai.Middleware.Rewrite (PathsAndQueries, rewritePureWithQueries)
@@ -317,20 +316,18 @@ isRequestToStatic request =
         isRequestPathNotEmpty = (not $ null pathTextChunks);
     } in isRequestPathNotEmpty && head pathTextChunks == "static"
 
-rewriteToStatic :: PathsAndQueries -> H.RequestHeaders -> PathsAndQueries
-rewriteToStatic ("static":otherPathPieces, queries) _ = (otherPathPieces, queries)
-rewriteToStatic pathsAndQueries _ = pathsAndQueries
+removeStaticFromURI :: PathsAndQueries -> H.RequestHeaders -> PathsAndQueries
+removeStaticFromURI ("static":otherPathPieces, queries) _ = (otherPathPieces, queries)
+removeStaticFromURI pathsAndQueries _ = pathsAndQueries
 
--- rewritePureWithQueries :: (PathsAndQueries -> RequestHeaders -> PathsAndQueries) -> Middleware
 rewrite :: Application -> Application
-rewrite = rewritePureWithQueries rewriteToStatic
+rewrite = rewritePureWithQueries removeStaticFromURI
 
 router :: Application -> Application
-router app request respond = print (pathInfo request)
-    >> case isRequestToStatic request of
-        -- _ -> (staticApp (defaultWebAppSettings "")) request respond
-        True -> (staticApp (defaultWebAppSettings "")) request respond
-        False -> app request respond
+router app request respond =
+    if isRequestToStatic request
+        then rewrite (staticApp (defaultWebAppSettings "static")) request respond
+        else app request respond
 
 runWarp :: IO ()
 runWarp = let {
