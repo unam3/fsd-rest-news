@@ -29,6 +29,12 @@ dependencies:
 # to get text from pathInfo LBS
 - utf8-string
 - wai == 3.2.2.1
+- wai-app-static
+- wai-session == 0.3.3
+- wai-session-postgresql == 0.2.1.2
+- postgresql-simple == 0.6.2
+- vault == 0.3.1.4
+- cookie
 - warp == 3.3.13
 - hasql >= 1.4.4
 - vector == 0.12.1.2
@@ -66,3 +72,5 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - rest-news
+    - hspec
+    - process == 1.6.9.0

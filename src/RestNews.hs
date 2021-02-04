@@ -8,12 +8,14 @@ import AesonDefinitions (CreateUserRequest, UserIdRequest, PromoteUserToAuthorRe
 import qualified HasqlSessions as HSS
 
 import Control.Exception (bracket_)
+import Control.Monad (void)
 import Data.Aeson (decode)
 import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
 import Data.Maybe (fromJust, isJust)
 import qualified Network.HTTP.Types as H
-import Network.Wai (Application, pathInfo, requestMethod, responseLBS, strictRequestBody)
+import Network.Wai (Application, Response, ResponseReceived, Request, ifRequest, pathInfo, requestMethod, responseLBS, strictRequestBody)
 import Network.Wai.Handler.Warp (Port, run)
+import Network.Wai.Application.Static
 import System.Log.Logger (Priority (DEBUG, ERROR), debugM, setLevel, traplogging, updateGlobalLogger)
 
 ifValidRequest :: String -> Maybe a -> String
@@ -167,12 +169,34 @@ restAPI request respond = let {
                     _ -> H.status200);
             } in respond $ responseLBS httpStatus [] processedResults)
 
+isRequestToStatic :: Request -> Bool
+isRequestToStatic request =
+    let {
+        pathTextChunks = pathInfo request;
+        isRequestPathNotEmpty = (not $ null pathTextChunks);
+    } in isRequestPathNotEmpty && head pathTextChunks == "static"
+
+router :: Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
+router request response = case isRequestToStatic request of
+    _ -> print (pathInfo request)
+        >> (staticApp (defaultWebAppSettings "static")) request response
 
 runWarp :: IO ()
 runWarp = let {
     port = 8081 :: Port;
-} in run port restAPI
-    >> return ()
+} in void $
+    --run
+    --    port
+    --    restAPI
+    run
+        port
+        --(
+        --    ifRequest
+        --        isRequestToStatic
+        --        (staticApp (defaultWebAppSettings "static"))
+        --)
+        router
+
 
 runWarpWithLogger :: IO ()
 runWarpWithLogger = traplogging "rest-news" ERROR "shutdown due to"
