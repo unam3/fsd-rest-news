@@ -30,6 +30,7 @@ dependencies:
 - utf8-string
 - wai == 3.2.2.1
 - wai-app-static
+- wai-extra == 3.1.6
 - wai-session == 0.3.3
 - wai-session-postgresql == 0.2.1.2
 - postgresql-simple == 0.6.2

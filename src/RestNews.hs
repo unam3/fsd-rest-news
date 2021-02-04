@@ -19,9 +19,10 @@ import qualified Data.Vault.Lazy as Vault
 import Database.PostgreSQL.Simple (Connection, ConnectInfo(..), connectPostgreSQL, postgreSQLConnectionString)
 import Hasql.Session (QueryError)
 import qualified Network.HTTP.Types as H
-import Network.Wai (Application, Request, pathInfo, requestMethod, responseLBS, strictRequestBody, vault)
+import Network.Wai (Application, Response, ResponseReceived, Request, pathInfo, requestMethod, responseLBS, strictRequestBody, vault)
 import Network.Wai.Application.Static
 import Network.Wai.Handler.Warp (Port, run)
+import Network.Wai.Middleware.Rewrite (PathsAndQueries, rewritePureWithQueries)
 import Network.Wai.Session (withSession, Session)
 import Network.Wai.Session.PostgreSQL (clearSession, dbStore, defaultSettings, fromSimpleConnection, purger)
 import System.Log.Logger (Priority (DEBUG, ERROR), debugM, setLevel, traplogging, updateGlobalLogger)
@@ -309,6 +310,27 @@ restAPI vaultKey clearSessionPartial request respond = let {
                     _ -> H.status200);
             } in respond $ responseLBS httpStatus [] processedResults)
 
+isRequestToStatic :: Request -> Bool
+isRequestToStatic request =
+    let {
+        pathTextChunks = pathInfo request;
+        isRequestPathNotEmpty = (not $ null pathTextChunks);
+    } in isRequestPathNotEmpty && head pathTextChunks == "static"
+
+rewriteToStatic :: PathsAndQueries -> H.RequestHeaders -> PathsAndQueries
+rewriteToStatic ("static":otherPathPieces, queries) _ = (otherPathPieces, queries)
+rewriteToStatic pathsAndQueries _ = pathsAndQueries
+
+-- rewritePureWithQueries :: (PathsAndQueries -> RequestHeaders -> PathsAndQueries) -> Middleware
+rewrite :: Application -> Application
+rewrite = rewritePureWithQueries rewriteToStatic
+
+router :: Application -> Application
+router app request respond = print (pathInfo request)
+    >> case isRequestToStatic request of
+        -- _ -> (staticApp (defaultWebAppSettings "")) request respond
+        True -> (staticApp (defaultWebAppSettings "")) request respond
+        False -> app request respond
 
 runWarp :: IO ()
 runWarp = let {
@@ -323,19 +345,11 @@ runWarp = let {
         let {
             clearSessionPartial = clearSession simpleConnection "SESSION";
         } in run port
-        -- :: SessionStore m k v	The SessionStore to use for sessions
-        -- -> ByteString	        Name to use for the session cookie (MUST BE ASCII)
-        -- -> SetCookie	            Settings for the cookie (path, expiry, etc)
-        -- -> Key (Session m k v)	Vault key to use when passing the session through
-        -- -> Middleware	 
-        $ withSession store "SESSION" defaultSetCookie vaultK
-        $ restAPI vaultK clearSessionPartial)
-
-runWarpStatic :: IO ()
-runWarpStatic = let {
-    port = 8080 :: Port;
-} in do
-    run port $ staticApp (defaultWebAppSettings "static")
+        (router (
+            withSession store "SESSION" defaultSetCookie vaultK
+            $ restAPI vaultK clearSessionPartial
+            ))
+        )
 
 runWarpWithLogger :: IO ()
 runWarpWithLogger = traplogging "rest-news" ERROR "shutdown due to"
