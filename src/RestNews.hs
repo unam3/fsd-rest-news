@@ -61,7 +61,7 @@ restAPI vaultKey clearSessionPartial request respond = let {
             (do
                 session_user_id <- sessionLookup "user_id"
                 when
-                    (session_user_id /= Nothing)
+                    (isJust session_user_id)
                     (debugM "rest-news" "invalidating session"
                         >> clearSessionPartial request)
                 )
@@ -334,7 +334,7 @@ runWarp = let {
     port = 8081 :: Port;
 } in do
     vaultK <- Vault.newKey
-    simpleConnection <- (dbconnect >>= fromSimpleConnection)
+    simpleConnection <- dbconnect >>= fromSimpleConnection
     -- IO (SessionStore IO String String)
     store <- dbStore simpleConnection defaultSettings
     void (purger simpleConnection defaultSettings)
