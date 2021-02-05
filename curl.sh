@@ -56,7 +56,7 @@ curl -i -H 'Cookie: SESSION='${SESSION} -X DELETE -d '{"tag_id": 5}' http://0.0.
 
 curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"article_title": "they dont beleive their eyes…", "category_id": 1, "article_content": "article is long enough", "tags": [1,2], "main_photo": "http://pl.uh/main", "additional_photos": ["1", "2", "3"]}' http://0.0.0.0:8081/articles
 
-curl -i -H 'Cookie: SESSION='${SESSION} -X PATCH -d '{"article_title": "PATCHED", "category_id": 1, "article_content": "PATCHED", "article_id": 8, "main_photo": "fs", "additional_photos": ["9", "2"]}' http://0.0.0.0:8081/articles
+curl -i -H 'Cookie: SESSION='${SESSION} -X PATCH -d '{"article_title": "PATCHED", "category_id": 2, "article_content": "PATCHED", "article_id": 11, "main_photo": "fs", "additional_photos": ["9", "2"], "tags": [1,2]}' http://0.0.0.0:8081/articles
 
 # publish article draft
 curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"article_id": 10}' http://0.0.0.0:8081/articles

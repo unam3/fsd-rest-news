@@ -340,53 +340,16 @@ publishArticleDraft =
 editArticleDraft :: Statement (Int32, Int32, Int32, Text, Text, Text, Vector Text, Vector Int32) Value
 editArticleDraft =
     [TH.singletonStatement|
-        with inserted_tags as (
-            insert into articles_tags
-            (tag_id, article_id)
-            (select unnest($8 :: int4[]), $2 :: int4)
-            on conflict (tag_id, article_id) do nothing
-        ), deleted_tags_if_empty_array as (
-            delete from articles_tags
-            using (
-                select tag_id
-                from articles_tags
-                where articles_tags.article_id = $2 :: int4
-                    and coalesce(array_length($8 :: int4[], 1), 0) = 0
-            ) as tags_to_delete
-            where article_id = $2 :: int4
-                and articles_tags.tag_id = tags_to_delete.tag_id
-        ), deleted_tags_that_not_in_array as (
-            delete from articles_tags
-            using (
-                select tag_id
-                from articles_tags,
-                    unnest($8 :: int4[] :: int[]) as tags_to_assign
-                where articles_tags.article_id = $2 :: int4
-                    and tag_id != tags_to_assign
-                group by tag_id
-            ) as tags_to_delete
-            where article_id = $2 :: int4
-                and articles_tags.tag_id = tags_to_delete.tag_id
-        )
-        update articles
-        set category_id = $3 :: int4,
-            article_title = $4 :: text,
-            article_content = $5 :: text,
-            main_photo = $6 :: text,
-            additional_photos = $7 :: text[]
-        where
-            author = $1 :: int4
-            and article_id = $2 :: int4
-        returning json_build_object(
-            'article_id', article_id,
-            'author', author,
-            'category_id', category_id,
-            'article_title', article_title,
-            'article_content', article_content,
-            'is_published', is_published,
-            'main_photo', main_photo,
-            'additional_photos', additional_photos
-            ) :: json
+        select edit_article_draft(
+            $1 :: int4,
+            $2 :: int4,
+            $3 :: int4,
+            $4 :: text,
+            $5 :: text,
+            $6 :: text,
+            $7 :: text[],
+            $8 :: int4[]
+        ) :: json
         |]
 
 getArticleDraft :: Statement (Int32, Int32) Value

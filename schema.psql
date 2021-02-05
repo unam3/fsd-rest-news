@@ -234,6 +234,68 @@ CREATE OR REPLACE FUNCTION public.get_article(art_id integer)
         ) as as_row;
     $function$;
 
+CREATE OR REPLACE FUNCTION public.edit_article_draft(
+    author integer,
+    article_id integer,
+    category_id integer,
+    article_title varchar,
+    article_content text,
+    main_photo text,
+    additional_photos text[],
+    tags int[]
+)
+       RETURNS json
+       LANGUAGE sql
+    AS $function$
+        with inserted_tags as (
+            insert into articles_tags
+            (tag_id, article_id)
+            (select unnest(tags), article_id)
+            on conflict (tag_id, article_id) do nothing
+        ), deleted_tags_if_empty_array as (
+            delete from articles_tags
+            using (
+                select tag_id
+                from articles_tags
+                where articles_tags.article_id = article_id
+                    and coalesce(array_length(tags, 1), 0) = 0
+            ) as tags_to_delete
+            where article_id = article_id
+                and articles_tags.tag_id = tags_to_delete.tag_id
+        ), deleted_tags_that_not_in_array as (
+            delete from articles_tags
+            using (
+                select tag_id
+                from articles_tags,
+                    unnest(tags) as tags_to_assign
+                where articles_tags.article_id = article_id
+                    and tag_id != tags_to_assign
+                group by tag_id
+            ) as tags_to_delete
+            where article_id = article_id
+                and articles_tags.tag_id = tags_to_delete.tag_id
+        )
+        update articles
+        set category_id = category_id,
+            article_title = article_title,
+            article_content = article_content,
+            main_photo = main_photo,
+            additional_photos = additional_photos
+        where
+            author = author
+            and article_id = article_id
+        returning json_build_object(
+            'article_id', article_id,
+            'author', author,
+            'category_id', category_id,
+            'article_title', article_title,
+            'article_content', article_content,
+            'is_published', is_published,
+            'main_photo', main_photo,
+            'additional_photos', additional_photos
+            )
+    $function$;
+
 SET plpgsql.extra_warnings TO 'all';
 SET plpgsql.extra_errors TO 'all';
 
