@@ -315,7 +315,7 @@ with created_draft as (
 createArticleDraft :: Statement (Int32, Int32, Text, Text, Vector Int32, Text, Vector Text) Value
 createArticleDraft =
     [TH.singletonStatement|
-            select check_assignment(
+            select create_article_draft(
                 $1 :: int4,
                 $2 :: int4,
                 $3 :: text,

@@ -237,7 +237,7 @@ CREATE OR REPLACE FUNCTION public.get_article(art_id integer)
 SET plpgsql.extra_warnings TO 'all';
 SET plpgsql.extra_errors TO 'all';
 
-CREATE OR REPLACE FUNCTION public.check_assignment(
+CREATE OR REPLACE FUNCTION public.create_article_draft(
     author integer,
     category_id integer,
     article_title varchar,
