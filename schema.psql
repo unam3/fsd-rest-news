@@ -250,40 +250,40 @@ CREATE OR REPLACE FUNCTION public.edit_article_draft(
         with inserted_tags as (
             insert into articles_tags
             (tag_id, article_id)
-            (select unnest(tags), article_id)
+            (select unnest(edit_article_draft.tags), edit_article_draft.article_id)
             on conflict (tag_id, article_id) do nothing
         ), deleted_tags_if_empty_array as (
             delete from articles_tags
             using (
                 select tag_id
                 from articles_tags
-                where articles_tags.article_id = article_id
-                    and coalesce(array_length(tags, 1), 0) = 0
+                where articles_tags.article_id = edit_article_draft.article_id
+                    and coalesce(array_length(edit_article_draft.tags, 1), 0) = 0
             ) as tags_to_delete
-            where article_id = article_id
+            where article_id = edit_article_draft.article_id
                 and articles_tags.tag_id = tags_to_delete.tag_id
         ), deleted_tags_that_not_in_array as (
             delete from articles_tags
             using (
                 select tag_id
                 from articles_tags,
-                    unnest(tags) as tags_to_assign
-                where articles_tags.article_id = article_id
+                    unnest(edit_article_draft.tags) as tags_to_assign
+                where articles_tags.article_id = edit_article_draft.article_id
                     and tag_id != tags_to_assign
                 group by tag_id
             ) as tags_to_delete
-            where article_id = article_id
+            where article_id = edit_article_draft.article_id
                 and articles_tags.tag_id = tags_to_delete.tag_id
         )
         update articles
-        set category_id = category_id,
-            article_title = article_title,
-            article_content = article_content,
-            main_photo = main_photo,
-            additional_photos = additional_photos
+        set category_id = edit_article_draft.category_id,
+            article_title = edit_article_draft.article_title,
+            article_content = edit_article_draft.article_content,
+            main_photo = edit_article_draft.main_photo,
+            additional_photos = edit_article_draft.additional_photos
         where
-            author = author
-            and article_id = article_id
+            author = edit_article_draft.author
+            and article_id = edit_article_draft.article_id
         returning json_build_object(
             'article_id', article_id,
             'author', author,

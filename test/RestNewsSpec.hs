@@ -396,7 +396,7 @@ spec = do
                 session
             >>= (`shouldBe` "{\"error\": \"no such category\"}")
 
-    focus $ describe "editArticleDraft" $ do
+    describe "editArticleDraft" $ do
         it "edits article draft"
             $ editArticleDraft
                 ("{\"article_title\": \"they dont beleive their eyes…\", \"category_id\": 2, \"article_content\": \"article is long enough\", \"tags\": [1], \"main_photo\": \"http://pl.uh/main\", \"additional_photos\": [\"1\", \"2\", \"3\"], " ++ articleIdJSONSection ++ "}")
