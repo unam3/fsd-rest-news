@@ -175,6 +175,11 @@ CREATE OR REPLACE FUNCTION public.get_article(art_id integer)
        RETURNS json
        LANGUAGE sql
     AS $function$
+        with author as (
+            select * from authors where author_id = (
+                select author from articles where article_id = art_id
+            )
+        )
         select row_to_json(as_row) from (
             --is_published        boolean not null,
             select
@@ -183,16 +188,23 @@ CREATE OR REPLACE FUNCTION public.get_article(art_id integer)
                 a.article_content,
                 a.creation_date,
                 categories_hierarchy.json_agg as categories,
-                aauthor as author,
+                uuser as user,
                 atags.json_agg as tags,
                 a.main_photo,
                 a.additional_photos
             from
+                author,
                 articles a,
-                (select * from authors where author_id = (
-                        select author from articles where article_id = art_id
-                    )
-                ) as aauthor,
+                (   select
+                        author.user_id,
+                        name,
+                        surname,
+                        avatar,
+                        creation_date
+                    from users,
+                        author
+                    where users.user_id = author.user_id
+                ) as uuser,
                 (select json_agg(tags) from (
                         select tags.*
                         from tags
