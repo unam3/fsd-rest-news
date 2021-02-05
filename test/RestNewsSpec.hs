@@ -403,6 +403,12 @@ spec = do
                 session
             >>= (`shouldStartWith` "{\"article_content")
 
+        it "returns error if no such article"
+            $ editArticleDraft
+                ("{\"article_title\": \"they dont beleive their eyes…\", \"category_id\": 1, \"article_content\": \"article is long enough\", \"tags\": [1], \"main_photo\": \"http://pl.uh/main\", \"additional_photos\": [\"1\", \"2\", \"3\"], \"article_id\": 123445}")
+                session
+            >>= (`shouldBe` "{\"error\": \"no such article\"}")
+
         it "returns error if no such tags"
             $ editArticleDraft
                 ("{\"article_title\": \"they dont beleive their eyes…\", \"category_id\": 1, \"article_content\": \"article is long enough\", \"tags\": [11234], \"main_photo\": \"http://pl.uh/main\", \"additional_photos\": [\"1\", \"2\", \"3\"], " ++ articleIdJSONSection ++ "}")

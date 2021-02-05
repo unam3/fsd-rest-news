@@ -482,6 +482,7 @@ editArticleDraft articleDraftEditRequest author_id' = let {
                 } in case detailsPrefix of
                     Just "Key (tag_id)" -> Just "{\"error\": \"no such tag\"}"
                     Just "Key (categor" -> Just "{\"error\": \"no such category\"}"
+                    Just "Key (article" -> Just "{\"error\": \"no such article\"}"
                     _ -> error $ show details
             Just ("0", Nothing) -> Just "{\"error\": \"no such article\"}"
             _ -> Nothing
