@@ -176,9 +176,33 @@ CREATE OR REPLACE FUNCTION public.get_article(art_id integer)
        LANGUAGE sql
     AS $function$
         with author as (
-            select * from authors where author_id = (
-                select author from articles where article_id = art_id
+            select *
+            from authors
+            where author_id = (
+                select author
+                from articles
+                where article_id = art_id
             )
+        ), atags as (
+            select json_agg(tags) from (
+                    select tags.*
+                    from tags
+                    inner join articles_tags
+                    on tags.tag_id = articles_tags.tag_id
+                    where article_id = art_id
+                ) as tags
+        ),
+        categories_hierarchy as (
+            WITH RECURSIVE categories_recursive(category_id, name, parent_id) AS (
+                SELECT category_id, name, parent_id
+                FROM categories
+                WHERE category_id = (select category_id from articles as a where a.article_id = art_id)
+                UNION ALL
+                SELECT categories.category_id, categories.name, categories.parent_id
+                FROM categories_recursive, categories
+                WHERE categories_recursive.parent_id = categories.category_id
+            )
+            SELECT json_agg(row_to_json(categories_recursive.*)) FROM categories_recursive
         )
         select row_to_json(as_row) from (
             --is_published        boolean not null,
@@ -194,6 +218,8 @@ CREATE OR REPLACE FUNCTION public.get_article(art_id integer)
                 a.additional_photos
             from
                 author,
+                categories_hierarchy,
+                atags,
                 articles a,
                 (   select
                         author.user_id,
@@ -204,27 +230,7 @@ CREATE OR REPLACE FUNCTION public.get_article(art_id integer)
                     from users,
                         author
                     where users.user_id = author.user_id
-                ) as uuser,
-                (select json_agg(tags) from (
-                        select tags.*
-                        from tags
-                        inner join articles_tags
-                        on tags.tag_id = articles_tags.tag_id
-                        where article_id = art_id
-                    ) as tags
-                ) as atags,
-                (
-                    WITH RECURSIVE categories_recursive(category_id, name, parent_id) AS (
-                        SELECT category_id, name, parent_id
-                        FROM categories
-                        WHERE category_id = (select category_id from articles as a where a.article_id = art_id)
-                        UNION ALL
-                        SELECT categories.category_id, categories.name, categories.parent_id
-                        FROM categories_recursive, categories
-                        WHERE categories_recursive.parent_id = categories.category_id
-                    )
-                    SELECT json_agg(row_to_json(categories_recursive.*)) FROM categories_recursive
-                ) as categories_hierarchy where a.article_id = art_id
+                ) as uuser
         ) as as_row;
     $function$;
 
