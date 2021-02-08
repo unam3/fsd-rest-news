@@ -68,6 +68,25 @@ connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest
 
 getError :: Either Session.QueryError resultsType -> Maybe (String, Maybe String)
 {-
+    Left (
+        QueryError
+            "SELECT edit_article_draft($1 :: int4, $2 :: int4, $3 :: int4, $4 :: text, $5 :: text, $6 :: text, $7 :: text[], $8 :: int4[]) :: json"
+            ["1","9","2","\"PATCHEDttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt\"","\"PATCHED\"","\"fs\"","[\"9\", \"2\"]","[1, 2]"]
+            (
+                ResultError
+                    (
+                        ServerError
+                            "22001"
+                            "value too long for type character varying(80)"
+                            Nothing
+                            Nothing
+                    )
+            )
+    )
+-}
+getError (Left (Session.QueryError _ _ (Session.ResultError (Session.ServerError "22001" _ details _)))) =
+    Just ("22001", fmap unpackChars details)
+{-
 Left (
     QueryError
         "WITH delete_results AS (DELETE FROM categories WHERE category_id = $1 :: int4 RETURNING *) SELECT CASE WHEN count(delete_results) = 0 THEN json_build_object('error', 'no such category') ELSE json_build_object('results', 'ook') END :: json FROM delete_results"
@@ -154,6 +173,7 @@ createUser createUserRequest = let {
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
+            Just "22001" -> Just "{\"error\": \"name and surname field length must be 80 characters at most\"}"
             Just "23505" -> Just "{\"error\": \"user with this username already exists\"}"
             _ -> Nothing
         )
@@ -210,6 +230,7 @@ editAuthor editAuthorRequest = let {
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
+            Just "22001" -> Just "{\"error\": \"name and surname field length must be 80 characters at most\"}"
             Just "0" -> Just "{\"error\": \"such author does not exist\"}"
             _ -> Nothing
         )
@@ -252,6 +273,7 @@ createCategory createCategoryRequest = let {
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
+            Just "22001" -> Just "{\"error\": \"category name length must be 80 characters at most\"}"
             Just "23503" -> Just "{\"error\": \"parent category does not exist\"}"
             _ -> Nothing
         )
@@ -269,6 +291,7 @@ updateCategory updateCategoryRequest = let {
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
+            Just "22001" -> Just "{\"error\": \"category name length must be 80 characters at most\"}"
             Just "23503" -> Just "{\"error\": \"parent category does not exist\"}"
             Just "0" -> Just "{\"error\": \"no such category\"}"
             _ -> Nothing
@@ -311,6 +334,7 @@ createTag createTagRequest = let {
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
+            Just "22001" -> Just "{\"error\": \"tag_name length must be 80 characters at most\"}"
             Just "23505" -> Just "{\"error\": \"tag with such name already exists\"}"
             _ -> Nothing
         )
@@ -324,6 +348,7 @@ editTag editTagRequest = let {
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
+            Just "22001" -> Just "{\"error\": \"tag_name length must be 80 characters at most\"}"
             Just "23505" -> Just "{\"error\": \"tag with such name already exists\"}"
             Just "0" -> Just "{\"error\": \"no such tag\"}"
             _ -> Nothing
@@ -422,6 +447,7 @@ createArticleDraft articleDraftRequest author_id' = let {
     pure (
         valueToUTFLBS sessionResults,
         case getError sessionResults of
+            Just ("22001", _) -> Just "{\"error\": \"article_title length must be 80 characters at most\"}"
             Just ("23503", details) ->
                 let {
                     detailsPrefix = fmap (take 12) details;
@@ -467,6 +493,7 @@ editArticleDraft articleDraftEditRequest author_id' = let {
     pure (
         valueToUTFLBS sessionResults,
         case getError sessionResults of
+            Just ("22001", _) -> Just "{\"error\": \"article_title length must be 80 characters at most\"}"
             Just ("23503", details) ->
                 let {
                     detailsPrefix = fmap (take 12) details;
