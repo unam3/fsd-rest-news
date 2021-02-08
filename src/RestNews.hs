@@ -27,8 +27,11 @@ import Network.Wai.Session.PostgreSQL (clearSession, dbStore, defaultSettings, f
 import System.Log.Logger (Priority (DEBUG, ERROR), debugM, setLevel, traplogging, updateGlobalLogger)
 import Web.Cookie (defaultSetCookie)
 
-ifValidRequest :: String -> Maybe a -> String
-ifValidRequest sessionName = maybe "Wrong parameters/parameters values" (const sessionName)
+wrongParamsOrValues :: Either String request
+wrongParamsOrValues = Left "Wrong parameters/parameters values"
+
+ifValidRequest :: String -> Maybe request -> Either String request
+ifValidRequest sessionName = maybe wrongParamsOrValues Right
 
 getIdString :: Maybe String -> String
 getIdString = maybe "0" id
@@ -47,6 +50,9 @@ dbconnect = let {
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
 restAPI :: Vault.Key (Session IO String String) -> (Request -> IO ()) -> Application;
 restAPI vaultKey clearSessionPartial request respond = let {
+        notImplemented = Left "Method is not implemented";
+        noSuchEndpoint = Left "No such endpoint";
+        endpointNeeded = Left "Endpoint needed";
         pathTextChunks = pathInfo request;
         isRequestPathNotEmpty = (not $ null pathTextChunks);
         pathHeadChunk = head pathTextChunks;
@@ -132,161 +138,169 @@ restAPI vaultKey clearSessionPartial request respond = let {
                     then (case pathHeadChunk of
                         "auth" -> case method of
                             "POST"      -> ifValidRequest "auth" maybeAuthRequestJSON
-                            _ -> "Method is not implemented"
+                            _ -> notImplemented
                         "users" -> case method of
                             "POST"      -> ifValidRequest "createUser" maybeCreateUserRequestJSON
                             "GET"       -> passIfHasUserId "getUser"
                             "DELETE"    -> passSessionNameIfAdmin   
                                 $ ifValidRequest "deleteUser" maybeUserIdRequestJSON
-                            _ -> "Method is not implemented"
-                        "authors" -> passSessionNameIfAdmin $ case method of
-                            "POST"      -> ifValidRequest "promoteUserToAuthor" maybePromoteUserToAuthorRequestJSON
-                            "PATCH"     -> ifValidRequest "editAuthor" maybeEditAuthorRequestJSON
-                            "GET"       -> ifValidRequest "getAuthor" maybeAuthorIdRequestJSON
-                            "DELETE"    -> ifValidRequest "deleteAuthorRole" maybeAuthorIdRequestJSON
-                            _ -> "Method is not implemented"
-                        "categories" -> case method of
-                            "POST"      -> passSessionNameIfAdmin
-                                $ ifValidRequest "createCategory" maybeCreateCategoryRequestJSON
-                            "PATCH"     -> passSessionNameIfAdmin
-                                $ ifValidRequest "updateCategory" maybeUpdateCategoryRequestJSON
-                            "GET"       -> ifValidRequest "getCategory" maybeCategoryIdRequestJSON
-                            "DELETE"    -> passSessionNameIfAdmin
-                                $ ifValidRequest "deleteCategory" maybeCategoryIdRequestJSON
-                            _ -> "Method is not implemented"
-                        "tags" -> case method of
-                            "POST"      -> passSessionNameIfAdmin $ ifValidRequest "createTag" maybeCreateTagRequestJSON
-                            "PATCH"     -> passSessionNameIfAdmin $ ifValidRequest "editTag" maybeEditTagRequestJSON
-                            "GET"       -> ifValidRequest "getTag" maybeTagIdRequestJSON
-                            "DELETE"    -> passSessionNameIfAdmin $ ifValidRequest "deleteTag" maybeTagIdRequestJSON
-                            _ -> "Method is not implemented"
-                        "comments" -> case method of
-                            "POST"      -> passIfHasUserId
-                                $ ifValidRequest "createComment" maybeCreateCommentRequestJSON
-                            "GET"       -> ifValidRequest "getArticleComments" maybeArticleCommentsRequestJSON
-                            "DELETE"    -> passIfHasUserId
-                                $ ifValidRequest "deleteComment" maybeCommentIdRequestJSON
-                            _ -> "Method is not implemented"
-                        "articles" -> case tail pathTextChunks of
-                            [] -> passIfHasAuthorId $ case method of
-                                "POST" -> if isJust maybeArticleDraftRequestJSON
-                                    then "createArticleDraft"
-                                    else ifValidRequest "publishArticleDraft" maybeArticleDraftIdRequestJSON
-                                "PATCH" -> ifValidRequest "editArticleDraft" maybeArticleDraftEditRequestJSON
-                                "GET" -> ifValidRequest "getArticleDraft" maybeArticleDraftIdRequestJSON
-                                "DELETE" -> ifValidRequest "deleteArticleDraft" maybeArticleDraftIdRequestJSON
-                                _ -> "Method is not implemented"
-                            ["category"] -> case method of
-                                "GET" -> ifValidRequest "getArticlesByCategoryId" maybeArticlesByCategoryIdRequestJSON
-                                _ -> "Method is not implemented"
-                            ["tag"] -> case method of
-                                "GET" -> ifValidRequest "getArticlesByTagId" maybeTagIdRequestWithOffsetJSON
-                                _ -> "Method is not implemented"
-                            ["tags__any"] -> case method of
-                                "GET" -> ifValidRequest "getArticlesByAnyTagId" maybeArticlesByTagIdListRequest
-                                _ -> "Method is not implemented"
-                            ["tags__all"] -> case method of
-                                "GET" -> ifValidRequest "getArticlesByAllTagId" maybeArticlesByTagIdListRequest
-                                _ -> "Method is not implemented"
-                            ["in__title"] -> case method of
-                                "GET" -> ifValidRequest "getArticlesByTitlePart" maybeArticlesByTitlePartRequest
-                                _ -> "Method is not implemented"
-                            ["in__content"] -> case method of
-                                "GET" -> ifValidRequest "getArticlesByContentPart" maybeArticlesByContentPartRequest
-                                _ -> "Method is not implemented"
-                            ["in__author_name"] -> case method of
-                                "GET" -> ifValidRequest
-                                    "getArticlesByAuthorNamePart"
-                                    maybeArticlesByAuthorNamePartRequest
-                                _ -> "Method is not implemented"
-                            ["byPhotosNumber"] -> case method of
-                                "GET" -> ifValidRequest
-                                    "getArticlesSortedByPhotosNumber"
-                                    maybeOffsetRequest
-                                _ -> "Method is not implemented"
-                            ["byCreationDate"] -> case method of
-                                "GET" -> ifValidRequest
-                                    "getArticlesSortedByCreationDate"
-                                    maybeOffsetRequest
-                                _ -> "Method is not implemented"
-                            ["sortByAuthor"] -> case method of
-                                "GET" -> ifValidRequest
-                                    "getArticlesSortedByAuthor"
-                                    maybeOffsetRequest
-                                _ -> "Method is not implemented"
-                            ["sortByCategory"] -> case method of
-                                "GET" -> ifValidRequest
-                                    "getArticlesSortedByCategory"
-                                    maybeOffsetRequest
-                                _ -> "Method is not implemented"
-                            ["createdAt"] -> case method of
-                                "GET" -> ifValidRequest
-                                    "getArticlesFilteredByCreationDate"
-                                    maybeArticlesFilteredByCreationDate
-                                _ -> "Method is not implemented"
-                            ["createdBefore"] -> case method of
-                                "GET" -> ifValidRequest
-                                    "getArticlesCreatedBeforeDate"
-                                    maybeArticlesFilteredByCreationDate
-                                _ -> "Method is not implemented"
-                            ["createdAfter"] -> case method of
-                                "GET" -> ifValidRequest
-                                    "getArticlesCreatedAfterDate"
-                                    maybeArticlesFilteredByCreationDate
-                                _ -> "Method is not implemented"
-                            _ -> "No such endpoint"
-                        _ -> "No such endpoint")
-                    else "Endpoint needed")
+                            _ -> notImplemented
+                        --"authors" -> passSessionNameIfAdmin $ case method of
+                        --    "POST"      -> ifValidRequest "promoteUserToAuthor" maybePromoteUserToAuthorRequestJSON
+                        --    "PATCH"     -> ifValidRequest "editAuthor" maybeEditAuthorRequestJSON
+                        --    "GET"       -> ifValidRequest "getAuthor" maybeAuthorIdRequestJSON
+                        --    "DELETE"    -> ifValidRequest "deleteAuthorRole" maybeAuthorIdRequestJSON
+                        --    _ -> "Method is not implemented"
+                        --"categories" -> case method of
+                        --    "POST"      -> passSessionNameIfAdmin
+                        --        $ ifValidRequest "createCategory" maybeCreateCategoryRequestJSON
+                        --    "PATCH"     -> passSessionNameIfAdmin
+                        --        $ ifValidRequest "updateCategory" maybeUpdateCategoryRequestJSON
+                        --    "GET"       -> ifValidRequest "getCategory" maybeCategoryIdRequestJSON
+                        --    "DELETE"    -> passSessionNameIfAdmin
+                        --        $ ifValidRequest "deleteCategory" maybeCategoryIdRequestJSON
+                        --    _ -> "Method is not implemented"
+                        --"tags" -> case method of
+                        --    "POST"      -> passSessionNameIfAdmin $ ifValidRequest "createTag" maybeCreateTagRequestJSON
+                        --    "PATCH"     -> passSessionNameIfAdmin $ ifValidRequest "editTag" maybeEditTagRequestJSON
+                        --    "GET"       -> ifValidRequest "getTag" maybeTagIdRequestJSON
+                        --    "DELETE"    -> passSessionNameIfAdmin $ ifValidRequest "deleteTag" maybeTagIdRequestJSON
+                        --    _ -> "Method is not implemented"
+                        --"comments" -> case method of
+                        --    "POST"      -> passIfHasUserId
+                        --        $ ifValidRequest "createComment" maybeCreateCommentRequestJSON
+                        --    "GET"       -> ifValidRequest "getArticleComments" maybeArticleCommentsRequestJSON
+                        --    "DELETE"    -> passIfHasUserId
+                        --        $ ifValidRequest "deleteComment" maybeCommentIdRequestJSON
+                        --    _ -> "Method is not implemented"
+                        --"articles" -> case tail pathTextChunks of
+                        --    [] -> passIfHasAuthorId $ case method of
+                        --        "POST" -> if isJust maybeArticleDraftRequestJSON
+                        --            then "createArticleDraft"
+                        --            else ifValidRequest "publishArticleDraft" maybeArticleDraftIdRequestJSON
+                        --        "PATCH" -> ifValidRequest "editArticleDraft" maybeArticleDraftEditRequestJSON
+                        --        "GET" -> ifValidRequest "getArticleDraft" maybeArticleDraftIdRequestJSON
+                        --        "DELETE" -> ifValidRequest "deleteArticleDraft" maybeArticleDraftIdRequestJSON
+                        --        _ -> "Method is not implemented"
+                        --    ["category"] -> case method of
+                        --        "GET" -> ifValidRequest "getArticlesByCategoryId" maybeArticlesByCategoryIdRequestJSON
+                        --        _ -> "Method is not implemented"
+                        --    ["tag"] -> case method of
+                        --        "GET" -> ifValidRequest "getArticlesByTagId" maybeTagIdRequestWithOffsetJSON
+                        --        _ -> "Method is not implemented"
+                        --    ["tags__any"] -> case method of
+                        --        "GET" -> ifValidRequest "getArticlesByAnyTagId" maybeArticlesByTagIdListRequest
+                        --        _ -> "Method is not implemented"
+                        --    ["tags__all"] -> case method of
+                        --        "GET" -> ifValidRequest "getArticlesByAllTagId" maybeArticlesByTagIdListRequest
+                        --        _ -> "Method is not implemented"
+                        --    ["in__title"] -> case method of
+                        --        "GET" -> ifValidRequest "getArticlesByTitlePart" maybeArticlesByTitlePartRequest
+                        --        _ -> "Method is not implemented"
+                        --    ["in__content"] -> case method of
+                        --        "GET" -> ifValidRequest "getArticlesByContentPart" maybeArticlesByContentPartRequest
+                        --        _ -> "Method is not implemented"
+                        --    ["in__author_name"] -> case method of
+                        --        "GET" -> ifValidRequest
+                        --            "getArticlesByAuthorNamePart"
+                        --            maybeArticlesByAuthorNamePartRequest
+                        --        _ -> "Method is not implemented"
+                        --    ["byPhotosNumber"] -> case method of
+                        --        "GET" -> ifValidRequest
+                        --            "getArticlesSortedByPhotosNumber"
+                        --            maybeOffsetRequest
+                        --        _ -> "Method is not implemented"
+                        --    ["byCreationDate"] -> case method of
+                        --        "GET" -> ifValidRequest
+                        --            "getArticlesSortedByCreationDate"
+                        --            maybeOffsetRequest
+                        --        _ -> "Method is not implemented"
+                        --    ["sortByAuthor"] -> case method of
+                        --        "GET" -> ifValidRequest
+                        --            "getArticlesSortedByAuthor"
+                        --            maybeOffsetRequest
+                        --        _ -> "Method is not implemented"
+                        --    ["sortByCategory"] -> case method of
+                        --        "GET" -> ifValidRequest
+                        --            "getArticlesSortedByCategory"
+                        --            maybeOffsetRequest
+                        --        _ -> "Method is not implemented"
+                        --    ["createdAt"] -> case method of
+                        --        "GET" -> ifValidRequest
+                        --            "getArticlesFilteredByCreationDate"
+                        --            maybeArticlesFilteredByCreationDate
+                        --        _ -> "Method is not implemented"
+                        --    ["createdBefore"] -> case method of
+                        --        "GET" -> ifValidRequest
+                        --            "getArticlesCreatedBeforeDate"
+                        --            maybeArticlesFilteredByCreationDate
+                        --        _ -> "Method is not implemented"
+                        --    ["createdAfter"] -> case method of
+                        --        "GET" -> ifValidRequest
+                        --            "getArticlesCreatedAfterDate"
+                        --            maybeArticlesFilteredByCreationDate
+                        --        _ -> "Method is not implemented"
+                        --    _ -> "No such endpoint"
+                        _ -> noSuchEndpoint)
+                    else endpointNeeded)
 
             results <- let {
+                --connection = 
+                --    case HSS.getConnection of
+                --        Left connectionError -> pure (
+                --            Right . UTFLBS.fromString $ show connectionError,
+                --            Just . UTFLBS.fromString $ show connectionError
+                --            )
+                --        Right connection -> ;
                 runSession session = (session . fromJust $ decode requestBody);
                 sessionAuthorId = (read sessionAuthorIdString :: Int32);
                 sessionUserId = (read sessionUserIdString :: Int32);
                 sessionResults = case errorOrSessionName of
-                    "auth" -> runSession HSS.getCredentials
-                        >>= (\ (eitherSessionResult, errorForClient) ->
-                            (processCredentials eitherSessionResult
-                            >>= (\ processedCreds -> pure (processedCreds, errorForClient))
+                    Left error -> pure (Right $ UTFLBS.fromString error, Just $ UTFLBS.fromString error)
+                    Right sessionName -> case sessionName of
+                        "auth" -> runSession HSS.getCredentials
+                            >>= (\ (eitherSessionResult, errorForClient) ->
+                                (processCredentials eitherSessionResult
+                                >>= (\ processedCreds -> pure (processedCreds, errorForClient))
+                                )
                             )
-                        )
-                    "createUser" -> runSession HSS.createUser
-                    "getUser" -> HSS.getUser sessionUserId
-                    "deleteUser" -> runSession HSS.deleteUser
-                    "promoteUserToAuthor" -> runSession HSS.promoteUserToAuthor;
-                    "editAuthor" -> runSession HSS.editAuthor
-                    "getAuthor" -> runSession HSS.getAuthor
-                    "deleteAuthorRole" -> runSession HSS.deleteAuthorRole
-                    "createCategory" -> runSession HSS.createCategory
-                    "updateCategory" -> runSession HSS.updateCategory
-                    "getCategory" -> runSession HSS.getCategory
-                    "deleteCategory" -> runSession HSS.deleteCategory
-                    "createTag" -> runSession HSS.createTag
-                    "editTag" -> runSession HSS.editTag
-                    "getTag" -> runSession HSS.getTag
-                    "deleteTag" -> runSession HSS.deleteTag
-                    "createComment" -> runSession HSS.createComment sessionUserId
-                    "deleteComment" -> runSession HSS.deleteComment sessionUserId
-                    "getArticleComments" -> runSession HSS.getArticleComments
-                    "createArticleDraft" -> runSession HSS.createArticleDraft sessionAuthorId
-                    "editArticleDraft" -> runSession HSS.editArticleDraft sessionAuthorId
-                    "publishArticleDraft" -> runSession HSS.publishArticleDraft sessionAuthorId
-                    "getArticleDraft" -> runSession HSS.getArticleDraft sessionAuthorId
-                    "deleteArticleDraft" -> runSession HSS.deleteArticleDraft sessionAuthorId
-                    "getArticlesByCategoryId" -> runSession HSS.getArticlesByCategoryId
-                    "getArticlesByTagId" -> runSession HSS.getArticlesByTagId
-                    "getArticlesByAnyTagId" -> runSession HSS.getArticlesByAnyTagId
-                    "getArticlesByAllTagId" -> runSession HSS.getArticlesByAllTagId
-                    "getArticlesByTitlePart" -> runSession HSS.getArticlesByTitlePart
-                    "getArticlesByContentPart" -> runSession HSS.getArticlesByContentPart
-                    "getArticlesByAuthorNamePart" -> runSession HSS.getArticlesByAuthorNamePart
-                    "getArticlesSortedByPhotosNumber" -> runSession HSS.getArticlesSortedByPhotosNumber
-                    "getArticlesSortedByCreationDate" -> runSession HSS.getArticlesSortedByCreationDate
-                    "getArticlesSortedByAuthor" -> runSession HSS.getArticlesSortedByAuthor
-                    "getArticlesSortedByCategory" -> runSession HSS.getArticlesSortedByCategory
-                    "getArticlesFilteredByCreationDate" -> runSession HSS.getArticlesFilteredByCreationDate
-                    "getArticlesCreatedBeforeDate" -> runSession HSS.getArticlesCreatedBeforeDate
-                    "getArticlesCreatedAfterDate" -> runSession HSS.getArticlesCreatedAfterDate
-                    nonMatched -> pure (Right $ UTFLBS.fromString nonMatched, Just $ UTFLBS.fromString nonMatched);
+                        "createUser" -> runSession HSS.createUser;
+                        --"getUser" -> HSS.getUser sessionUserId
+                        --"deleteUser" -> runSession HSS.deleteUser
+                        --"promoteUserToAuthor" -> runSession HSS.promoteUserToAuthor;
+                        --"editAuthor" -> runSession HSS.editAuthor
+                        --"getAuthor" -> runSession HSS.getAuthor
+                        --"deleteAuthorRole" -> runSession HSS.deleteAuthorRole
+                        --"createCategory" -> runSession HSS.createCategory
+                        --"updateCategory" -> runSession HSS.updateCategory
+                        --"getCategory" -> runSession HSS.getCategory
+                        --"deleteCategory" -> runSession HSS.deleteCategory
+                        --"createTag" -> runSession HSS.createTag
+                        --"editTag" -> runSession HSS.editTag
+                        --"getTag" -> runSession HSS.getTag
+                        --"deleteTag" -> runSession HSS.deleteTag
+                        --"createComment" -> runSession HSS.createComment sessionUserId
+                        --"deleteComment" -> runSession HSS.deleteComment sessionUserId
+                        --"getArticleComments" -> runSession HSS.getArticleComments
+                        --"createArticleDraft" -> runSession HSS.createArticleDraft sessionAuthorId
+                        --"editArticleDraft" -> runSession HSS.editArticleDraft sessionAuthorId
+                        --"publishArticleDraft" -> runSession HSS.publishArticleDraft sessionAuthorId
+                        --"getArticleDraft" -> runSession HSS.getArticleDraft sessionAuthorId
+                        --"deleteArticleDraft" -> runSession HSS.deleteArticleDraft sessionAuthorId
+                        --"getArticlesByCategoryId" -> runSession HSS.getArticlesByCategoryId
+                        --"getArticlesByTagId" -> runSession HSS.getArticlesByTagId
+                        --"getArticlesByAnyTagId" -> runSession HSS.getArticlesByAnyTagId
+                        --"getArticlesByAllTagId" -> runSession HSS.getArticlesByAllTagId
+                        --"getArticlesByTitlePart" -> runSession HSS.getArticlesByTitlePart
+                        --"getArticlesByContentPart" -> runSession HSS.getArticlesByContentPart
+                        --"getArticlesByAuthorNamePart" -> runSession HSS.getArticlesByAuthorNamePart
+                        --"getArticlesSortedByPhotosNumber" -> runSession HSS.getArticlesSortedByPhotosNumber
+                        --"getArticlesSortedByCreationDate" -> runSession HSS.getArticlesSortedByCreationDate
+                        --"getArticlesSortedByAuthor" -> runSession HSS.getArticlesSortedByAuthor
+                        --"getArticlesSortedByCategory" -> runSession HSS.getArticlesSortedByCategory
+                        --"getArticlesFilteredByCreationDate" -> runSession HSS.getArticlesFilteredByCreationDate
+                        --"getArticlesCreatedBeforeDate" -> runSession HSS.getArticlesCreatedBeforeDate
+                        --"getArticlesCreatedAfterDate" -> runSession HSS.getArticlesCreatedAfterDate
                 } in sessionResults
 
             debugM "rest-news" (case fst results of
@@ -302,10 +316,10 @@ restAPI vaultKey clearSessionPartial request respond = let {
                     _ -> undefined)
             let {
                 httpStatus = (case errorOrSessionName of
-                    "Endpoint needed" -> H.status404
-                    "No such endpoint" -> H.status404
-                    "Wrong parameters/parameters values" -> H.status400
-                    "Method is not implemented" -> H.status501
+                    endpointNeeded -> H.status404
+                    noSuchEndpoint -> H.status404
+                    wrongParamsOrValues -> H.status400
+                    notImplemented -> H.status501
                     _ -> H.status200);
             } in respond $ responseLBS httpStatus [] processedResults)
 

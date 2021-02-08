@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings  #-}
 
 module HasqlSessions (
+    getConnection,
     createUser,
     deleteUser,
     getUser,
@@ -64,7 +65,7 @@ valueToUTFLBS :: Either Session.QueryError Value -> Either Session.QueryError By
 valueToUTFLBS = fmap encode
 
 connectionSettings :: Connection.Settings
-connectionSettings = Connection.settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
+connectionSettings = Connection.settings "localhost" 5431 "rest-news-user" "rest" "rest-news-db";
 
 getError :: Either Session.QueryError resultsType -> Maybe (String, Maybe String)
 {-
@@ -146,14 +147,8 @@ getError _ = Nothing
 --    Right connection <- Connection.acquire connectionSettings
 --    sessionResults <- Session.run (Session.statement params statement) connection
 
---getConnection :: IO (Either Connection.ConnectionError Connection.Connection)
---getConnection = --Connection.acquire connectionSettings
---    do
---    eitherConnection <- Connection.acquire connectionSettings
---    pure $ case eitherConnection of
---        Right connection -> connection
---        Left connectionError -> error $ show connectionError
---        --Left Connection.ConnectionError -> undefined
+getConnection :: IO (Either Connection.ConnectionError Connection.Connection)
+getConnection = Connection.acquire connectionSettings
 
 getErrorCode :: Either Session.QueryError resultsType -> Maybe String
 getErrorCode = fmap fst . getError
