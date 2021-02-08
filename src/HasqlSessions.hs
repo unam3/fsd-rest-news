@@ -59,16 +59,6 @@ import qualified HasqlStatements as HST
 -- https://hackage.haskell.org/package/hasql-1.4.4
 -- https://github.com/nikita-volkov/hasql-tutorial1
 
--- *Main RestNews> dbCall
--- Left (QueryError "INSERT INTO users VALUES (5, 'n', 's', '2010-12-12', FALSE)" [] (ResultError (UnexpectedResult "Unexpected result status: CommandOk")))
--- *Main RestNews> dbCall
--- Left (QueryError "INSERT INTO users VALUES (5, 'n', 's', '2010-12-12', FALSE)" [] (ResultError (ServerError "23505" "duplicate key value violates unique constraint \"users_pkey\"" (Just "Key (user_id)=(5) already exists.") Nothing)))
-
---int32ToUTFLBS $ Session.run (Session.statement params HST.createUser) connection
---int32ToUTFLBS = fmap $ fmap (UTFLBS.fromString . show)
-
--- Text
---(fmap (fmap (UTFLBS.fromString . unpack))) $ Session.run (Session.statement params HST.createUser) connection
 
 valueToUTFLBS :: Either Session.QueryError Value -> Either Session.QueryError ByteString
 valueToUTFLBS = fmap encode
@@ -279,6 +269,7 @@ updateCategory updateCategoryRequest = let {
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
+            Just "23503" -> Just "{\"error\": \"parent category does not exist\"}"
             Just "0" -> Just "{\"error\": \"no such category\"}"
             _ -> Nothing
         )

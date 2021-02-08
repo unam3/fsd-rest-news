@@ -360,6 +360,10 @@ spec = do
             $ updateCategory "{\"category_id\": 123456, \"name\": \"pluh_pattched\", \"parent_id\": null}" session
             >>= (`shouldBe` "{\"error\": \"no such category\"}")
 
+        it "returns error if non-existent parent category"
+            $ updateCategory (categoryIdJSONSection ++ ", \"name\": \"plusdh\", \"parent_id\": 12345}") session
+            >>= (`shouldBe` "{\"error\": \"parent category does not exist\"}")
+
 
     describe "deleteCategory" $ do
         it "deletes category"
