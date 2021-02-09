@@ -65,7 +65,7 @@ valueToUTFLBS :: Either Session.QueryError Value -> Either Session.QueryError By
 valueToUTFLBS = fmap encode
 
 connectionSettings :: Settings
-connectionSettings = settings "localhost" 5431 "rest-news-user" "rest" "rest-news-db";
+connectionSettings = settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
 
 getError :: Either Session.QueryError resultsType -> Maybe (String, Maybe String)
 {-
@@ -526,14 +526,13 @@ getArticlesByCategoryId connection articlesByCategoryIdRequest = let {
         Nothing
         )
 
-getArticlesByTagId :: TagIdRequestWithOffset -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-getArticlesByTagId tagIdRequestWithOffset = let {
+getArticlesByTagId :: Connection -> TagIdRequestWithOffset -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getArticlesByTagId connection tagIdRequestWithOffset = let {
     params = (
         tag_id (tagIdRequestWithOffset :: TagIdRequestWithOffset),
         offset (tagIdRequestWithOffset :: TagIdRequestWithOffset)
         );
 } in do
-    Right connection <- acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesByTagId) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -541,151 +540,142 @@ getArticlesByTagId tagIdRequestWithOffset = let {
         )
 
 
-getArticlesByAnyTagId :: ArticlesByTagIdListRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-getArticlesByAnyTagId tagIdsRequest = let {
+getArticlesByAnyTagId :: Connection -> ArticlesByTagIdListRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getArticlesByAnyTagId connection tagIdsRequest = let {
     params = (
         tags_ids (tagIdsRequest :: ArticlesByTagIdListRequest),
         offset (tagIdsRequest :: ArticlesByTagIdListRequest)
         );
 } in do
-    Right connection <- acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesByAnyTagId) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
         )
 
-getArticlesByAllTagId :: ArticlesByTagIdListRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-getArticlesByAllTagId tagIdsRequest = let {
+getArticlesByAllTagId :: Connection -> ArticlesByTagIdListRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getArticlesByAllTagId connection tagIdsRequest = let {
     params = (
         tags_ids (tagIdsRequest :: ArticlesByTagIdListRequest),
         offset (tagIdsRequest :: ArticlesByTagIdListRequest)
         );
 } in do
-    Right connection <- acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesByAllTagId) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
         )
 
-getArticlesByTitlePart :: ArticlesByTitlePartRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-getArticlesByTitlePart substringRequest = let {
+getArticlesByTitlePart :: Connection -> ArticlesByTitlePartRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getArticlesByTitlePart connection substringRequest = let {
     params = (
         title_substring (substringRequest :: ArticlesByTitlePartRequest),
         offset (substringRequest :: ArticlesByTitlePartRequest)
         );
 } in do
-    Right connection <- acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesByTitlePart) connection
-    --Data.Text.IO.putStrLn . pack $ show sessionResults
     pure (
         valueToUTFLBS sessionResults,
         Nothing
         )
 
-getArticlesByContentPart :: ArticlesByContentPartRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-getArticlesByContentPart substringRequest = let {
+getArticlesByContentPart :: Connection -> ArticlesByContentPartRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getArticlesByContentPart connection substringRequest = let {
     params = (
         content_substring (substringRequest :: ArticlesByContentPartRequest),
         offset (substringRequest :: ArticlesByContentPartRequest)
         );
 } in do
-    Right connection <- acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesByContentPart) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
         )
 
-getArticlesByAuthorNamePart :: ArticlesByAuthorNamePartRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-getArticlesByAuthorNamePart substringRequest = let {
+getArticlesByAuthorNamePart :: Connection -> ArticlesByAuthorNamePartRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getArticlesByAuthorNamePart connection substringRequest = let {
     params = (
         author_name_substring (substringRequest :: ArticlesByAuthorNamePartRequest),
         offset (substringRequest :: ArticlesByAuthorNamePartRequest)
         );
 } in do
-    Right connection <- acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesByAuthorNamePart) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
         )
 
-getArticlesSortedByPhotosNumber :: OffsetRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-getArticlesSortedByPhotosNumber request = let {
+getArticlesSortedByPhotosNumber :: Connection -> OffsetRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getArticlesSortedByPhotosNumber connection request = let {
     params = (
         offset (request :: OffsetRequest)
         );
 } in do
-    Right connection <- acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesSortedByPhotosNumber) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
         )
 
-getArticlesSortedByCreationDate :: OffsetRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-getArticlesSortedByCreationDate request = let {
+getArticlesSortedByCreationDate :: Connection -> OffsetRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getArticlesSortedByCreationDate connection request = let {
     params = (
         offset (request :: OffsetRequest)
         );
 } in do
-    Right connection <- acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesSortedByCreationDate) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
         )
 
-getArticlesSortedByAuthor :: OffsetRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-getArticlesSortedByAuthor request = let {
+getArticlesSortedByAuthor :: Connection -> OffsetRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getArticlesSortedByAuthor connection request = let {
     params = (
         offset (request :: OffsetRequest)
         );
 } in do
-    Right connection <- acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesSortedByAuthor) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
         )
 
-getArticlesSortedByCategory :: OffsetRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-getArticlesSortedByCategory request = let {
+getArticlesSortedByCategory :: Connection -> OffsetRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getArticlesSortedByCategory connection request = let {
     params = (
         offset (request :: OffsetRequest)
         );
 } in do
-    Right connection <- acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesSortedByCategory) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
         )
 
-getArticlesFilteredBy :: Statement (Text, Maybe Int32) Value -> ArticlesByCreationDateRequest
+getArticlesFilteredBy :: Statement (Text, Maybe Int32) Value -> Connection -> ArticlesByCreationDateRequest
     -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-getArticlesFilteredBy filterF articlesByCreationDateRequest = let {
+getArticlesFilteredBy statement connection articlesByCreationDateRequest = let {
     params = (
         pack . showGregorian $ day (articlesByCreationDateRequest :: ArticlesByCreationDateRequest),
         offset (articlesByCreationDateRequest :: ArticlesByCreationDateRequest)
         );
 } in do
-    Right connection <- acquire connectionSettings
-    sessionResults <- Session.run (Session.statement params filterF) connection
+    sessionResults <- Session.run (Session.statement params statement) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
         )
 
-getArticlesFilteredByCreationDate :: ArticlesByCreationDateRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getArticlesFilteredByCreationDate :: Connection -> ArticlesByCreationDateRequest
+    -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 getArticlesFilteredByCreationDate = getArticlesFilteredBy HST.getArticlesFilteredByCreationDate
 
-getArticlesCreatedBeforeDate :: ArticlesByCreationDateRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getArticlesCreatedBeforeDate :: Connection -> ArticlesByCreationDateRequest
+    -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 getArticlesCreatedBeforeDate = getArticlesFilteredBy HST.getArticlesCreatedBeforeDate
 
-getArticlesCreatedAfterDate :: ArticlesByCreationDateRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getArticlesCreatedAfterDate :: Connection -> ArticlesByCreationDateRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
 getArticlesCreatedAfterDate = getArticlesFilteredBy HST.getArticlesCreatedAfterDate
 
 
