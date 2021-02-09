@@ -23,15 +23,27 @@ import Network.Wai.Application.Static
 import Network.Wai.Handler.Warp (Port, run)
 import Network.Wai.Middleware.Rewrite (PathsAndQueries, rewritePureWithQueries)
 import Network.Wai.Session (withSession, Session)
+import Prelude hiding (error)
 import Network.Wai.Session.PostgreSQL (clearSession, dbStore, defaultSettings, fromSimpleConnection, purger)
 import System.Log.Logger (Priority (DEBUG, ERROR), debugM, setLevel, traplogging, updateGlobalLogger)
 import Web.Cookie (defaultSetCookie)
 
-wrongParamsOrValues :: Either String request
+wrongParamsOrValues :: Either String String
 wrongParamsOrValues = Left "Wrong parameters/parameters values"
 
-ifValidRequest :: String -> Maybe request -> Either String request
-ifValidRequest sessionName = maybe wrongParamsOrValues Right
+ifValidRequest :: Maybe request -> String -> Either String String
+ifValidRequest request sessionName = maybe wrongParamsOrValues (const $ Right sessionName) request
+
+noSuchEndpointS :: String
+noSuchEndpointS = "No such endpoint"
+
+noSuchEndpoint :: Either String String
+noSuchEndpoint = Left "No such endpoint"
+
+passSessionNameIf :: String -> Bool -> Either String String
+passSessionNameIf sessionName condition = if condition
+    then Right sessionName
+    else noSuchEndpoint;
 
 getIdString :: Maybe String -> String
 getIdString = maybe "0" id
@@ -51,7 +63,6 @@ dbconnect = let {
 restAPI :: Vault.Key (Session IO String String) -> (Request -> IO ()) -> Application;
 restAPI vaultKey clearSessionPartial request respond = let {
         notImplemented = Left "Method is not implemented";
-        noSuchEndpoint = Left "No such endpoint";
         endpointNeeded = Left "Endpoint needed";
         pathTextChunks = pathInfo request;
         isRequestPathNotEmpty = (not $ null pathTextChunks);
@@ -100,13 +111,9 @@ restAPI vaultKey clearSessionPartial request respond = let {
                 isAdmin _ = False;
                 passSessionNameIfAdmin sessionName = if isAdmin maybeIsAdmin
                     then sessionName
-                    else "No such endpoint";
-                passIfHasUserId sessionName = if sessionUserIdString /= "0"
-                    then sessionName
-                    else "No such endpoint";
-                passIfHasAuthorId sessionName = if sessionAuthorIdString /= "0"
-                    then sessionName
-                    else "No such endpoint";
+                    else noSuchEndpointS;
+                passSessionNameIfHasUserId sessionName = passSessionNameIf sessionName $ sessionUserIdString /= "0";
+                passSessionNameIfHasAuthorId sessionName = passSessionNameIf sessionName $ sessionAuthorIdString /= "0";
                 maybeAuthRequestJSON = decode requestBody :: Maybe AuthRequest;
                 maybeCreateUserRequestJSON = decode requestBody :: Maybe CreateUserRequest;
                 maybeUserIdRequestJSON = decode requestBody :: Maybe UserIdRequest;
@@ -137,110 +144,121 @@ restAPI vaultKey clearSessionPartial request respond = let {
                 if isRequestPathNotEmpty
                     then (case pathHeadChunk of
                         "auth" -> case method of
-                            "POST"      -> ifValidRequest "auth" maybeAuthRequestJSON
+                            "POST"      -> ifValidRequest maybeAuthRequestJSON "auth"
                             _ -> notImplemented
                         "users" -> case method of
-                            "POST"      -> ifValidRequest "createUser" maybeCreateUserRequestJSON
-                            "GET"       -> passIfHasUserId "getUser"
-                            "DELETE"    -> passSessionNameIfAdmin   
-                                $ ifValidRequest "deleteUser" maybeUserIdRequestJSON
+                            "POST"      -> ifValidRequest maybeCreateUserRequestJSON "createUser"
+                            "GET"       -> passSessionNameIfHasUserId "getUser"
+                            "DELETE"    -> ifValidRequest maybeUserIdRequestJSON
+                                $ passSessionNameIfAdmin "deleteUser" 
                             _ -> notImplemented
-                        --"authors" -> passSessionNameIfAdmin $ case method of
-                        --    "POST"      -> ifValidRequest "promoteUserToAuthor" maybePromoteUserToAuthorRequestJSON
-                        --    "PATCH"     -> ifValidRequest "editAuthor" maybeEditAuthorRequestJSON
-                        --    "GET"       -> ifValidRequest "getAuthor" maybeAuthorIdRequestJSON
-                        --    "DELETE"    -> ifValidRequest "deleteAuthorRole" maybeAuthorIdRequestJSON
-                        --    _ -> "Method is not implemented"
-                        --"categories" -> case method of
-                        --    "POST"      -> passSessionNameIfAdmin
-                        --        $ ifValidRequest "createCategory" maybeCreateCategoryRequestJSON
-                        --    "PATCH"     -> passSessionNameIfAdmin
-                        --        $ ifValidRequest "updateCategory" maybeUpdateCategoryRequestJSON
-                        --    "GET"       -> ifValidRequest "getCategory" maybeCategoryIdRequestJSON
-                        --    "DELETE"    -> passSessionNameIfAdmin
-                        --        $ ifValidRequest "deleteCategory" maybeCategoryIdRequestJSON
-                        --    _ -> "Method is not implemented"
-                        --"tags" -> case method of
-                        --    "POST"      -> passSessionNameIfAdmin $ ifValidRequest "createTag" maybeCreateTagRequestJSON
-                        --    "PATCH"     -> passSessionNameIfAdmin $ ifValidRequest "editTag" maybeEditTagRequestJSON
-                        --    "GET"       -> ifValidRequest "getTag" maybeTagIdRequestJSON
-                        --    "DELETE"    -> passSessionNameIfAdmin $ ifValidRequest "deleteTag" maybeTagIdRequestJSON
-                        --    _ -> "Method is not implemented"
-                        --"comments" -> case method of
-                        --    "POST"      -> passIfHasUserId
-                        --        $ ifValidRequest "createComment" maybeCreateCommentRequestJSON
-                        --    "GET"       -> ifValidRequest "getArticleComments" maybeArticleCommentsRequestJSON
-                        --    "DELETE"    -> passIfHasUserId
-                        --        $ ifValidRequest "deleteComment" maybeCommentIdRequestJSON
-                        --    _ -> "Method is not implemented"
-                        --"articles" -> case tail pathTextChunks of
-                        --    [] -> passIfHasAuthorId $ case method of
-                        --        "POST" -> if isJust maybeArticleDraftRequestJSON
-                        --            then "createArticleDraft"
-                        --            else ifValidRequest "publishArticleDraft" maybeArticleDraftIdRequestJSON
-                        --        "PATCH" -> ifValidRequest "editArticleDraft" maybeArticleDraftEditRequestJSON
-                        --        "GET" -> ifValidRequest "getArticleDraft" maybeArticleDraftIdRequestJSON
-                        --        "DELETE" -> ifValidRequest "deleteArticleDraft" maybeArticleDraftIdRequestJSON
-                        --        _ -> "Method is not implemented"
-                        --    ["category"] -> case method of
-                        --        "GET" -> ifValidRequest "getArticlesByCategoryId" maybeArticlesByCategoryIdRequestJSON
-                        --        _ -> "Method is not implemented"
-                        --    ["tag"] -> case method of
-                        --        "GET" -> ifValidRequest "getArticlesByTagId" maybeTagIdRequestWithOffsetJSON
-                        --        _ -> "Method is not implemented"
-                        --    ["tags__any"] -> case method of
-                        --        "GET" -> ifValidRequest "getArticlesByAnyTagId" maybeArticlesByTagIdListRequest
-                        --        _ -> "Method is not implemented"
-                        --    ["tags__all"] -> case method of
-                        --        "GET" -> ifValidRequest "getArticlesByAllTagId" maybeArticlesByTagIdListRequest
-                        --        _ -> "Method is not implemented"
-                        --    ["in__title"] -> case method of
-                        --        "GET" -> ifValidRequest "getArticlesByTitlePart" maybeArticlesByTitlePartRequest
-                        --        _ -> "Method is not implemented"
-                        --    ["in__content"] -> case method of
-                        --        "GET" -> ifValidRequest "getArticlesByContentPart" maybeArticlesByContentPartRequest
-                        --        _ -> "Method is not implemented"
-                        --    ["in__author_name"] -> case method of
-                        --        "GET" -> ifValidRequest
-                        --            "getArticlesByAuthorNamePart"
-                        --            maybeArticlesByAuthorNamePartRequest
-                        --        _ -> "Method is not implemented"
-                        --    ["byPhotosNumber"] -> case method of
-                        --        "GET" -> ifValidRequest
-                        --            "getArticlesSortedByPhotosNumber"
-                        --            maybeOffsetRequest
-                        --        _ -> "Method is not implemented"
-                        --    ["byCreationDate"] -> case method of
-                        --        "GET" -> ifValidRequest
-                        --            "getArticlesSortedByCreationDate"
-                        --            maybeOffsetRequest
-                        --        _ -> "Method is not implemented"
-                        --    ["sortByAuthor"] -> case method of
-                        --        "GET" -> ifValidRequest
-                        --            "getArticlesSortedByAuthor"
-                        --            maybeOffsetRequest
-                        --        _ -> "Method is not implemented"
-                        --    ["sortByCategory"] -> case method of
-                        --        "GET" -> ifValidRequest
-                        --            "getArticlesSortedByCategory"
-                        --            maybeOffsetRequest
-                        --        _ -> "Method is not implemented"
-                        --    ["createdAt"] -> case method of
-                        --        "GET" -> ifValidRequest
-                        --            "getArticlesFilteredByCreationDate"
-                        --            maybeArticlesFilteredByCreationDate
-                        --        _ -> "Method is not implemented"
-                        --    ["createdBefore"] -> case method of
-                        --        "GET" -> ifValidRequest
-                        --            "getArticlesCreatedBeforeDate"
-                        --            maybeArticlesFilteredByCreationDate
-                        --        _ -> "Method is not implemented"
-                        --    ["createdAfter"] -> case method of
-                        --        "GET" -> ifValidRequest
-                        --            "getArticlesCreatedAfterDate"
-                        --            maybeArticlesFilteredByCreationDate
-                        --        _ -> "Method is not implemented"
-                        --    _ -> "No such endpoint"
+                        "authors" -> case method of
+                            "POST"      -> ifValidRequest maybePromoteUserToAuthorRequestJSON
+                                $ passSessionNameIfAdmin "promoteUserToAuthor"
+                            "PATCH"     -> ifValidRequest maybeEditAuthorRequestJSON
+                                $ passSessionNameIfAdmin "editAuthor"
+                            "GET"       -> ifValidRequest maybeAuthorIdRequestJSON
+                                $ passSessionNameIfAdmin "getAuthor" 
+                            "DELETE"    -> ifValidRequest maybeAuthorIdRequestJSON
+                                $ passSessionNameIfAdmin "deleteAuthorRole" 
+                            _ -> notImplemented
+                        "categories" -> case method of
+                            "POST"      -> ifValidRequest maybeCreateCategoryRequestJSON
+                                $ passSessionNameIfAdmin "createCategory"
+                            "PATCH"     -> ifValidRequest maybeUpdateCategoryRequestJSON
+                                $ passSessionNameIfAdmin "updateCategory"
+                            "GET"       -> ifValidRequest maybeCategoryIdRequestJSON "getCategory"
+                            "DELETE"    -> ifValidRequest maybeCategoryIdRequestJSON
+                                $ passSessionNameIfAdmin "deleteCategory"
+                            _ -> notImplemented
+                        "tags" -> case method of
+                            "POST"      -> ifValidRequest maybeCreateTagRequestJSON
+                                $ passSessionNameIfAdmin "createTag"
+                            "PATCH"     -> ifValidRequest maybeEditTagRequestJSON
+                                $ passSessionNameIfAdmin "editTag"
+                            "GET"       -> ifValidRequest maybeTagIdRequestJSON "getTag"
+                            "DELETE"    -> ifValidRequest maybeTagIdRequestJSON
+                                $ passSessionNameIfAdmin "deleteTag"
+                            _ -> notImplemented
+                        "comments" -> case method of
+                            "POST"      -> ifValidRequest maybeCreateCommentRequestJSON
+                                . either id id $ passSessionNameIfHasUserId "createComment"
+                            "GET"       -> ifValidRequest maybeArticleCommentsRequestJSON "getArticleComments"
+                            "DELETE"    -> ifValidRequest maybeCommentIdRequestJSON
+                                . either id id $ passSessionNameIfHasUserId "deleteComment" 
+                            _ -> notImplemented
+                        "articles" -> case tail pathTextChunks of
+                            [] -> case method of
+                                "POST" -> if isJust maybeArticleDraftRequestJSON
+                                    then passSessionNameIfHasAuthorId "createArticleDraft"
+                                    else ifValidRequest maybeArticleDraftIdRequestJSON
+                                        . either id id $ passSessionNameIfHasAuthorId "publishArticleDraft"
+                                "PATCH" -> ifValidRequest maybeArticleDraftEditRequestJSON
+                                    . either id id $ passSessionNameIfHasAuthorId "editArticleDraft"
+                                "GET" -> ifValidRequest maybeArticleDraftIdRequestJSON
+                                    . either id id $ passSessionNameIfHasAuthorId "getArticleDraft"
+                                "DELETE" -> ifValidRequest maybeArticleDraftIdRequestJSON
+                                    . either id id $ passSessionNameIfHasAuthorId "deleteArticleDraft"
+                                _ -> notImplemented
+                            ["category"] -> case method of
+                                "GET" -> ifValidRequest maybeArticlesByCategoryIdRequestJSON "getArticlesByCategoryId" 
+                                _ -> notImplemented
+                            ["tag"] -> case method of
+                                "GET" -> ifValidRequest maybeTagIdRequestWithOffsetJSON "getArticlesByTagId"
+                                _ -> notImplemented
+                            ["tags__any"] -> case method of
+                                "GET" -> ifValidRequest maybeArticlesByTagIdListRequest "getArticlesByAnyTagId"
+                                _ -> notImplemented
+                            ["tags__all"] -> case method of
+                                "GET" -> ifValidRequest maybeArticlesByTagIdListRequest "getArticlesByAllTagId"
+                                _ -> notImplemented
+                            ["in__title"] -> case method of
+                                "GET" -> ifValidRequest maybeArticlesByTitlePartRequest "getArticlesByTitlePart"
+                                _ -> notImplemented
+                            ["in__content"] -> case method of
+                                "GET" -> ifValidRequest maybeArticlesByContentPartRequest "getArticlesByContentPart"
+                                _ -> notImplemented
+                            ["in__author_name"] -> case method of
+                                "GET" -> ifValidRequest
+                                    maybeArticlesByAuthorNamePartRequest
+                                    "getArticlesByAuthorNamePart"
+                                _ -> notImplemented
+                            ["byPhotosNumber"] -> case method of
+                                "GET" -> ifValidRequest
+                                    maybeOffsetRequest
+                                    "getArticlesSortedByPhotosNumber"
+                                _ -> notImplemented
+                            ["byCreationDate"] -> case method of
+                                "GET" -> ifValidRequest
+                                    maybeOffsetRequest
+                                    "getArticlesSortedByCreationDate"
+                                _ -> notImplemented
+                            ["sortByAuthor"] -> case method of
+                                "GET" -> ifValidRequest
+                                    maybeOffsetRequest
+                                    "getArticlesSortedByAuthor"
+                                _ -> notImplemented
+                            ["sortByCategory"] -> case method of
+                                "GET" -> ifValidRequest
+                                    maybeOffsetRequest
+                                    "getArticlesSortedByCategory"
+                                _ -> notImplemented
+                            ["createdAt"] -> case method of
+                                "GET" -> ifValidRequest
+                                    maybeArticlesFilteredByCreationDate
+                                    "getArticlesFilteredByCreationDate"
+                                _ -> notImplemented
+                            ["createdBefore"] -> case method of
+                                "GET" -> ifValidRequest
+                                    maybeArticlesFilteredByCreationDate
+                                    "getArticlesCreatedBeforeDate"
+                                _ -> notImplemented
+                            ["createdAfter"] -> case method of
+                                "GET" -> ifValidRequest
+                                    maybeArticlesFilteredByCreationDate
+                                    "getArticlesCreatedAfterDate"
+                                _ -> notImplemented
+                            _ -> noSuchEndpoint
                         _ -> noSuchEndpoint)
                     else endpointNeeded)
 
@@ -265,42 +283,43 @@ restAPI vaultKey clearSessionPartial request respond = let {
                                 )
                             )
                         "createUser" -> runSession HSS.createUser;
-                        --"getUser" -> HSS.getUser sessionUserId
-                        --"deleteUser" -> runSession HSS.deleteUser
-                        --"promoteUserToAuthor" -> runSession HSS.promoteUserToAuthor;
-                        --"editAuthor" -> runSession HSS.editAuthor
-                        --"getAuthor" -> runSession HSS.getAuthor
-                        --"deleteAuthorRole" -> runSession HSS.deleteAuthorRole
-                        --"createCategory" -> runSession HSS.createCategory
-                        --"updateCategory" -> runSession HSS.updateCategory
-                        --"getCategory" -> runSession HSS.getCategory
-                        --"deleteCategory" -> runSession HSS.deleteCategory
-                        --"createTag" -> runSession HSS.createTag
-                        --"editTag" -> runSession HSS.editTag
-                        --"getTag" -> runSession HSS.getTag
-                        --"deleteTag" -> runSession HSS.deleteTag
-                        --"createComment" -> runSession HSS.createComment sessionUserId
-                        --"deleteComment" -> runSession HSS.deleteComment sessionUserId
-                        --"getArticleComments" -> runSession HSS.getArticleComments
-                        --"createArticleDraft" -> runSession HSS.createArticleDraft sessionAuthorId
-                        --"editArticleDraft" -> runSession HSS.editArticleDraft sessionAuthorId
-                        --"publishArticleDraft" -> runSession HSS.publishArticleDraft sessionAuthorId
-                        --"getArticleDraft" -> runSession HSS.getArticleDraft sessionAuthorId
-                        --"deleteArticleDraft" -> runSession HSS.deleteArticleDraft sessionAuthorId
-                        --"getArticlesByCategoryId" -> runSession HSS.getArticlesByCategoryId
-                        --"getArticlesByTagId" -> runSession HSS.getArticlesByTagId
-                        --"getArticlesByAnyTagId" -> runSession HSS.getArticlesByAnyTagId
-                        --"getArticlesByAllTagId" -> runSession HSS.getArticlesByAllTagId
-                        --"getArticlesByTitlePart" -> runSession HSS.getArticlesByTitlePart
-                        --"getArticlesByContentPart" -> runSession HSS.getArticlesByContentPart
-                        --"getArticlesByAuthorNamePart" -> runSession HSS.getArticlesByAuthorNamePart
-                        --"getArticlesSortedByPhotosNumber" -> runSession HSS.getArticlesSortedByPhotosNumber
-                        --"getArticlesSortedByCreationDate" -> runSession HSS.getArticlesSortedByCreationDate
-                        --"getArticlesSortedByAuthor" -> runSession HSS.getArticlesSortedByAuthor
-                        --"getArticlesSortedByCategory" -> runSession HSS.getArticlesSortedByCategory
-                        --"getArticlesFilteredByCreationDate" -> runSession HSS.getArticlesFilteredByCreationDate
-                        --"getArticlesCreatedBeforeDate" -> runSession HSS.getArticlesCreatedBeforeDate
-                        --"getArticlesCreatedAfterDate" -> runSession HSS.getArticlesCreatedAfterDate
+                        "getUser" -> HSS.getUser sessionUserId
+                        "deleteUser" -> runSession HSS.deleteUser
+                        "promoteUserToAuthor" -> runSession HSS.promoteUserToAuthor;
+                        "editAuthor" -> runSession HSS.editAuthor
+                        "getAuthor" -> runSession HSS.getAuthor
+                        "deleteAuthorRole" -> runSession HSS.deleteAuthorRole
+                        "createCategory" -> runSession HSS.createCategory
+                        "updateCategory" -> runSession HSS.updateCategory
+                        "getCategory" -> runSession HSS.getCategory
+                        "deleteCategory" -> runSession HSS.deleteCategory
+                        "createTag" -> runSession HSS.createTag
+                        "editTag" -> runSession HSS.editTag
+                        "getTag" -> runSession HSS.getTag
+                        "deleteTag" -> runSession HSS.deleteTag
+                        "createComment" -> runSession HSS.createComment sessionUserId
+                        "deleteComment" -> runSession HSS.deleteComment sessionUserId
+                        "getArticleComments" -> runSession HSS.getArticleComments
+                        "createArticleDraft" -> runSession HSS.createArticleDraft sessionAuthorId
+                        "editArticleDraft" -> runSession HSS.editArticleDraft sessionAuthorId
+                        "publishArticleDraft" -> runSession HSS.publishArticleDraft sessionAuthorId
+                        "getArticleDraft" -> runSession HSS.getArticleDraft sessionAuthorId
+                        "deleteArticleDraft" -> runSession HSS.deleteArticleDraft sessionAuthorId
+                        "getArticlesByCategoryId" -> runSession HSS.getArticlesByCategoryId
+                        "getArticlesByTagId" -> runSession HSS.getArticlesByTagId
+                        "getArticlesByAnyTagId" -> runSession HSS.getArticlesByAnyTagId
+                        "getArticlesByAllTagId" -> runSession HSS.getArticlesByAllTagId
+                        "getArticlesByTitlePart" -> runSession HSS.getArticlesByTitlePart
+                        "getArticlesByContentPart" -> runSession HSS.getArticlesByContentPart
+                        "getArticlesByAuthorNamePart" -> runSession HSS.getArticlesByAuthorNamePart
+                        "getArticlesSortedByPhotosNumber" -> runSession HSS.getArticlesSortedByPhotosNumber
+                        "getArticlesSortedByCreationDate" -> runSession HSS.getArticlesSortedByCreationDate
+                        "getArticlesSortedByAuthor" -> runSession HSS.getArticlesSortedByAuthor
+                        "getArticlesSortedByCategory" -> runSession HSS.getArticlesSortedByCategory
+                        "getArticlesFilteredByCreationDate" -> runSession HSS.getArticlesFilteredByCreationDate
+                        "getArticlesCreatedBeforeDate" -> runSession HSS.getArticlesCreatedBeforeDate
+                        "getArticlesCreatedAfterDate" -> runSession HSS.getArticlesCreatedAfterDate
+                        nonMatched -> pure (Right $ UTFLBS.fromString nonMatched, Just $ UTFLBS.fromString nonMatched);
                 } in sessionResults
 
             debugM "rest-news" (case fst results of
@@ -315,12 +334,11 @@ restAPI vaultKey clearSessionPartial request respond = let {
                     -- there must not be any QueryError!
                     _ -> undefined)
             let {
-                httpStatus = (case errorOrSessionName of
-                    endpointNeeded -> H.status404
-                    noSuchEndpoint -> H.status404
-                    wrongParamsOrValues -> H.status400
-                    notImplemented -> H.status501
-                    _ -> H.status200);
+                httpStatus
+                    | errorOrSessionName == endpointNeeded || errorOrSessionName == noSuchEndpoint = H.status404
+                    | errorOrSessionName == wrongParamsOrValues = H.status400
+                    | errorOrSessionName == notImplemented = H.status501
+                    | otherwise = H.status200;
             } in respond $ responseLBS httpStatus [] processedResults)
 
 isRequestToStatic :: Request -> Bool
