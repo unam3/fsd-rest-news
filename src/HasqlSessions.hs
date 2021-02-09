@@ -50,7 +50,7 @@ import Data.Int (Int32)
 import Data.Text (Text, pack)
 --import Data.Text.IO (putStrLn)
 import Data.Time.Calendar (showGregorian)
-import qualified Hasql.Connection as Connection
+import Hasql.Connection (Connection, ConnectionError, Settings, acquire, settings)
 import qualified Hasql.Session as Session
 import Hasql.Statement (Statement)
 
@@ -64,8 +64,8 @@ import qualified HasqlStatements as HST
 valueToUTFLBS :: Either Session.QueryError Value -> Either Session.QueryError ByteString
 valueToUTFLBS = fmap encode
 
-connectionSettings :: Connection.Settings
-connectionSettings = Connection.settings "localhost" 5431 "rest-news-user" "rest" "rest-news-db";
+connectionSettings :: Settings
+connectionSettings = settings "localhost" 5431 "rest-news-user" "rest" "rest-news-db";
 
 getError :: Either Session.QueryError resultsType -> Maybe (String, Maybe String)
 {-
@@ -144,17 +144,17 @@ getError _ = Nothing
 
 -- params and statement type are different
 --runSession params statement =
---    Right connection <- Connection.acquire connectionSettings
+--    Right connection <- acquire connectionSettings
 --    sessionResults <- Session.run (Session.statement params statement) connection
 
-getConnection :: IO (Either Connection.ConnectionError Connection.Connection)
-getConnection = Connection.acquire connectionSettings
+getConnection :: IO (Either ConnectionError Connection)
+getConnection = acquire connectionSettings
 
 getErrorCode :: Either Session.QueryError resultsType -> Maybe String
 getErrorCode = fmap fst . getError
 
-createUser :: CreateUserRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-createUser createUserRequest = let {
+createUser :: Connection -> CreateUserRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+createUser connection createUserRequest = let {
     params = (
         username (createUserRequest :: CreateUserRequest),
         password (createUserRequest :: CreateUserRequest),
@@ -163,7 +163,6 @@ createUser createUserRequest = let {
         avatar createUserRequest
         );
 } in do
-    Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.createUser) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -173,11 +172,10 @@ createUser createUserRequest = let {
             _ -> Nothing
         )
 
-deleteUser :: UserIdRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-deleteUser deleteUserRequest = let {
+deleteUser :: Connection -> UserIdRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+deleteUser connection deleteUserRequest = let {
     params = user_id (deleteUserRequest :: UserIdRequest);
 } in do
-    Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.deleteUser) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -186,9 +184,8 @@ deleteUser deleteUserRequest = let {
             _ -> Nothing
         )
 
-getUser :: Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-getUser userId = do
-    Right connection <- Connection.acquire connectionSettings
+getUser :: Connection -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getUser connection userId = do
     sessionResults <- Session.run (Session.statement userId HST.getUser) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -198,13 +195,13 @@ getUser userId = do
         )
 
 
-promoteUserToAuthor :: PromoteUserToAuthorRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-promoteUserToAuthor promoteUserToAuthorRequest = let {
+promoteUserToAuthor :: Connection -> PromoteUserToAuthorRequest
+    -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+promoteUserToAuthor connection promoteUserToAuthorRequest = let {
     params = (
         user_id (promoteUserToAuthorRequest :: PromoteUserToAuthorRequest),
         description (promoteUserToAuthorRequest :: PromoteUserToAuthorRequest));
 } in do
-    Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.promoteUserToAuthor) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -214,13 +211,12 @@ promoteUserToAuthor promoteUserToAuthorRequest = let {
             _ -> Nothing
         )
 
-editAuthor :: EditAuthorRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-editAuthor editAuthorRequest = let {
+editAuthor :: Connection -> EditAuthorRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+editAuthor connection editAuthorRequest = let {
     params = (
         author_id (editAuthorRequest :: EditAuthorRequest),
         description (editAuthorRequest :: EditAuthorRequest));
 } in do
-    Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.editAuthor) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -230,11 +226,10 @@ editAuthor editAuthorRequest = let {
             _ -> Nothing
         )
 
-getAuthor :: AuthorIdRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-getAuthor authorIdRequest = let {
+getAuthor :: Connection -> AuthorIdRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getAuthor connection authorIdRequest = let {
     params = author_id (authorIdRequest :: AuthorIdRequest);
 } in do
-    Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getAuthor) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -243,11 +238,11 @@ getAuthor authorIdRequest = let {
             _ -> Nothing
         )
 
-deleteAuthorRole :: AuthorIdRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-deleteAuthorRole authorIdRequest = let {
+deleteAuthorRole :: Connection -> AuthorIdRequest
+    -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+deleteAuthorRole connection authorIdRequest = let {
     params = author_id (authorIdRequest :: AuthorIdRequest);
 } in do
-    Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.deleteAuthorRole) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -256,14 +251,13 @@ deleteAuthorRole authorIdRequest = let {
             _ -> Nothing
         )
 
-createCategory :: CreateCategoryRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-createCategory createCategoryRequest = let {
+createCategory :: Connection -> CreateCategoryRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+createCategory connection createCategoryRequest = let {
     params = (
         name (createCategoryRequest :: CreateCategoryRequest),
         parent_id (createCategoryRequest :: CreateCategoryRequest)
         );
 } in do
-    Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.createCategory) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -273,15 +267,14 @@ createCategory createCategoryRequest = let {
             _ -> Nothing
         )
 
-updateCategory :: UpdateCategoryRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-updateCategory updateCategoryRequest = let {
+updateCategory :: Connection -> UpdateCategoryRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+updateCategory connection updateCategoryRequest = let {
     params = (
         category_id (updateCategoryRequest :: UpdateCategoryRequest),
         name (updateCategoryRequest :: UpdateCategoryRequest),
         parent_id (updateCategoryRequest :: UpdateCategoryRequest)
         );
 } in do
-    Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.updateCategory) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -292,11 +285,10 @@ updateCategory updateCategoryRequest = let {
             _ -> Nothing
         )
 
-getCategory :: CategoryIdRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-getCategory categoryIdRequest = let {
+getCategory :: Connection -> CategoryIdRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getCategory connection categoryIdRequest = let {
     params = category_id (categoryIdRequest :: CategoryIdRequest);
 } in do
-    Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getCategory) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -305,11 +297,10 @@ getCategory categoryIdRequest = let {
             _ -> Nothing
         )
 
-deleteCategory :: CategoryIdRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-deleteCategory categoryIdRequest = let {
+deleteCategory :: Connection -> CategoryIdRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+deleteCategory connection categoryIdRequest = let {
     params = category_id (categoryIdRequest :: CategoryIdRequest);
 } in do
-    Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.deleteCategory) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -320,11 +311,10 @@ deleteCategory categoryIdRequest = let {
         )
 
 
-createTag :: CreateTagRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-createTag createTagRequest = let {
+createTag :: Connection -> CreateTagRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+createTag connection createTagRequest = let {
     params = tag_name (createTagRequest :: CreateTagRequest);
 } in do
-    Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.createTag) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -334,11 +324,10 @@ createTag createTagRequest = let {
             _ -> Nothing
         )
 
-editTag :: EditTagRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-editTag editTagRequest = let {
+editTag :: Connection -> EditTagRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+editTag connection editTagRequest = let {
     params = (tag_id (editTagRequest :: EditTagRequest), tag_name (editTagRequest :: EditTagRequest));
 } in do
-    Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.editTag) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -349,11 +338,10 @@ editTag editTagRequest = let {
             _ -> Nothing
         )
 
-deleteTag :: TagIdRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-deleteTag deleteTagRequest = let {
+deleteTag :: Connection -> TagIdRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+deleteTag connection deleteTagRequest = let {
     params = tag_id (deleteTagRequest :: TagIdRequest);
 } in do
-    Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.deleteTag) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -363,11 +351,10 @@ deleteTag deleteTagRequest = let {
             _ -> Nothing
         )
 
-getTag :: TagIdRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-getTag getTagRequest = let {
+getTag :: Connection -> TagIdRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getTag connection getTagRequest = let {
     params = tag_id (getTagRequest :: TagIdRequest);
 } in do
-    Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getTag) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -377,15 +364,14 @@ getTag getTagRequest = let {
         )
 
 
-createComment :: CreateCommentRequest -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-createComment createCommentRequest user_id' = let {
+createComment :: Connection -> CreateCommentRequest -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+createComment connection createCommentRequest user_id' = let {
     params = (
         article_id (createCommentRequest :: CreateCommentRequest),
         comment_text (createCommentRequest :: CreateCommentRequest),
         user_id'
         );
 } in do
-    Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.createComment) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -394,14 +380,13 @@ createComment createCommentRequest user_id' = let {
             _ -> Nothing
         )
 
-deleteComment :: CommentIdRequest -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-deleteComment deleteCommentRequest user_id' = let {
+deleteComment :: Connection -> CommentIdRequest -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+deleteComment connection deleteCommentRequest user_id' = let {
     params = (
         comment_id (deleteCommentRequest :: CommentIdRequest),
         user_id'
     );
 } in do
-    Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.deleteComment) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -410,14 +395,13 @@ deleteComment deleteCommentRequest user_id' = let {
             _ -> Nothing
         )
 
-getArticleComments :: ArticleCommentsRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-getArticleComments articleCommentsRequest = let {
+getArticleComments :: Connection -> ArticleCommentsRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getArticleComments connection articleCommentsRequest = let {
     params = (
         article_id (articleCommentsRequest :: ArticleCommentsRequest),
         offset (articleCommentsRequest :: ArticleCommentsRequest)
         );
 } in do
-    Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticleComments) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -425,8 +409,8 @@ getArticleComments articleCommentsRequest = let {
         )
 
 
-createArticleDraft :: ArticleDraftRequest -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-createArticleDraft articleDraftRequest author_id' = let {
+createArticleDraft :: Connection -> ArticleDraftRequest -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+createArticleDraft connection articleDraftRequest author_id' = let {
     params = (
         author_id',
         category_id (articleDraftRequest :: ArticleDraftRequest),
@@ -437,7 +421,6 @@ createArticleDraft articleDraftRequest author_id' = let {
         additional_photos (articleDraftRequest :: ArticleDraftRequest)
         );
 } in do
-    Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.createArticleDraft) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -454,14 +437,13 @@ createArticleDraft articleDraftRequest author_id' = let {
             _ -> Nothing
         )
 
-publishArticleDraft :: ArticleDraftIdRequest -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-publishArticleDraft articleDraftIdRequest author_id' = let {
+publishArticleDraft :: Connection -> ArticleDraftIdRequest -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+publishArticleDraft connection articleDraftIdRequest author_id' = let {
     params = (
         author_id',
         article_id (articleDraftIdRequest :: ArticleDraftIdRequest)
         );
 } in do
-    Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.publishArticleDraft) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -470,8 +452,8 @@ publishArticleDraft articleDraftIdRequest author_id' = let {
             _ -> Nothing
         )
 
-editArticleDraft :: ArticleDraftEditRequest -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-editArticleDraft articleDraftEditRequest author_id' = let {
+editArticleDraft :: Connection -> ArticleDraftEditRequest -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+editArticleDraft connection articleDraftEditRequest author_id' = let {
     params = (
         author_id',
         article_id (articleDraftEditRequest :: ArticleDraftEditRequest),
@@ -483,7 +465,6 @@ editArticleDraft articleDraftEditRequest author_id' = let {
         tags (articleDraftEditRequest :: ArticleDraftEditRequest)
         );
 } in do
-    Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.editArticleDraft) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -501,14 +482,13 @@ editArticleDraft articleDraftEditRequest author_id' = let {
             _ -> Nothing
         )
 
-getArticleDraft :: ArticleDraftIdRequest -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-getArticleDraft articleDraftIdRequest author_id' = let {
+getArticleDraft :: Connection -> ArticleDraftIdRequest -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getArticleDraft connection articleDraftIdRequest author_id' = let {
     params = (
         article_id (articleDraftIdRequest :: ArticleDraftIdRequest),
         author_id'
         );
 } in do
-    Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticleDraft) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -517,14 +497,13 @@ getArticleDraft articleDraftIdRequest author_id' = let {
             _ -> Nothing
         )
 
-deleteArticleDraft :: ArticleDraftIdRequest -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-deleteArticleDraft articleDraftIdRequest author_id' = let {
+deleteArticleDraft :: Connection -> ArticleDraftIdRequest -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+deleteArticleDraft connection articleDraftIdRequest author_id' = let {
     params = (
         article_id (articleDraftIdRequest :: ArticleDraftIdRequest),
         author_id'
         );
 } in do
-    Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.deleteArticleDraft) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -534,14 +513,13 @@ deleteArticleDraft articleDraftIdRequest author_id' = let {
         )
 
 
-getArticlesByCategoryId :: ArticlesByCategoryIdRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
-getArticlesByCategoryId articlesByCategoryIdRequest = let {
+getArticlesByCategoryId :: Connection -> ArticlesByCategoryIdRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getArticlesByCategoryId connection articlesByCategoryIdRequest = let {
     params = (
         category_id (articlesByCategoryIdRequest :: ArticlesByCategoryIdRequest),
         offset (articlesByCategoryIdRequest :: ArticlesByCategoryIdRequest)
         );
 } in do
-    Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesByCategoryId) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -555,7 +533,7 @@ getArticlesByTagId tagIdRequestWithOffset = let {
         offset (tagIdRequestWithOffset :: TagIdRequestWithOffset)
         );
 } in do
-    Right connection <- Connection.acquire connectionSettings
+    Right connection <- acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesByTagId) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -570,7 +548,7 @@ getArticlesByAnyTagId tagIdsRequest = let {
         offset (tagIdsRequest :: ArticlesByTagIdListRequest)
         );
 } in do
-    Right connection <- Connection.acquire connectionSettings
+    Right connection <- acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesByAnyTagId) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -584,7 +562,7 @@ getArticlesByAllTagId tagIdsRequest = let {
         offset (tagIdsRequest :: ArticlesByTagIdListRequest)
         );
 } in do
-    Right connection <- Connection.acquire connectionSettings
+    Right connection <- acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesByAllTagId) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -598,7 +576,7 @@ getArticlesByTitlePart substringRequest = let {
         offset (substringRequest :: ArticlesByTitlePartRequest)
         );
 } in do
-    Right connection <- Connection.acquire connectionSettings
+    Right connection <- acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesByTitlePart) connection
     --Data.Text.IO.putStrLn . pack $ show sessionResults
     pure (
@@ -613,7 +591,7 @@ getArticlesByContentPart substringRequest = let {
         offset (substringRequest :: ArticlesByContentPartRequest)
         );
 } in do
-    Right connection <- Connection.acquire connectionSettings
+    Right connection <- acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesByContentPart) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -627,7 +605,7 @@ getArticlesByAuthorNamePart substringRequest = let {
         offset (substringRequest :: ArticlesByAuthorNamePartRequest)
         );
 } in do
-    Right connection <- Connection.acquire connectionSettings
+    Right connection <- acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesByAuthorNamePart) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -640,7 +618,7 @@ getArticlesSortedByPhotosNumber request = let {
         offset (request :: OffsetRequest)
         );
 } in do
-    Right connection <- Connection.acquire connectionSettings
+    Right connection <- acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesSortedByPhotosNumber) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -653,7 +631,7 @@ getArticlesSortedByCreationDate request = let {
         offset (request :: OffsetRequest)
         );
 } in do
-    Right connection <- Connection.acquire connectionSettings
+    Right connection <- acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesSortedByCreationDate) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -666,7 +644,7 @@ getArticlesSortedByAuthor request = let {
         offset (request :: OffsetRequest)
         );
 } in do
-    Right connection <- Connection.acquire connectionSettings
+    Right connection <- acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesSortedByAuthor) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -679,7 +657,7 @@ getArticlesSortedByCategory request = let {
         offset (request :: OffsetRequest)
         );
 } in do
-    Right connection <- Connection.acquire connectionSettings
+    Right connection <- acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getArticlesSortedByCategory) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -694,7 +672,7 @@ getArticlesFilteredBy filterF articlesByCreationDateRequest = let {
         offset (articlesByCreationDateRequest :: ArticlesByCreationDateRequest)
         );
 } in do
-    Right connection <- Connection.acquire connectionSettings
+    Right connection <- acquire connectionSettings
     sessionResults <- Session.run (Session.statement params filterF) connection
     pure (
         valueToUTFLBS sessionResults,
@@ -711,14 +689,13 @@ getArticlesCreatedAfterDate :: ArticlesByCreationDateRequest -> IO (Either Sessi
 getArticlesCreatedAfterDate = getArticlesFilteredBy HST.getArticlesCreatedAfterDate
 
 
-getCredentials :: AuthRequest -> IO (Either Session.QueryError (Int32, Bool, Int32), Maybe ByteString)
-getCredentials authRequest = let {
+getCredentials :: Connection -> AuthRequest -> IO (Either Session.QueryError (Int32, Bool, Int32), Maybe ByteString)
+getCredentials connection authRequest = let {
     params = (
         username (authRequest :: AuthRequest),
         password (authRequest :: AuthRequest)
         );
 } in do
-    Right connection <- Connection.acquire connectionSettings
     sessionResults <- Session.run (Session.statement params HST.getCredentials) connection
     pure (
         sessionResults,
