@@ -70,7 +70,7 @@ valueToUTFLBS :: Either Session.QueryError Value -> Either Session.QueryError By
 valueToUTFLBS = fmap encode
 
 connectionSettings :: Settings
-connectionSettings = settings "localhost" 5431 "rest-news-user" "rest" "rest-news-db";
+connectionSettings = settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
 
 getError :: Either Session.QueryError resultsType -> Maybe (String, Maybe String)
 {-

@@ -338,7 +338,7 @@ restAPI vaultKey clearSessionPartial request respond = let {
 
             debugM "rest-news" (case fst results of
                 Right ulbs -> UTFLBS.toString ulbs
-                leftErr -> show (snd results, leftErr)
+                leftErr -> (show (snd results) ++ ", " ++ either UTFLBS.toString UTFLBS.toString leftErr)
                 )
 
             processedResults <- pure (case fst results of
