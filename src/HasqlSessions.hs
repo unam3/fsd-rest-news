@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings  #-}
 
 module HasqlSessions (
+    valueToUTFLBS',
     getConnection,
     createUser,
     deleteUser,
@@ -44,6 +45,7 @@ module HasqlSessions (
     ) where
 
 import Data.Aeson (Value, encode)
+import Data.Bifunctor (bimap)
 import Data.ByteString.Lazy.UTF8 (ByteString)
 import Data.ByteString.Internal (unpackChars)
 import Data.Int (Int32)
@@ -61,11 +63,14 @@ import qualified HasqlStatements as HST
 -- https://github.com/nikita-volkov/hasql-tutorial1
 
 
+valueToUTFLBS' :: Either Session.QueryError Value -> Either ByteString ByteString
+valueToUTFLBS' = bimap (encode . show) encode
+
 valueToUTFLBS :: Either Session.QueryError Value -> Either Session.QueryError ByteString
 valueToUTFLBS = fmap encode
 
 connectionSettings :: Settings
-connectionSettings = settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
+connectionSettings = settings "localhost" 5431 "rest-news-user" "rest" "rest-news-db";
 
 getError :: Either Session.QueryError resultsType -> Maybe (String, Maybe String)
 {-
@@ -153,7 +158,7 @@ getConnection = acquire connectionSettings
 getErrorCode :: Either Session.QueryError resultsType -> Maybe String
 getErrorCode = fmap fst . getError
 
-createUser :: Connection -> CreateUserRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+createUser :: Connection -> CreateUserRequest -> IO (Either ByteString ByteString, Maybe ByteString)
 createUser connection createUserRequest = let {
     params = (
         username (createUserRequest :: CreateUserRequest),
@@ -165,7 +170,7 @@ createUser connection createUserRequest = let {
 } in do
     sessionResults <- Session.run (Session.statement params HST.createUser) connection
     pure (
-        valueToUTFLBS sessionResults,
+        valueToUTFLBS' sessionResults,
         case getErrorCode sessionResults of
             Just "22001" -> Just "{\"error\": \"name and surname field length must be 80 characters at most\"}"
             Just "23505" -> Just "{\"error\": \"user with this username already exists\"}"
@@ -184,11 +189,11 @@ deleteUser connection deleteUserRequest = let {
             _ -> Nothing
         )
 
-getUser :: Connection -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getUser :: Connection -> Int32 -> IO (Either ByteString ByteString, Maybe ByteString)
 getUser connection userId = do
     sessionResults <- Session.run (Session.statement userId HST.getUser) connection
     pure (
-        valueToUTFLBS sessionResults,
+        valueToUTFLBS' sessionResults,
         case getErrorCode sessionResults of
             Just "0" -> Just "{\"error\": \"such user does not exist\"}"
             _ -> Nothing
