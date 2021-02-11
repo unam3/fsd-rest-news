@@ -63,8 +63,8 @@ import qualified HasqlStatements as HST
 -- https://github.com/nikita-volkov/hasql-tutorial1
 
 
-valueToUTFLBS' :: Either Session.QueryError Value -> Either ByteString ByteString
-valueToUTFLBS' = bimap (encode . show) encode
+valueToUTFLBS' :: Either Session.QueryError Value -> Either String ByteString
+valueToUTFLBS' = bimap show encode
 
 valueToUTFLBS :: Either Session.QueryError Value -> Either Session.QueryError ByteString
 valueToUTFLBS = fmap encode
@@ -158,7 +158,7 @@ getConnection = acquire connectionSettings
 getErrorCode :: Either Session.QueryError resultsType -> Maybe String
 getErrorCode = fmap fst . getError
 
-createUser :: Connection -> CreateUserRequest -> IO (Either ByteString ByteString, Maybe ByteString)
+createUser :: Connection -> CreateUserRequest -> IO (Either String ByteString, Maybe ByteString)
 createUser connection createUserRequest = let {
     params = (
         username (createUserRequest :: CreateUserRequest),
@@ -189,7 +189,7 @@ deleteUser connection deleteUserRequest = let {
             _ -> Nothing
         )
 
-getUser :: Connection -> Int32 -> IO (Either ByteString ByteString, Maybe ByteString)
+getUser :: Connection -> Int32 -> IO (Either String ByteString, Maybe ByteString)
 getUser connection userId = do
     sessionResults <- Session.run (Session.statement userId HST.getUser) connection
     pure (

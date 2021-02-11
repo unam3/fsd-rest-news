@@ -9,7 +9,7 @@ import qualified HasqlSessions as HSS
 
 import Control.Exception (bracket_)
 import Control.Monad (void, when)
-import Data.Aeson (encode, decode)
+import Data.Aeson (decode)
 import Data.Bifunctor (bimap)
 import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
 import Data.Either (fromRight)
@@ -46,7 +46,7 @@ passSessionNameIf sessionName condition = if condition
     then Right sessionName
     else noSuchEndpoint;
 
-dbError :: Either UTFLBS.ByteString UTFLBS.ByteString
+dbError :: Either String UTFLBS.ByteString
 dbError = Left "DB error"
 
 getIdString :: Maybe String -> String
@@ -73,7 +73,7 @@ restAPI vaultKey clearSessionPartial request respond = let {
         pathHeadChunk = head pathTextChunks;
         method = requestMethod request;
         Just (sessionLookup, sessionInsert) = Vault.lookup vaultKey (vault request);
-        processCredentials :: Either QueryError (Int32, Bool, Int32) -> IO (Either UTFLBS.ByteString UTFLBS.ByteString);
+        processCredentials :: Either QueryError (Int32, Bool, Int32) -> IO (Either String UTFLBS.ByteString);
         processCredentials sessionResults = let {
             (user_id, is_admin, author_id) = fromRight (0, False, 0) sessionResults;
         } in
@@ -91,7 +91,7 @@ restAPI vaultKey clearSessionPartial request respond = let {
             >> (sessionInsert "user_id" $ show user_id)
             >> (sessionInsert "author_id" $ show author_id)
 
-            >> (pure $ bimap (encode . show) (const "cookies are baked") sessionResults);
+            >> (pure $ bimap show (const "cookies are baked") sessionResults);
     } in bracket_
         (debugM "rest-news" "Allocating scarce resource")
         (debugM "rest-news" "Cleaning up")
@@ -338,7 +338,7 @@ restAPI vaultKey clearSessionPartial request respond = let {
 
             debugM "rest-news" (case fst results of
                 Right ulbs -> UTFLBS.toString ulbs
-                leftErr -> (show (snd results) ++ ", " ++ either UTFLBS.toString UTFLBS.toString leftErr)
+                Left leftErr -> (show (snd results) ++ ", " ++ leftErr)
                 )
 
             processedResults <- pure (case fst results of
