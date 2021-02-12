@@ -12,7 +12,7 @@ SESSION=`curl -i -X POST -d '{"username": "username5", "password": "12345"}' htt
 SESSION=`curl -H 'Cookie: SESSION='${SESSION} -i -X POST -d '{"username": "username5", "password": "12345"}' http://0.0.0.0:8081/auth|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`
 
 
-curl -i -X POST -d '{"username": "asdq", "password": "check, indeed", "name": "name", "surname": "surname", "avatar": "asd"}' http://0.0.0.0:8081/users
+curl -i -X POST -d '{"username": "asdq", "password": "check, indeed", "name": "name2", "surname": "surname", "avatar": "asd"}' http://0.0.0.0:8081/users
 
 curl -i -H 'Cookie: SESSION='${SESSION} -X GET http://0.0.0.0:8081/users
 
@@ -45,7 +45,7 @@ curl -i -X GET -d '{"article_id": 2, "offset": 1}' http://0.0.0.0:8081/comments
 curl -i -H 'Cookie: SESSION='${SESSION} -X DELETE -d '{"comment_id": 4}' http://0.0.0.0:8081/comments
 
 
-curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"tag_name": "pluh"}' http://0.0.0.0:8081/tags
+curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"tag_name": "pluh1"}' http://0.0.0.0:8081/tags
 
 curl -i -H 'Cookie: SESSION='${SESSION} -X PATCH -d '{"tag_id": 4, "tag_name": "pluh_patched"}' http://0.0.0.0:8081/tags
 
@@ -56,7 +56,7 @@ curl -i -H 'Cookie: SESSION='${SESSION} -X DELETE -d '{"tag_id": 5}' http://0.0.
 
 curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"article_title": "they dont beleive their eyes…", "category_id": 1, "article_content": "article is long enough", "tags": [1,2], "main_photo": "http://pl.uh/main", "additional_photos": ["1", "2", "3"]}' http://0.0.0.0:8081/articles
 
-curl -i -H 'Cookie: SESSION='${SESSION} -X PATCH -d '{"article_title": "PATCHED", "category_id": 2, "article_content": "PATCHED", "article_id": 11, "main_photo": "fs", "additional_photos": ["9", "2"], "tags": [1,2]}' http://0.0.0.0:8081/articles
+curl -i -H 'Cookie: SESSION='${SESSION} -X PATCH -d '{"article_title": "PATCHEDttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt", "category_id": 2, "article_content": "PATCHED", "article_id": 9, "main_photo": "fs", "additional_photos": ["9", "2"], "tags": [1,2]}' http://0.0.0.0:8081/articles
 
 # publish article draft
 curl -i -H 'Cookie: SESSION='${SESSION} -X POST -d '{"article_id": 10}' http://0.0.0.0:8081/articles

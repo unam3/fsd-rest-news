@@ -16,7 +16,6 @@ import Data.Int (Int32)
 import Data.Maybe (fromJust, isJust)
 import qualified Data.Vault.Lazy as Vault
 import Database.PostgreSQL.Simple (Connection, ConnectInfo(..), connectPostgreSQL, postgreSQLConnectionString)
-import Hasql.Session (QueryError)
 import qualified Network.HTTP.Types as H
 import Network.Wai (Application, Request, pathInfo, requestMethod, responseLBS, strictRequestBody, vault)
 import Network.Wai.Application.Static
@@ -45,6 +44,9 @@ passSessionNameIf sessionName condition = if condition
     then Right sessionName
     else noSuchEndpoint;
 
+dbError :: Either String UTFLBS.ByteString
+dbError = Left "DB error"
+
 getIdString :: Maybe String -> String
 getIdString = maybe "0" id
 
@@ -69,7 +71,7 @@ restAPI vaultKey clearSessionPartial request respond = let {
         pathHeadChunk = head pathTextChunks;
         method = requestMethod request;
         Just (sessionLookup, sessionInsert) = Vault.lookup vaultKey (vault request);
-        processCredentials :: Either QueryError (Int32, Bool, Int32) -> IO (Either QueryError UTFLBS.ByteString);
+        processCredentials :: Either String (Int32, Bool, Int32) -> IO (Either String UTFLBS.ByteString);
         processCredentials sessionResults = let {
             (user_id, is_admin, author_id) = fromRight (0, False, 0) sessionResults;
         } in
@@ -86,6 +88,7 @@ restAPI vaultKey clearSessionPartial request respond = let {
             >> (sessionInsert "is_admin" $ show is_admin)
             >> (sessionInsert "user_id" $ show user_id)
             >> (sessionInsert "author_id" $ show author_id)
+
             >> (pure $ fmap (const "cookies are baked") sessionResults);
     } in bracket_
         (debugM "rest-news" "Allocating scarce resource")
@@ -262,69 +265,78 @@ restAPI vaultKey clearSessionPartial request respond = let {
                         _ -> noSuchEndpoint)
                     else endpointNeeded)
 
+            eitherConnection <- HSS.getConnection
+
             results <- let {
-                --connection = 
-                --    case HSS.getConnection of
-                --        Left connectionError -> pure (
-                --            Right . UTFLBS.fromString $ show connectionError,
-                --            Just . UTFLBS.fromString $ show connectionError
-                --            )
-                --        Right connection -> ;
-                runSession session = (session . fromJust $ decode requestBody);
                 sessionAuthorId = (read sessionAuthorIdString :: Int32);
                 sessionUserId = (read sessionUserIdString :: Int32);
                 sessionResults = case errorOrSessionName of
                     Left error -> pure (Right $ UTFLBS.fromString error, Just $ UTFLBS.fromString error)
-                    Right sessionName -> case sessionName of
-                        "auth" -> runSession HSS.getCredentials
-                            >>= (\ (eitherSessionResult, errorForClient) ->
-                                (processCredentials eitherSessionResult
-                                >>= (\ processedCreds -> pure (processedCreds, errorForClient))
+                    Right sessionName -> 
+                        case eitherConnection of
+                            Left connectionError -> 
+                                debugM "rest-news" (show connectionError)
+                                >> pure (
+                                    dbError,
+                                    Just "DB connection error"
                                 )
-                            )
-                        "createUser" -> runSession HSS.createUser;
-                        "getUser" -> HSS.getUser sessionUserId
-                        "deleteUser" -> runSession HSS.deleteUser
-                        "promoteUserToAuthor" -> runSession HSS.promoteUserToAuthor;
-                        "editAuthor" -> runSession HSS.editAuthor
-                        "getAuthor" -> runSession HSS.getAuthor
-                        "deleteAuthorRole" -> runSession HSS.deleteAuthorRole
-                        "createCategory" -> runSession HSS.createCategory
-                        "updateCategory" -> runSession HSS.updateCategory
-                        "getCategory" -> runSession HSS.getCategory
-                        "deleteCategory" -> runSession HSS.deleteCategory
-                        "createTag" -> runSession HSS.createTag
-                        "editTag" -> runSession HSS.editTag
-                        "getTag" -> runSession HSS.getTag
-                        "deleteTag" -> runSession HSS.deleteTag
-                        "createComment" -> runSession HSS.createComment sessionUserId
-                        "deleteComment" -> runSession HSS.deleteComment sessionUserId
-                        "getArticleComments" -> runSession HSS.getArticleComments
-                        "createArticleDraft" -> runSession HSS.createArticleDraft sessionAuthorId
-                        "editArticleDraft" -> runSession HSS.editArticleDraft sessionAuthorId
-                        "publishArticleDraft" -> runSession HSS.publishArticleDraft sessionAuthorId
-                        "getArticleDraft" -> runSession HSS.getArticleDraft sessionAuthorId
-                        "deleteArticleDraft" -> runSession HSS.deleteArticleDraft sessionAuthorId
-                        "getArticlesByCategoryId" -> runSession HSS.getArticlesByCategoryId
-                        "getArticlesByTagId" -> runSession HSS.getArticlesByTagId
-                        "getArticlesByAnyTagId" -> runSession HSS.getArticlesByAnyTagId
-                        "getArticlesByAllTagId" -> runSession HSS.getArticlesByAllTagId
-                        "getArticlesByTitlePart" -> runSession HSS.getArticlesByTitlePart
-                        "getArticlesByContentPart" -> runSession HSS.getArticlesByContentPart
-                        "getArticlesByAuthorNamePart" -> runSession HSS.getArticlesByAuthorNamePart
-                        "getArticlesSortedByPhotosNumber" -> runSession HSS.getArticlesSortedByPhotosNumber
-                        "getArticlesSortedByCreationDate" -> runSession HSS.getArticlesSortedByCreationDate
-                        "getArticlesSortedByAuthor" -> runSession HSS.getArticlesSortedByAuthor
-                        "getArticlesSortedByCategory" -> runSession HSS.getArticlesSortedByCategory
-                        "getArticlesFilteredByCreationDate" -> runSession HSS.getArticlesFilteredByCreationDate
-                        "getArticlesCreatedBeforeDate" -> runSession HSS.getArticlesCreatedBeforeDate
-                        "getArticlesCreatedAfterDate" -> runSession HSS.getArticlesCreatedAfterDate
-                        nonMatched -> pure (Right $ UTFLBS.fromString nonMatched, Just $ UTFLBS.fromString nonMatched);
+                            Right connection -> let {
+                                runSession session = (session connection . fromJust $ decode requestBody);
+                            } in case sessionName of
+                                "auth" -> runSession HSS.getCredentials
+                                    >>= (\ (eitherSessionResult, errorForClient) ->
+                                        (processCredentials eitherSessionResult
+                                        >>= (\ processedCreds -> pure (
+                                            processedCreds,
+                                            errorForClient
+                                            ))
+                                        )
+                                    )
+                                "createUser" -> runSession HSS.createUser;
+                                "getUser" -> HSS.getUser connection sessionUserId
+                                "deleteUser" -> runSession HSS.deleteUser
+                                "promoteUserToAuthor" -> runSession HSS.promoteUserToAuthor;
+                                "editAuthor" -> runSession HSS.editAuthor
+                                "getAuthor" -> runSession HSS.getAuthor
+                                "deleteAuthorRole" -> runSession HSS.deleteAuthorRole
+                                "createCategory" -> runSession HSS.createCategory
+                                "updateCategory" -> runSession HSS.updateCategory
+                                "getCategory" -> runSession HSS.getCategory
+                                "deleteCategory" -> runSession HSS.deleteCategory
+                                "createTag" -> runSession HSS.createTag
+                                "editTag" -> runSession HSS.editTag
+                                "getTag" -> runSession HSS.getTag
+                                "deleteTag" -> runSession HSS.deleteTag
+                                "createComment" -> runSession HSS.createComment sessionUserId
+                                "deleteComment" -> runSession HSS.deleteComment sessionUserId
+                                "getArticleComments" -> runSession HSS.getArticleComments
+                                "createArticleDraft" -> runSession HSS.createArticleDraft sessionAuthorId
+                                "editArticleDraft" -> runSession HSS.editArticleDraft sessionAuthorId
+                                "publishArticleDraft" -> runSession HSS.publishArticleDraft sessionAuthorId
+                                "getArticleDraft" -> runSession HSS.getArticleDraft sessionAuthorId
+                                "deleteArticleDraft" -> runSession HSS.deleteArticleDraft sessionAuthorId
+                                "getArticlesByCategoryId" -> runSession HSS.getArticlesByCategoryId
+                                "getArticlesByTagId" -> runSession HSS.getArticlesByTagId
+                                "getArticlesByAnyTagId" -> runSession HSS.getArticlesByAnyTagId
+                                "getArticlesByAllTagId" -> runSession HSS.getArticlesByAllTagId
+                                "getArticlesByTitlePart" -> runSession HSS.getArticlesByTitlePart
+                                "getArticlesByContentPart" -> runSession HSS.getArticlesByContentPart
+                                "getArticlesByAuthorNamePart" -> runSession HSS.getArticlesByAuthorNamePart
+                                "getArticlesSortedByPhotosNumber" -> runSession HSS.getArticlesSortedByPhotosNumber
+                                "getArticlesSortedByCreationDate" -> runSession HSS.getArticlesSortedByCreationDate
+                                "getArticlesSortedByAuthor" -> runSession HSS.getArticlesSortedByAuthor
+                                "getArticlesSortedByCategory" -> runSession HSS.getArticlesSortedByCategory
+                                "getArticlesFilteredByCreationDate" -> runSession HSS.getArticlesFilteredByCreationDate
+                                "getArticlesCreatedBeforeDate" -> runSession HSS.getArticlesCreatedBeforeDate
+                                "getArticlesCreatedAfterDate" -> runSession HSS.getArticlesCreatedAfterDate
+                                nonMatched -> pure (
+                                    Right $ UTFLBS.fromString nonMatched,
+                                    Just $ UTFLBS.fromString nonMatched);
                 } in sessionResults
 
             debugM "rest-news" (case fst results of
                 Right ulbs -> UTFLBS.toString ulbs
-                leftErr -> show (snd results, leftErr)
+                Left leftErr -> (show (snd results) ++ ", " ++ leftErr)
                 )
 
             processedResults <- pure (case fst results of
@@ -333,11 +345,13 @@ restAPI vaultKey clearSessionPartial request respond = let {
                     Just errorForClient -> errorForClient
                     -- there must not be any QueryError!
                     _ -> undefined)
+
             let {
                 httpStatus
                     | errorOrSessionName == endpointNeeded || errorOrSessionName == noSuchEndpoint = H.status404
                     | errorOrSessionName == wrongParamsOrValues = H.status400
                     | errorOrSessionName == notImplemented = H.status501
+                    | (fst results) == dbError = H.status500
                     | otherwise = H.status200;
             } in respond $ responseLBS httpStatus [] processedResults)
 
