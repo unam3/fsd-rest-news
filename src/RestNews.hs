@@ -64,7 +64,6 @@ dbconnect = let {
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
 restAPI :: Vault.Key (Session IO String String) -> (Request -> IO ()) -> Application;
 restAPI vaultKey clearSessionPartial request respond = let {
-        notImplemented = Left "Method is not implemented";
         endpointNeeded = Left "Endpoint needed";
         pathTextChunks = pathInfo request;
         isRequestPathNotEmpty = (not $ null pathTextChunks);
@@ -148,13 +147,13 @@ restAPI vaultKey clearSessionPartial request respond = let {
                     then (case pathHeadChunk of
                         "auth" -> case method of
                             "POST"      -> ifValidRequest maybeAuthRequestJSON "auth"
-                            _ -> notImplemented
+                            _ -> noSuchEndpoint
                         "users" -> case method of
                             "POST"      -> ifValidRequest maybeCreateUserRequestJSON "createUser"
                             "GET"       -> passSessionNameIfHasUserId "getUser"
                             "DELETE"    -> ifValidRequest maybeUserIdRequestJSON
                                 $ passSessionNameIfAdmin "deleteUser" 
-                            _ -> notImplemented
+                            _ -> noSuchEndpoint
                         "authors" -> case method of
                             "POST"      -> ifValidRequest maybePromoteUserToAuthorRequestJSON
                                 $ passSessionNameIfAdmin "promoteUserToAuthor"
@@ -164,7 +163,7 @@ restAPI vaultKey clearSessionPartial request respond = let {
                                 $ passSessionNameIfAdmin "getAuthor" 
                             "DELETE"    -> ifValidRequest maybeAuthorIdRequestJSON
                                 $ passSessionNameIfAdmin "deleteAuthorRole" 
-                            _ -> notImplemented
+                            _ -> noSuchEndpoint
                         "categories" -> case method of
                             "POST"      -> ifValidRequest maybeCreateCategoryRequestJSON
                                 $ passSessionNameIfAdmin "createCategory"
@@ -173,7 +172,7 @@ restAPI vaultKey clearSessionPartial request respond = let {
                             "GET"       -> ifValidRequest maybeCategoryIdRequestJSON "getCategory"
                             "DELETE"    -> ifValidRequest maybeCategoryIdRequestJSON
                                 $ passSessionNameIfAdmin "deleteCategory"
-                            _ -> notImplemented
+                            _ -> noSuchEndpoint
                         "tags" -> case method of
                             "POST"      -> ifValidRequest maybeCreateTagRequestJSON
                                 $ passSessionNameIfAdmin "createTag"
@@ -182,14 +181,14 @@ restAPI vaultKey clearSessionPartial request respond = let {
                             "GET"       -> ifValidRequest maybeTagIdRequestJSON "getTag"
                             "DELETE"    -> ifValidRequest maybeTagIdRequestJSON
                                 $ passSessionNameIfAdmin "deleteTag"
-                            _ -> notImplemented
+                            _ -> noSuchEndpoint
                         "comments" -> case method of
                             "POST"      -> ifValidRequest maybeCreateCommentRequestJSON
                                 . either id id $ passSessionNameIfHasUserId "createComment"
                             "GET"       -> ifValidRequest maybeArticleCommentsRequestJSON "getArticleComments"
                             "DELETE"    -> ifValidRequest maybeCommentIdRequestJSON
                                 . either id id $ passSessionNameIfHasUserId "deleteComment" 
-                            _ -> notImplemented
+                            _ -> noSuchEndpoint
                         "articles" -> case tail pathTextChunks of
                             [] -> case method of
                                 "POST" -> if isJust maybeArticleDraftRequestJSON
@@ -202,65 +201,65 @@ restAPI vaultKey clearSessionPartial request respond = let {
                                     . either id id $ passSessionNameIfHasAuthorId "getArticleDraft"
                                 "DELETE" -> ifValidRequest maybeArticleDraftIdRequestJSON
                                     . either id id $ passSessionNameIfHasAuthorId "deleteArticleDraft"
-                                _ -> notImplemented
+                                _ -> noSuchEndpoint
                             ["category"] -> case method of
                                 "GET" -> ifValidRequest maybeArticlesByCategoryIdRequestJSON "getArticlesByCategoryId" 
-                                _ -> notImplemented
+                                _ -> noSuchEndpoint
                             ["tag"] -> case method of
                                 "GET" -> ifValidRequest maybeTagIdRequestWithOffsetJSON "getArticlesByTagId"
-                                _ -> notImplemented
+                                _ -> noSuchEndpoint
                             ["tags__any"] -> case method of
                                 "GET" -> ifValidRequest maybeArticlesByTagIdListRequest "getArticlesByAnyTagId"
-                                _ -> notImplemented
+                                _ -> noSuchEndpoint
                             ["tags__all"] -> case method of
                                 "GET" -> ifValidRequest maybeArticlesByTagIdListRequest "getArticlesByAllTagId"
-                                _ -> notImplemented
+                                _ -> noSuchEndpoint
                             ["in__title"] -> case method of
                                 "GET" -> ifValidRequest maybeArticlesByTitlePartRequest "getArticlesByTitlePart"
-                                _ -> notImplemented
+                                _ -> noSuchEndpoint
                             ["in__content"] -> case method of
                                 "GET" -> ifValidRequest maybeArticlesByContentPartRequest "getArticlesByContentPart"
-                                _ -> notImplemented
+                                _ -> noSuchEndpoint
                             ["in__author_name"] -> case method of
                                 "GET" -> ifValidRequest
                                     maybeArticlesByAuthorNamePartRequest
                                     "getArticlesByAuthorNamePart"
-                                _ -> notImplemented
+                                _ -> noSuchEndpoint
                             ["byPhotosNumber"] -> case method of
                                 "GET" -> ifValidRequest
                                     maybeOffsetRequest
                                     "getArticlesSortedByPhotosNumber"
-                                _ -> notImplemented
+                                _ -> noSuchEndpoint
                             ["byCreationDate"] -> case method of
                                 "GET" -> ifValidRequest
                                     maybeOffsetRequest
                                     "getArticlesSortedByCreationDate"
-                                _ -> notImplemented
+                                _ -> noSuchEndpoint
                             ["sortByAuthor"] -> case method of
                                 "GET" -> ifValidRequest
                                     maybeOffsetRequest
                                     "getArticlesSortedByAuthor"
-                                _ -> notImplemented
+                                _ -> noSuchEndpoint
                             ["sortByCategory"] -> case method of
                                 "GET" -> ifValidRequest
                                     maybeOffsetRequest
                                     "getArticlesSortedByCategory"
-                                _ -> notImplemented
+                                _ -> noSuchEndpoint
                             ["createdAt"] -> case method of
                                 "GET" -> ifValidRequest
                                     maybeArticlesFilteredByCreationDate
                                     "getArticlesFilteredByCreationDate"
-                                _ -> notImplemented
+                                _ -> noSuchEndpoint
                             ["createdBefore"] -> case method of
                                 "GET" -> ifValidRequest
                                     maybeArticlesFilteredByCreationDate
                                     "getArticlesCreatedBeforeDate"
-                                _ -> notImplemented
+                                _ -> noSuchEndpoint
                             ["createdAfter"] -> case method of
                                 "GET" -> ifValidRequest
                                     maybeArticlesFilteredByCreationDate
                                     "getArticlesCreatedAfterDate"
-                                _ -> notImplemented
+                                _ -> noSuchEndpoint
                             _ -> noSuchEndpoint
                         _ -> noSuchEndpoint)
                     else endpointNeeded)
@@ -336,7 +335,7 @@ restAPI vaultKey clearSessionPartial request respond = let {
 
             debugM "rest-news" (case fst results of
                 Right ulbs -> UTFLBS.toString ulbs
-                Left leftErr -> (show (snd results) ++ ", " ++ leftErr)
+                Left leftErr -> show (snd results) ++ ", " ++ leftErr
                 )
 
             processedResults <- pure (case fst results of
@@ -350,8 +349,7 @@ restAPI vaultKey clearSessionPartial request respond = let {
                 httpStatus
                     | errorOrSessionName == endpointNeeded || errorOrSessionName == noSuchEndpoint = H.status404
                     | errorOrSessionName == wrongParamsOrValues = H.status400
-                    | errorOrSessionName == notImplemented = H.status501
-                    | (fst results) == dbError = H.status500
+                    | fst results == dbError = H.status500
                     | otherwise = H.status200;
             } in respond $ responseLBS httpStatus [] processedResults)
 

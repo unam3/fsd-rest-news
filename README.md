@@ -47,6 +47,6 @@ stack test
 
 - Deletion of inexistent entity will return response with 200 HTTP status code.
 
-- Unused fields of request json will be ignored silently.
+- Unused fields of json requests will be ignored silently.
 
 - `%` and `_` characters will be stripped from `title_substring` parameter of `articles/in__title` request.
