@@ -2,7 +2,6 @@
 {-# LANGUAGE OverloadedStrings  #-}
 
 module HasqlSessions (
-    valueToUTFLBS',
     getConnection,
     createUser,
     deleteUser,
@@ -63,11 +62,8 @@ import qualified HasqlStatements as HST
 -- https://github.com/nikita-volkov/hasql-tutorial1
 
 
-valueToUTFLBS' :: Either Session.QueryError Value -> Either String ByteString
-valueToUTFLBS' = bimap show encode
-
-valueToUTFLBS :: Either Session.QueryError Value -> Either Session.QueryError ByteString
-valueToUTFLBS = fmap encode
+valueToUTFLBS :: Either Session.QueryError Value -> Either String ByteString
+valueToUTFLBS = bimap show encode
 
 connectionSettings :: Settings
 connectionSettings = settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
@@ -170,14 +166,14 @@ createUser connection createUserRequest = let {
 } in do
     sessionResults <- Session.run (Session.statement params HST.createUser) connection
     pure (
-        valueToUTFLBS' sessionResults,
+        valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
             Just "22001" -> Just "{\"error\": \"name and surname field length must be 80 characters at most\"}"
             Just "23505" -> Just "{\"error\": \"user with this username already exists\"}"
             _ -> Nothing
         )
 
-deleteUser :: Connection -> UserIdRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+deleteUser :: Connection -> UserIdRequest -> IO (Either String ByteString, Maybe ByteString)
 deleteUser connection deleteUserRequest = let {
     params = user_id (deleteUserRequest :: UserIdRequest);
 } in do
@@ -193,7 +189,7 @@ getUser :: Connection -> Int32 -> IO (Either String ByteString, Maybe ByteString
 getUser connection userId = do
     sessionResults <- Session.run (Session.statement userId HST.getUser) connection
     pure (
-        valueToUTFLBS' sessionResults,
+        valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
             Just "0" -> Just "{\"error\": \"such user does not exist\"}"
             _ -> Nothing
@@ -201,7 +197,7 @@ getUser connection userId = do
 
 
 promoteUserToAuthor :: Connection -> PromoteUserToAuthorRequest
-    -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+    -> IO (Either String ByteString, Maybe ByteString)
 promoteUserToAuthor connection promoteUserToAuthorRequest = let {
     params = (
         user_id (promoteUserToAuthorRequest :: PromoteUserToAuthorRequest),
@@ -216,7 +212,7 @@ promoteUserToAuthor connection promoteUserToAuthorRequest = let {
             _ -> Nothing
         )
 
-editAuthor :: Connection -> EditAuthorRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+editAuthor :: Connection -> EditAuthorRequest -> IO (Either String ByteString, Maybe ByteString)
 editAuthor connection editAuthorRequest = let {
     params = (
         author_id (editAuthorRequest :: EditAuthorRequest),
@@ -231,7 +227,7 @@ editAuthor connection editAuthorRequest = let {
             _ -> Nothing
         )
 
-getAuthor :: Connection -> AuthorIdRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getAuthor :: Connection -> AuthorIdRequest -> IO (Either String ByteString, Maybe ByteString)
 getAuthor connection authorIdRequest = let {
     params = author_id (authorIdRequest :: AuthorIdRequest);
 } in do
@@ -244,7 +240,7 @@ getAuthor connection authorIdRequest = let {
         )
 
 deleteAuthorRole :: Connection -> AuthorIdRequest
-    -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+    -> IO (Either String ByteString, Maybe ByteString)
 deleteAuthorRole connection authorIdRequest = let {
     params = author_id (authorIdRequest :: AuthorIdRequest);
 } in do
@@ -256,7 +252,7 @@ deleteAuthorRole connection authorIdRequest = let {
             _ -> Nothing
         )
 
-createCategory :: Connection -> CreateCategoryRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+createCategory :: Connection -> CreateCategoryRequest -> IO (Either String ByteString, Maybe ByteString)
 createCategory connection createCategoryRequest = let {
     params = (
         name (createCategoryRequest :: CreateCategoryRequest),
@@ -272,7 +268,7 @@ createCategory connection createCategoryRequest = let {
             _ -> Nothing
         )
 
-updateCategory :: Connection -> UpdateCategoryRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+updateCategory :: Connection -> UpdateCategoryRequest -> IO (Either String ByteString, Maybe ByteString)
 updateCategory connection updateCategoryRequest = let {
     params = (
         category_id (updateCategoryRequest :: UpdateCategoryRequest),
@@ -290,7 +286,7 @@ updateCategory connection updateCategoryRequest = let {
             _ -> Nothing
         )
 
-getCategory :: Connection -> CategoryIdRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getCategory :: Connection -> CategoryIdRequest -> IO (Either String ByteString, Maybe ByteString)
 getCategory connection categoryIdRequest = let {
     params = category_id (categoryIdRequest :: CategoryIdRequest);
 } in do
@@ -302,7 +298,7 @@ getCategory connection categoryIdRequest = let {
             _ -> Nothing
         )
 
-deleteCategory :: Connection -> CategoryIdRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+deleteCategory :: Connection -> CategoryIdRequest -> IO (Either String ByteString, Maybe ByteString)
 deleteCategory connection categoryIdRequest = let {
     params = category_id (categoryIdRequest :: CategoryIdRequest);
 } in do
@@ -316,7 +312,7 @@ deleteCategory connection categoryIdRequest = let {
         )
 
 
-createTag :: Connection -> CreateTagRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+createTag :: Connection -> CreateTagRequest -> IO (Either String ByteString, Maybe ByteString)
 createTag connection createTagRequest = let {
     params = tag_name (createTagRequest :: CreateTagRequest);
 } in do
@@ -329,7 +325,7 @@ createTag connection createTagRequest = let {
             _ -> Nothing
         )
 
-editTag :: Connection -> EditTagRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+editTag :: Connection -> EditTagRequest -> IO (Either String ByteString, Maybe ByteString)
 editTag connection editTagRequest = let {
     params = (tag_id (editTagRequest :: EditTagRequest), tag_name (editTagRequest :: EditTagRequest));
 } in do
@@ -343,7 +339,7 @@ editTag connection editTagRequest = let {
             _ -> Nothing
         )
 
-deleteTag :: Connection -> TagIdRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+deleteTag :: Connection -> TagIdRequest -> IO (Either String ByteString, Maybe ByteString)
 deleteTag connection deleteTagRequest = let {
     params = tag_id (deleteTagRequest :: TagIdRequest);
 } in do
@@ -356,7 +352,7 @@ deleteTag connection deleteTagRequest = let {
             _ -> Nothing
         )
 
-getTag :: Connection -> TagIdRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getTag :: Connection -> TagIdRequest -> IO (Either String ByteString, Maybe ByteString)
 getTag connection getTagRequest = let {
     params = tag_id (getTagRequest :: TagIdRequest);
 } in do
@@ -369,7 +365,7 @@ getTag connection getTagRequest = let {
         )
 
 
-createComment :: Connection -> CreateCommentRequest -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+createComment :: Connection -> CreateCommentRequest -> Int32 -> IO (Either String ByteString, Maybe ByteString)
 createComment connection createCommentRequest user_id' = let {
     params = (
         article_id (createCommentRequest :: CreateCommentRequest),
@@ -385,7 +381,7 @@ createComment connection createCommentRequest user_id' = let {
             _ -> Nothing
         )
 
-deleteComment :: Connection -> CommentIdRequest -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+deleteComment :: Connection -> CommentIdRequest -> Int32 -> IO (Either String ByteString, Maybe ByteString)
 deleteComment connection deleteCommentRequest user_id' = let {
     params = (
         comment_id (deleteCommentRequest :: CommentIdRequest),
@@ -400,7 +396,7 @@ deleteComment connection deleteCommentRequest user_id' = let {
             _ -> Nothing
         )
 
-getArticleComments :: Connection -> ArticleCommentsRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getArticleComments :: Connection -> ArticleCommentsRequest -> IO (Either String ByteString, Maybe ByteString)
 getArticleComments connection articleCommentsRequest = let {
     params = (
         article_id (articleCommentsRequest :: ArticleCommentsRequest),
@@ -414,7 +410,7 @@ getArticleComments connection articleCommentsRequest = let {
         )
 
 
-createArticleDraft :: Connection -> ArticleDraftRequest -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+createArticleDraft :: Connection -> ArticleDraftRequest -> Int32 -> IO (Either String ByteString, Maybe ByteString)
 createArticleDraft connection articleDraftRequest author_id' = let {
     params = (
         author_id',
@@ -442,7 +438,7 @@ createArticleDraft connection articleDraftRequest author_id' = let {
             _ -> Nothing
         )
 
-publishArticleDraft :: Connection -> ArticleDraftIdRequest -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+publishArticleDraft :: Connection -> ArticleDraftIdRequest -> Int32 -> IO (Either String ByteString, Maybe ByteString)
 publishArticleDraft connection articleDraftIdRequest author_id' = let {
     params = (
         author_id',
@@ -457,7 +453,7 @@ publishArticleDraft connection articleDraftIdRequest author_id' = let {
             _ -> Nothing
         )
 
-editArticleDraft :: Connection -> ArticleDraftEditRequest -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+editArticleDraft :: Connection -> ArticleDraftEditRequest -> Int32 -> IO (Either String ByteString, Maybe ByteString)
 editArticleDraft connection articleDraftEditRequest author_id' = let {
     params = (
         author_id',
@@ -487,7 +483,7 @@ editArticleDraft connection articleDraftEditRequest author_id' = let {
             _ -> Nothing
         )
 
-getArticleDraft :: Connection -> ArticleDraftIdRequest -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getArticleDraft :: Connection -> ArticleDraftIdRequest -> Int32 -> IO (Either String ByteString, Maybe ByteString)
 getArticleDraft connection articleDraftIdRequest author_id' = let {
     params = (
         article_id (articleDraftIdRequest :: ArticleDraftIdRequest),
@@ -502,7 +498,7 @@ getArticleDraft connection articleDraftIdRequest author_id' = let {
             _ -> Nothing
         )
 
-deleteArticleDraft :: Connection -> ArticleDraftIdRequest -> Int32 -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+deleteArticleDraft :: Connection -> ArticleDraftIdRequest -> Int32 -> IO (Either String ByteString, Maybe ByteString)
 deleteArticleDraft connection articleDraftIdRequest author_id' = let {
     params = (
         article_id (articleDraftIdRequest :: ArticleDraftIdRequest),
@@ -518,7 +514,7 @@ deleteArticleDraft connection articleDraftIdRequest author_id' = let {
         )
 
 
-getArticlesByCategoryId :: Connection -> ArticlesByCategoryIdRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getArticlesByCategoryId :: Connection -> ArticlesByCategoryIdRequest -> IO (Either String ByteString, Maybe ByteString)
 getArticlesByCategoryId connection articlesByCategoryIdRequest = let {
     params = (
         category_id (articlesByCategoryIdRequest :: ArticlesByCategoryIdRequest),
@@ -531,7 +527,7 @@ getArticlesByCategoryId connection articlesByCategoryIdRequest = let {
         Nothing
         )
 
-getArticlesByTagId :: Connection -> TagIdRequestWithOffset -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getArticlesByTagId :: Connection -> TagIdRequestWithOffset -> IO (Either String ByteString, Maybe ByteString)
 getArticlesByTagId connection tagIdRequestWithOffset = let {
     params = (
         tag_id (tagIdRequestWithOffset :: TagIdRequestWithOffset),
@@ -545,7 +541,7 @@ getArticlesByTagId connection tagIdRequestWithOffset = let {
         )
 
 
-getArticlesByAnyTagId :: Connection -> ArticlesByTagIdListRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getArticlesByAnyTagId :: Connection -> ArticlesByTagIdListRequest -> IO (Either String ByteString, Maybe ByteString)
 getArticlesByAnyTagId connection tagIdsRequest = let {
     params = (
         tags_ids (tagIdsRequest :: ArticlesByTagIdListRequest),
@@ -558,7 +554,7 @@ getArticlesByAnyTagId connection tagIdsRequest = let {
         Nothing
         )
 
-getArticlesByAllTagId :: Connection -> ArticlesByTagIdListRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getArticlesByAllTagId :: Connection -> ArticlesByTagIdListRequest -> IO (Either String ByteString, Maybe ByteString)
 getArticlesByAllTagId connection tagIdsRequest = let {
     params = (
         tags_ids (tagIdsRequest :: ArticlesByTagIdListRequest),
@@ -571,7 +567,7 @@ getArticlesByAllTagId connection tagIdsRequest = let {
         Nothing
         )
 
-getArticlesByTitlePart :: Connection -> ArticlesByTitlePartRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getArticlesByTitlePart :: Connection -> ArticlesByTitlePartRequest -> IO (Either String ByteString, Maybe ByteString)
 getArticlesByTitlePart connection substringRequest = let {
     params = (
         title_substring (substringRequest :: ArticlesByTitlePartRequest),
@@ -584,7 +580,7 @@ getArticlesByTitlePart connection substringRequest = let {
         Nothing
         )
 
-getArticlesByContentPart :: Connection -> ArticlesByContentPartRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getArticlesByContentPart :: Connection -> ArticlesByContentPartRequest -> IO (Either String ByteString, Maybe ByteString)
 getArticlesByContentPart connection substringRequest = let {
     params = (
         content_substring (substringRequest :: ArticlesByContentPartRequest),
@@ -597,7 +593,7 @@ getArticlesByContentPart connection substringRequest = let {
         Nothing
         )
 
-getArticlesByAuthorNamePart :: Connection -> ArticlesByAuthorNamePartRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getArticlesByAuthorNamePart :: Connection -> ArticlesByAuthorNamePartRequest -> IO (Either String ByteString, Maybe ByteString)
 getArticlesByAuthorNamePart connection substringRequest = let {
     params = (
         author_name_substring (substringRequest :: ArticlesByAuthorNamePartRequest),
@@ -610,7 +606,7 @@ getArticlesByAuthorNamePart connection substringRequest = let {
         Nothing
         )
 
-getArticlesSortedByPhotosNumber :: Connection -> OffsetRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getArticlesSortedByPhotosNumber :: Connection -> OffsetRequest -> IO (Either String ByteString, Maybe ByteString)
 getArticlesSortedByPhotosNumber connection request = let {
     params = (
         offset (request :: OffsetRequest)
@@ -622,7 +618,7 @@ getArticlesSortedByPhotosNumber connection request = let {
         Nothing
         )
 
-getArticlesSortedByCreationDate :: Connection -> OffsetRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getArticlesSortedByCreationDate :: Connection -> OffsetRequest -> IO (Either String ByteString, Maybe ByteString)
 getArticlesSortedByCreationDate connection request = let {
     params = (
         offset (request :: OffsetRequest)
@@ -634,7 +630,7 @@ getArticlesSortedByCreationDate connection request = let {
         Nothing
         )
 
-getArticlesSortedByAuthor :: Connection -> OffsetRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getArticlesSortedByAuthor :: Connection -> OffsetRequest -> IO (Either String ByteString, Maybe ByteString)
 getArticlesSortedByAuthor connection request = let {
     params = (
         offset (request :: OffsetRequest)
@@ -646,7 +642,7 @@ getArticlesSortedByAuthor connection request = let {
         Nothing
         )
 
-getArticlesSortedByCategory :: Connection -> OffsetRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getArticlesSortedByCategory :: Connection -> OffsetRequest -> IO (Either String ByteString, Maybe ByteString)
 getArticlesSortedByCategory connection request = let {
     params = (
         offset (request :: OffsetRequest)
@@ -659,7 +655,7 @@ getArticlesSortedByCategory connection request = let {
         )
 
 getArticlesFilteredBy :: Statement (Text, Maybe Int32) Value -> Connection -> ArticlesByCreationDateRequest
-    -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+    -> IO (Either String ByteString, Maybe ByteString)
 getArticlesFilteredBy statement connection articlesByCreationDateRequest = let {
     params = (
         pack . showGregorian $ day (articlesByCreationDateRequest :: ArticlesByCreationDateRequest),
@@ -673,18 +669,18 @@ getArticlesFilteredBy statement connection articlesByCreationDateRequest = let {
         )
 
 getArticlesFilteredByCreationDate :: Connection -> ArticlesByCreationDateRequest
-    -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+    -> IO (Either String ByteString, Maybe ByteString)
 getArticlesFilteredByCreationDate = getArticlesFilteredBy HST.getArticlesFilteredByCreationDate
 
 getArticlesCreatedBeforeDate :: Connection -> ArticlesByCreationDateRequest
-    -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+    -> IO (Either String ByteString, Maybe ByteString)
 getArticlesCreatedBeforeDate = getArticlesFilteredBy HST.getArticlesCreatedBeforeDate
 
-getArticlesCreatedAfterDate :: Connection -> ArticlesByCreationDateRequest -> IO (Either Session.QueryError ByteString, Maybe ByteString)
+getArticlesCreatedAfterDate :: Connection -> ArticlesByCreationDateRequest -> IO (Either String ByteString, Maybe ByteString)
 getArticlesCreatedAfterDate = getArticlesFilteredBy HST.getArticlesCreatedAfterDate
 
 
-getCredentials :: Connection -> AuthRequest -> IO (Either Session.QueryError (Int32, Bool, Int32), Maybe ByteString)
+getCredentials :: Connection -> AuthRequest -> IO (Either String (Int32, Bool, Int32), Maybe ByteString)
 getCredentials connection authRequest = let {
     params = (
         username (authRequest :: AuthRequest),
@@ -693,7 +689,7 @@ getCredentials connection authRequest = let {
 } in do
     sessionResults <- Session.run (Session.statement params HST.getCredentials) connection
     pure (
-        sessionResults,
+        bimap show id sessionResults,
         case getErrorCode sessionResults of
             Just "0" -> Just "wrong username/password"
             _ -> Nothing
