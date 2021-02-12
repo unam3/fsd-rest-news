@@ -24,7 +24,7 @@ import Network.Wai.Middleware.Rewrite (PathsAndQueries, rewritePureWithQueries)
 import Network.Wai.Session (withSession, Session)
 import Prelude hiding (error)
 import Network.Wai.Session.PostgreSQL (clearSession, dbStore, defaultSettings, fromSimpleConnection, purger)
-import System.Log.Logger (Priority (DEBUG, ERROR), debugM, setLevel, traplogging, updateGlobalLogger)
+import System.Log.Logger (Priority (DEBUG, ERROR), debugM, errorM, setLevel, traplogging, updateGlobalLogger)
 import Web.Cookie (defaultSetCookie)
 
 wrongParamsOrValues :: Either String String
@@ -270,11 +270,11 @@ restAPI vaultKey clearSessionPartial request respond = let {
                 sessionAuthorId = (read sessionAuthorIdString :: Int32);
                 sessionUserId = (read sessionUserIdString :: Int32);
                 sessionResults = case errorOrSessionName of
-                    Left error -> pure (Right $ UTFLBS.fromString error, Just $ UTFLBS.fromString error)
+                    Left error -> pure (Left error, Just $ UTFLBS.fromString error)
                     Right sessionName -> 
                         case eitherConnection of
                             Left connectionError -> 
-                                debugM "rest-news" (show connectionError)
+                                errorM "rest-news" (show connectionError)
                                 >> pure (
                                     dbError,
                                     Just "DB connection error"
@@ -329,21 +329,24 @@ restAPI vaultKey clearSessionPartial request respond = let {
                                 "getArticlesCreatedBeforeDate" -> runSession HSS.getArticlesCreatedBeforeDate
                                 "getArticlesCreatedAfterDate" -> runSession HSS.getArticlesCreatedAfterDate
                                 nonMatched -> pure (
-                                    Right $ UTFLBS.fromString nonMatched,
-                                    Just $ UTFLBS.fromString nonMatched);
+                                    Left $ "Endpoint is not implemented: " ++ nonMatched,
+                                    Just . UTFLBS.fromString $ "Endpoint is not implemented: " ++ nonMatched);
                 } in sessionResults
 
-            debugM "rest-news" (case fst results of
-                Right ulbs -> UTFLBS.toString ulbs
-                Left leftErr -> show (snd results) ++ ", " ++ leftErr
+            debugM
+                "rest-news"
+                (case fst results of
+                    Left leftErr -> show (snd results) ++ ", " ++ leftErr
+                    Right ulbs -> UTFLBS.toString ulbs
                 )
 
-            processedResults <- pure (case fst results of
+            processedResults <- let {
+                no_output_for_the_user_in_case_of_unhandled_exception = "";
+            } in pure (case fst results of
                 Right ulbs -> ulbs
                 _ -> case snd results of
                     Just errorForClient -> errorForClient
-                    -- there must not be any QueryError!
-                    _ -> undefined)
+                    _ -> no_output_for_the_user_in_case_of_unhandled_exception)
 
             let {
                 httpStatus
