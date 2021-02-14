@@ -17,6 +17,7 @@ createuser -d -P rest-news-user
 createdb rest-news-db
 psql rest-news-db -c "CREATE EXTENSION pgcrypto;"
 psql -h 0.0.0.0 -W -f schema.psql rest-news-db rest-news-user
+# add user with admin privileges: substitute LOGIN and PASSWORD with desired values
 psql rest-news-db -c "INSERT INTO users (username, password, name, surname, is_admin) VALUES ('LOGIN', crypt('PASSWORD', gen_salt('bf', 8)), '~', '~', true)"
 
 ^D
@@ -38,7 +39,7 @@ stack build
 
 stack exec rest-news-exe
 
-psql -h 0.0.0.0 -W -f schema.psql rest-news-db rest-news-user
+psql -h 0.0.0.0 -W -f schema.psql rest-news-db rest-news-user && psql -h 0.0.0.0 -W -f tests-fixtures.psql rest-news-db rest-news-user
 
 stack test
 ```
