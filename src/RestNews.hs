@@ -31,7 +31,9 @@ wrongParamsOrValues :: Either String String
 wrongParamsOrValues = Left "Wrong parameters/parameters values"
 
 ifValidRequest :: Maybe request -> String -> Either String String
-ifValidRequest request sessionName = maybe wrongParamsOrValues (const $ Right sessionName) request
+ifValidRequest request sessionName = if sessionName == noSuchEndpointS
+    then noSuchEndpoint
+    else maybe wrongParamsOrValues (const $ Right sessionName) request
 
 noSuchEndpointS :: String
 noSuchEndpointS = "No such endpoint"
@@ -329,8 +331,8 @@ restAPI vaultKey clearSessionPartial request respond = let {
                                 "getArticlesCreatedBeforeDate" -> runSession HSS.getArticlesCreatedBeforeDate
                                 "getArticlesCreatedAfterDate" -> runSession HSS.getArticlesCreatedAfterDate
                                 nonMatched -> pure (
-                                    Left $ "Endpoint is not implemented: " ++ nonMatched,
-                                    Just . UTFLBS.fromString $ "Endpoint is not implemented: " ++ nonMatched);
+                                    Left nonMatched,
+                                    Nothing);
                 } in sessionResults
 
             debugM
