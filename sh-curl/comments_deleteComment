@@ -1,0 +1,1 @@
+curl -i -H 'Cookie: SESSION='${NOT_AN_AUTHOR_SESSION} -X DELETE -d '{"comment_id": 4}' http://0.0.0.0:8081/comments

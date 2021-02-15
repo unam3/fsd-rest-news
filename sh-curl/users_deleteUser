@@ -1,0 +1,1 @@
+curl -i -H 'Cookie: SESSION='${AUTHOR_ADMIN_SESSION} -X DELETE -d '{"user_id": 7}' http://localhost:8081/users

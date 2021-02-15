@@ -1,0 +1,1 @@
+curl -i -H 'Cookie: SESSION='${NOT_AN_AUTHOR_SESSION} -X POST -d '{"article_id": 2, "comment_text": "bluasd!"}' http://0.0.0.0:8081/comments

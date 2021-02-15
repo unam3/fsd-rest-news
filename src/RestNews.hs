@@ -189,7 +189,7 @@ restAPI vaultKey clearSessionPartial request respond = let {
                                 . either id id $ passSessionNameIfHasUserId "createComment"
                             "GET"       -> ifValidRequest maybeArticleCommentsRequestJSON "getArticleComments"
                             "DELETE"    -> ifValidRequest maybeCommentIdRequestJSON
-                                . either id id $ passSessionNameIfHasUserId "deleteComment" 
+                                . either id id $ passSessionNameIfHasUserId "deleteComment"
                             _ -> noSuchEndpoint
                         "articles" -> case tail pathTextChunks of
                             [] -> case method of

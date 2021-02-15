@@ -1,0 +1,1 @@
+curl -i -X GET -d '{"author_name_substring": "s", "offset": 1}' http://0.0.0.0:8081/articles/in__author_name

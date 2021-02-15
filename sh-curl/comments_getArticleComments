@@ -1,0 +1,1 @@
+curl -i -X GET -d '{"article_id": 2, "offset": 1}' http://0.0.0.0:8081/comments

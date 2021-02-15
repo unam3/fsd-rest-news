@@ -1,0 +1,1 @@
+curl -i -H 'Cookie: SESSION='${AUTHOR_ADMIN_SESSION} -X DELETE -d '{"category_id": 8}' http://0.0.0.0:8081/categories

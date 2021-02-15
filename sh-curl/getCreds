@@ -1,0 +1,8 @@
+# not an author
+NOT_AN_AUTHOR_SESSION=`curl -i -X POST -d '{"username": "username5", "password": "12345"}' http://0.0.0.0:8081/auth|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`
+
+# author
+AUTHOR_SESSION=`curl -i -X POST -d '{"username": "username2", "password": "12345"}' http://0.0.0.0:8081/auth|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`
+
+# author and admin
+AUTHOR_ADMIN_SESSION=`curl -i -X POST -d '{"username": "username", "password": "12345"}' http://0.0.0.0:8081/auth|grep SESSION|cut -d = -f 2 -|tr -d "\r\n"`

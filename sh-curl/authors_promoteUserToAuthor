@@ -1,0 +1,1 @@
+curl -i -H 'Cookie: SESSION='${AUTHOR_ADMIN_SESSION} -X POST -d '{"user_id": 6, "description": "blob deccas"}' http://0.0.0.0:8081/authors

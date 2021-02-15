@@ -1,0 +1,1 @@
+curl -i -H 'Cookie: SESSION='${AUTHOR_SESSION} -X PATCH -d '{"article_title": "PATCHED", "category_id": 2, "article_content": "PATCHED", "article_id": 9, "main_photo": "fs", "additional_photos": ["9", "2"], "tags": [1,2]}' http://0.0.0.0:8081/articles
