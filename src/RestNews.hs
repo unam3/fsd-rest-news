@@ -28,6 +28,7 @@ import Network.Wai.Session (withSession, Session)
 import Prelude hiding (error)
 import Network.Wai.Session.PostgreSQL (clearSession, dbStore, defaultSettings, fromSimpleConnection, purger)
 import System.Environment (getArgs)
+import System.Exit (exitFailure, exitSuccess)
 import System.Log.Logger (Priority (DEBUG, ERROR), debugM, errorM, setLevel, traplogging, updateGlobalLogger)
 import Web.Cookie (defaultSetCookie)
 
@@ -397,7 +398,8 @@ runWarp :: [String] -> IO ()
 runWarp argsList = let {
     processedArgs = processArgs argsList;
 } in case processedArgs of
-    Left error -> errorM "rest-news" error
+    Left error -> errorM "rest-news" error  
+        >> exitFailure
     Right (port, dbConnectionSettings) -> 
         do
         vaultK <- Vault.newKey
@@ -405,15 +407,15 @@ runWarp argsList = let {
         -- IO (SessionStore IO String String)
         store <- dbStore simpleConnection defaultSettings
         void (purger simpleConnection defaultSettings)
-        void (
-            let {
+        let {
                 clearSessionPartial = clearSession simpleConnection "SESSION";
             } in run port
-            (router (
-                withSession store "SESSION" defaultSetCookie vaultK
-                $ restAPI dbConnectionSettings vaultK clearSessionPartial
-                ))
-            )
+                (router (
+                    withSession store "SESSION" defaultSetCookie vaultK
+                    $ restAPI dbConnectionSettings vaultK clearSessionPartial
+                    )
+                )
+            >> exitSuccess
 
 runWarpWithLogger :: IO ()
 runWarpWithLogger = traplogging "rest-news" ERROR "shutdown due to"
