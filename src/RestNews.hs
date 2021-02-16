@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings  #-}
 
 module RestNews
-    ( runWarpWithLogger
+    ( runWarpWithLogger,
+    processArgs
     ) where
 
 import AesonDefinitions (AuthRequest, CreateUserRequest, UserIdRequest, PromoteUserToAuthorRequest, EditAuthorRequest, AuthorIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest, TagIdRequestWithOffset, CreateCommentRequest, CreateCommentRequest, CommentIdRequest, ArticleCommentsRequest, ArticleDraftRequest, ArticleDraftEditRequest, ArticleDraftIdRequest, ArticlesByCategoryIdRequest, ArticlesByTagIdListRequest, ArticlesByTitlePartRequest, ArticlesByContentPartRequest, ArticlesByAuthorNamePartRequest, ArticlesByCreationDateRequest, OffsetRequest)
@@ -14,8 +15,10 @@ import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
 import Data.Either (fromRight)
 import Data.Int (Int32)
 import Data.Maybe (fromJust, isJust)
+import Data.String (fromString)
 import qualified Data.Vault.Lazy as Vault
 import Database.PostgreSQL.Simple (Connection, ConnectInfo(..), connectPostgreSQL, postgreSQLConnectionString)
+import Hasql.Connection (Settings, settings)
 import qualified Network.HTTP.Types as H
 import Network.Wai (Application, Request, pathInfo, requestMethod, responseLBS, strictRequestBody, vault)
 import Network.Wai.Application.Static
@@ -24,6 +27,7 @@ import Network.Wai.Middleware.Rewrite (PathsAndQueries, rewritePureWithQueries)
 import Network.Wai.Session (withSession, Session)
 import Prelude hiding (error)
 import Network.Wai.Session.PostgreSQL (clearSession, dbStore, defaultSettings, fromSimpleConnection, purger)
+import System.Environment (getArgs)
 import System.Log.Logger (Priority (DEBUG, ERROR), debugM, errorM, setLevel, traplogging, updateGlobalLogger)
 import Web.Cookie (defaultSetCookie)
 
@@ -64,8 +68,8 @@ dbconnect = let {
 
 
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
-restAPI :: Vault.Key (Session IO String String) -> (Request -> IO ()) -> Application;
-restAPI vaultKey clearSessionPartial request respond = let {
+restAPI :: Settings -> Vault.Key (Session IO String String) -> (Request -> IO ()) -> Application;
+restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let {
         endpointNeeded = Left "Endpoint needed";
         pathTextChunks = pathInfo request;
         isRequestPathNotEmpty = (not $ null pathTextChunks);
@@ -266,7 +270,7 @@ restAPI vaultKey clearSessionPartial request respond = let {
                         _ -> noSuchEndpoint)
                     else endpointNeeded)
 
-            eitherConnection <- HSS.getConnection
+            eitherConnection <- HSS.getConnection dbConnectionSettings
 
             results <- let {
                 sessionAuthorId = (read sessionAuthorIdString :: Int32);
@@ -378,26 +382,40 @@ router app request respond =
         then rewrite (staticApp (defaultWebAppSettings "static")) request respond
         else app request respond
 
-runWarp :: IO ()
-runWarp = let {
-    port = 8081 :: Port;
-} in do
-    vaultK <- Vault.newKey
-    simpleConnection <- dbconnect >>= fromSimpleConnection
-    -- IO (SessionStore IO String String)
-    store <- dbStore simpleConnection defaultSettings
-    void (purger simpleConnection defaultSettings)
-    void (
-        let {
-            clearSessionPartial = clearSession simpleConnection "SESSION";
-        } in run port
-        (router (
-            withSession store "SESSION" defaultSetCookie vaultK
-            $ restAPI vaultK clearSessionPartial
-            ))
-        )
+processArgs :: [String] -> Either String (Port, Settings)
+-- settings :: ByteString -> Word16 -> ByteString -> ByteString -> ByteString -> Settings
+-- connectionSettings = settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
+processArgs [runAtPort, dbHost, dbPort, dbUser, dbPassword, dbName] =
+    Right (
+        read runAtPort,
+        settings (fromString dbHost) (read dbPort) (fromString dbUser) (fromString dbPassword) (fromString dbName)
+    )
+        
+processArgs _ = Left "Exactly 6 arguments needed: port to run rest-news, db hostname, db port, db user, db password, db name"
+
+runWarp :: [String] -> IO ()
+runWarp argsList = let {
+    processedArgs = processArgs argsList;
+} in case processedArgs of
+    Left error -> errorM "rest-news" error
+    Right (port, dbConnectionSettings) -> 
+        do
+        vaultK <- Vault.newKey
+        simpleConnection <- dbconnect >>= fromSimpleConnection
+        -- IO (SessionStore IO String String)
+        store <- dbStore simpleConnection defaultSettings
+        void (purger simpleConnection defaultSettings)
+        void (
+            let {
+                clearSessionPartial = clearSession simpleConnection "SESSION";
+            } in run port
+            (router (
+                withSession store "SESSION" defaultSetCookie vaultK
+                $ restAPI dbConnectionSettings vaultK clearSessionPartial
+                ))
+            )
 
 runWarpWithLogger :: IO ()
 runWarpWithLogger = traplogging "rest-news" ERROR "shutdown due to"
     $ updateGlobalLogger "rest-news" (setLevel DEBUG)
-    >> runWarp
+    >> getArgs >>= runWarp

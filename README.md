@@ -23,11 +23,10 @@ psql rest-news-db -c "INSERT INTO users (username, password, name, surname, is_a
 
 ^D
 
-# build package
 stack build
 
-# run it
-stack exec rest-news-exe
+# arguments: port to run rest-news, db hostname, db port, db user, db password, db name
+stack exec rest-news-exe 8081 "localhost" 5432 "rest-news-user" "rest" "rest-news-db"
 ```
 
 As a definitive guide to parameter values for requests one may use combination of `src/RestNews.hs`, `src/HasqlSessions.hs` and `src/AesonDefinitions.hs`.
@@ -53,7 +52,7 @@ To run tests you need to (1) run rest news, (2) create proper db-structure befor
 ```
 stack build
 
-stack exec rest-news-exe
+stack exec rest-news-exe 8081 "localhost" 5432 "rest-news-user" "rest" "rest-news-db"
 
 psql -h 0.0.0.0 -W -f schema.psql rest-news-db rest-news-user && psql -h 0.0.0.0 -W -f tests-fixtures.psql rest-news-db rest-news-user
 

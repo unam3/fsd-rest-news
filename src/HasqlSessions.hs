@@ -51,7 +51,7 @@ import Data.Int (Int32)
 import Data.Text (Text, pack)
 --import Data.Text.IO (putStrLn)
 import Data.Time.Calendar (showGregorian)
-import Hasql.Connection (Connection, ConnectionError, Settings, acquire, settings)
+import Hasql.Connection (Connection, ConnectionError, Settings, acquire)
 import qualified Hasql.Session as Session
 import Hasql.Statement (Statement)
 
@@ -64,9 +64,6 @@ import qualified HasqlStatements as HST
 
 valueToUTFLBS :: Either Session.QueryError Value -> Either String ByteString
 valueToUTFLBS = bimap show encode
-
-connectionSettings :: Settings
-connectionSettings = settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
 
 getError :: Either Session.QueryError resultsType -> Maybe (String, Maybe String)
 {-
@@ -148,8 +145,8 @@ getError _ = Nothing
 --    Right connection <- acquire connectionSettings
 --    sessionResults <- Session.run (Session.statement params statement) connection
 
-getConnection :: IO (Either ConnectionError Connection)
-getConnection = acquire connectionSettings
+getConnection :: Settings -> IO (Either ConnectionError Connection)
+getConnection = acquire
 
 getErrorCode :: Either Session.QueryError resultsType -> Maybe String
 getErrorCode = fmap fst . getError
