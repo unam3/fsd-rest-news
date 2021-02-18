@@ -35,8 +35,8 @@ import Web.Cookie (defaultSetCookie)
 wrongParamsOrValues :: Either String String
 wrongParamsOrValues = Left "Wrong parameters/parameters values"
 
-ifValidRequest :: Maybe request -> String -> Either String String
-ifValidRequest request sessionName = if sessionName == noSuchEndpointS
+ifValidRequestPassSessionName :: Maybe request -> String -> Either String String
+ifValidRequestPassSessionName request sessionName = if sessionName == noSuchEndpointS
     then noSuchEndpoint
     else maybe wrongParamsOrValues (const $ Right sessionName) request
 
@@ -153,117 +153,117 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
                 if isRequestPathNotEmpty
                     then (case pathHeadChunk of
                         "auth" -> case method of
-                            "POST"      -> ifValidRequest maybeAuthRequestJSON "auth"
+                            "POST"      -> ifValidRequestPassSessionName maybeAuthRequestJSON "auth"
                             _ -> noSuchEndpoint
                         "users" -> case method of
-                            "POST"      -> ifValidRequest maybeCreateUserRequestJSON "createUser"
+                            "POST"      -> ifValidRequestPassSessionName maybeCreateUserRequestJSON "createUser"
                             "GET"       -> passSessionNameIfHasUserId "getUser"
-                            "DELETE"    -> ifValidRequest maybeUserIdRequestJSON
+                            "DELETE"    -> ifValidRequestPassSessionName maybeUserIdRequestJSON
                                 $ passSessionNameIfAdmin "deleteUser" 
                             _ -> noSuchEndpoint
                         "authors" -> case method of
-                            "POST"      -> ifValidRequest maybePromoteUserToAuthorRequestJSON
+                            "POST"      -> ifValidRequestPassSessionName maybePromoteUserToAuthorRequestJSON
                                 $ passSessionNameIfAdmin "promoteUserToAuthor"
-                            "PATCH"     -> ifValidRequest maybeEditAuthorRequestJSON
+                            "PATCH"     -> ifValidRequestPassSessionName maybeEditAuthorRequestJSON
                                 $ passSessionNameIfAdmin "editAuthor"
-                            "GET"       -> ifValidRequest maybeAuthorIdRequestJSON
+                            "GET"       -> ifValidRequestPassSessionName maybeAuthorIdRequestJSON
                                 $ passSessionNameIfAdmin "getAuthor" 
-                            "DELETE"    -> ifValidRequest maybeAuthorIdRequestJSON
+                            "DELETE"    -> ifValidRequestPassSessionName maybeAuthorIdRequestJSON
                                 $ passSessionNameIfAdmin "deleteAuthorRole" 
                             _ -> noSuchEndpoint
                         "categories" -> case method of
-                            "POST"      -> ifValidRequest maybeCreateCategoryRequestJSON
+                            "POST"      -> ifValidRequestPassSessionName maybeCreateCategoryRequestJSON
                                 $ passSessionNameIfAdmin "createCategory"
-                            "PATCH"     -> ifValidRequest maybeUpdateCategoryRequestJSON
+                            "PATCH"     -> ifValidRequestPassSessionName maybeUpdateCategoryRequestJSON
                                 $ passSessionNameIfAdmin "updateCategory"
-                            "GET"       -> ifValidRequest maybeCategoryIdRequestJSON "getCategory"
-                            "DELETE"    -> ifValidRequest maybeCategoryIdRequestJSON
+                            "GET"       -> ifValidRequestPassSessionName maybeCategoryIdRequestJSON "getCategory"
+                            "DELETE"    -> ifValidRequestPassSessionName maybeCategoryIdRequestJSON
                                 $ passSessionNameIfAdmin "deleteCategory"
                             _ -> noSuchEndpoint
                         "tags" -> case method of
-                            "POST"      -> ifValidRequest maybeCreateTagRequestJSON
+                            "POST"      -> ifValidRequestPassSessionName maybeCreateTagRequestJSON
                                 $ passSessionNameIfAdmin "createTag"
-                            "PATCH"     -> ifValidRequest maybeEditTagRequestJSON
+                            "PATCH"     -> ifValidRequestPassSessionName maybeEditTagRequestJSON
                                 $ passSessionNameIfAdmin "editTag"
-                            "GET"       -> ifValidRequest maybeTagIdRequestJSON "getTag"
-                            "DELETE"    -> ifValidRequest maybeTagIdRequestJSON
+                            "GET"       -> ifValidRequestPassSessionName maybeTagIdRequestJSON "getTag"
+                            "DELETE"    -> ifValidRequestPassSessionName maybeTagIdRequestJSON
                                 $ passSessionNameIfAdmin "deleteTag"
                             _ -> noSuchEndpoint
                         "comments" -> case method of
-                            "POST"      -> ifValidRequest maybeCreateCommentRequestJSON
+                            "POST"      -> ifValidRequestPassSessionName maybeCreateCommentRequestJSON
                                 . either id id $ passSessionNameIfHasUserId "createComment"
-                            "GET"       -> ifValidRequest maybeArticleCommentsRequestJSON "getArticleComments"
-                            "DELETE"    -> ifValidRequest maybeCommentIdRequestJSON
+                            "GET"       -> ifValidRequestPassSessionName maybeArticleCommentsRequestJSON "getArticleComments"
+                            "DELETE"    -> ifValidRequestPassSessionName maybeCommentIdRequestJSON
                                 . either id id $ passSessionNameIfHasUserId "deleteComment"
                             _ -> noSuchEndpoint
                         "articles" -> case tail pathTextChunks of
                             [] -> case method of
                                 "POST" -> if isJust maybeArticleDraftRequestJSON
                                     then passSessionNameIfHasAuthorId "createArticleDraft"
-                                    else ifValidRequest maybeArticleDraftIdRequestJSON
+                                    else ifValidRequestPassSessionName maybeArticleDraftIdRequestJSON
                                         . either id id $ passSessionNameIfHasAuthorId "publishArticleDraft"
-                                "PATCH" -> ifValidRequest maybeArticleDraftEditRequestJSON
+                                "PATCH" -> ifValidRequestPassSessionName maybeArticleDraftEditRequestJSON
                                     . either id id $ passSessionNameIfHasAuthorId "editArticleDraft"
-                                "GET" -> ifValidRequest maybeArticleDraftIdRequestJSON
+                                "GET" -> ifValidRequestPassSessionName maybeArticleDraftIdRequestJSON
                                     . either id id $ passSessionNameIfHasAuthorId "getArticleDraft"
-                                "DELETE" -> ifValidRequest maybeArticleDraftIdRequestJSON
+                                "DELETE" -> ifValidRequestPassSessionName maybeArticleDraftIdRequestJSON
                                     . either id id $ passSessionNameIfHasAuthorId "deleteArticleDraft"
                                 _ -> noSuchEndpoint
                             ["category"] -> case method of
-                                "GET" -> ifValidRequest maybeArticlesByCategoryIdRequestJSON "getArticlesByCategoryId" 
+                                "GET" -> ifValidRequestPassSessionName maybeArticlesByCategoryIdRequestJSON "getArticlesByCategoryId" 
                                 _ -> noSuchEndpoint
                             ["tag"] -> case method of
-                                "GET" -> ifValidRequest maybeTagIdRequestWithOffsetJSON "getArticlesByTagId"
+                                "GET" -> ifValidRequestPassSessionName maybeTagIdRequestWithOffsetJSON "getArticlesByTagId"
                                 _ -> noSuchEndpoint
                             ["tags__any"] -> case method of
-                                "GET" -> ifValidRequest maybeArticlesByTagIdListRequest "getArticlesByAnyTagId"
+                                "GET" -> ifValidRequestPassSessionName maybeArticlesByTagIdListRequest "getArticlesByAnyTagId"
                                 _ -> noSuchEndpoint
                             ["tags__all"] -> case method of
-                                "GET" -> ifValidRequest maybeArticlesByTagIdListRequest "getArticlesByAllTagId"
+                                "GET" -> ifValidRequestPassSessionName maybeArticlesByTagIdListRequest "getArticlesByAllTagId"
                                 _ -> noSuchEndpoint
                             ["in__title"] -> case method of
-                                "GET" -> ifValidRequest maybeArticlesByTitlePartRequest "getArticlesByTitlePart"
+                                "GET" -> ifValidRequestPassSessionName maybeArticlesByTitlePartRequest "getArticlesByTitlePart"
                                 _ -> noSuchEndpoint
                             ["in__content"] -> case method of
-                                "GET" -> ifValidRequest maybeArticlesByContentPartRequest "getArticlesByContentPart"
+                                "GET" -> ifValidRequestPassSessionName maybeArticlesByContentPartRequest "getArticlesByContentPart"
                                 _ -> noSuchEndpoint
                             ["in__author_name"] -> case method of
-                                "GET" -> ifValidRequest
+                                "GET" -> ifValidRequestPassSessionName
                                     maybeArticlesByAuthorNamePartRequest
                                     "getArticlesByAuthorNamePart"
                                 _ -> noSuchEndpoint
                             ["byPhotosNumber"] -> case method of
-                                "GET" -> ifValidRequest
+                                "GET" -> ifValidRequestPassSessionName
                                     maybeOffsetRequest
                                     "getArticlesSortedByPhotosNumber"
                                 _ -> noSuchEndpoint
                             ["byCreationDate"] -> case method of
-                                "GET" -> ifValidRequest
+                                "GET" -> ifValidRequestPassSessionName
                                     maybeOffsetRequest
                                     "getArticlesSortedByCreationDate"
                                 _ -> noSuchEndpoint
                             ["sortByAuthor"] -> case method of
-                                "GET" -> ifValidRequest
+                                "GET" -> ifValidRequestPassSessionName
                                     maybeOffsetRequest
                                     "getArticlesSortedByAuthor"
                                 _ -> noSuchEndpoint
                             ["sortByCategory"] -> case method of
-                                "GET" -> ifValidRequest
+                                "GET" -> ifValidRequestPassSessionName
                                     maybeOffsetRequest
                                     "getArticlesSortedByCategory"
                                 _ -> noSuchEndpoint
                             ["createdAt"] -> case method of
-                                "GET" -> ifValidRequest
+                                "GET" -> ifValidRequestPassSessionName
                                     maybeArticlesFilteredByCreationDate
                                     "getArticlesFilteredByCreationDate"
                                 _ -> noSuchEndpoint
                             ["createdBefore"] -> case method of
-                                "GET" -> ifValidRequest
+                                "GET" -> ifValidRequestPassSessionName
                                     maybeArticlesFilteredByCreationDate
                                     "getArticlesCreatedBeforeDate"
                                 _ -> noSuchEndpoint
                             ["createdAfter"] -> case method of
-                                "GET" -> ifValidRequest
+                                "GET" -> ifValidRequestPassSessionName
                                     maybeArticlesFilteredByCreationDate
                                     "getArticlesCreatedAfterDate"
                                 _ -> noSuchEndpoint
