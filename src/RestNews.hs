@@ -2,7 +2,8 @@
 
 module RestNews
     ( runWarpWithLogger,
-    processArgs
+    processArgs,
+    RequestCheckParams(..)
     ) where
 
 import AesonDefinitions (AuthRequest, CreateUserRequest, UserIdRequest, PromoteUserToAuthorRequest, EditAuthorRequest, AuthorIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest, TagIdRequestWithOffset, CreateCommentRequest, CreateCommentRequest, CommentIdRequest, ArticleCommentsRequest, ArticleDraftRequest, ArticleDraftEditRequest, ArticleDraftIdRequest, ArticlesByCategoryIdRequest, ArticlesByTagIdListRequest, ArticlesByTitlePartRequest, ArticlesByContentPartRequest, ArticlesByAuthorNamePartRequest, ArticlesByCreationDateRequest, OffsetRequest)
@@ -71,6 +72,13 @@ dbconnect = let {
         , connectDatabase = "rest-news-db" };
     } in connectPostgreSQL $ postgreSQLConnectionString connectInfo
 
+data RequestCheckParams = Params {
+    ----- (isAdmin, sessionUserIdString, sessionAuthorIdString, requestBody) -> sessionNameOrError)
+    lbsRequest :: LBS.ByteString,
+    isAdmin :: Bool,
+    hasUserIdString :: Bool,
+    hasAuthorIdString :: Bool
+} deriving Show
 
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
 restAPI :: Settings -> Vault.Key (Session IO String String) -> (Request -> IO ()) -> Application;
@@ -118,13 +126,16 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
             debugM "rest-news" (show (method, pathTextChunks, requestBody))
 
             errorOrSessionName <- let {
-                isAdmin (Just "True") = True;
-                isAdmin _ = False;
-                passSessionNameIfAdmin sessionName = if isAdmin maybeIsAdmin
+                isAdmin = (case maybeIsAdmin of  
+                    (Just "True") -> True
+                    _ -> False);
+                passSessionNameIfAdmin sessionName = if isAdmin
                     then sessionName
                     else noSuchEndpointS;
-                passSessionNameIfHasUserId sessionName = passSessionNameIf sessionName $ sessionUserIdString /= "0";
-                passSessionNameIfHasAuthorId sessionName = passSessionNameIf sessionName $ sessionAuthorIdString /= "0";
+                hasUserId = sessionUserIdString /= "0";
+                passSessionNameIfHasUserId sessionName = passSessionNameIf sessionName $ hasUserId;
+                hasAuthorId = sessionAuthorIdString /= "0";
+                passSessionNameIfHasAuthorId sessionName = passSessionNameIf sessionName $ hasAuthorId;
                 maybeEditAuthorRequestJSON = decode requestBody :: Maybe EditAuthorRequest;
                 maybeAuthorIdRequestJSON = decode requestBody :: Maybe AuthorIdRequest;
                 maybeCreateCategoryRequestJSON = decode requestBody :: Maybe CreateCategoryRequest;
@@ -145,7 +156,7 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
                 maybeArticlesByAuthorNamePartRequest = decode requestBody :: Maybe ArticlesByAuthorNamePartRequest;
                 maybeArticlesFilteredByCreationDate = decode requestBody :: Maybe ArticlesByCreationDateRequest;
                 maybeOffsetRequest = decode requestBody :: Maybe OffsetRequest;
-                pathAndMethodToF :: HMS.HashMap ([Text], BS.ByteString) (UTFLBS.ByteString -> Either String String);
+                pathAndMethodToF :: HMS.HashMap ([Text], BS.ByteString) (RequestCheckParams -> Either String String);
                 pathAndMethodToF = HMS.fromList [
                     --( 
                     --    (pathTextChunks, method),
@@ -155,12 +166,12 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
                     ((["auth"], "POST"),
                         passSessionNameIfValidRequest
                             "auth"
-                            . (decode :: LBS.ByteString -> Maybe AuthRequest)
+                            . (decode :: LBS.ByteString -> Maybe AuthRequest) . lbsRequest
                             ),
                     ((["users"], "POST"),
                         passSessionNameIfValidRequest
                             "createUser"
-                            . (decode :: LBS.ByteString -> Maybe CreateUserRequest)
+                            . (decode :: LBS.ByteString -> Maybe CreateUserRequest) . lbsRequest
                             ),
                     ((["users"], "GET"),
                         const $ passSessionNameIfHasUserId "getUser"
@@ -168,12 +179,12 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
                     ((["users"], "DELETE"),
                         passSessionNameIfValidRequest
                             (passSessionNameIfAdmin "deleteUser")
-                            . (decode :: LBS.ByteString -> Maybe UserIdRequest)
+                            . (decode :: LBS.ByteString -> Maybe UserIdRequest) . lbsRequest
                             ),
                     ((["authors"], "POST"),
                         passSessionNameIfValidRequest
                             (passSessionNameIfAdmin "promoteUserToAuthor")
-                            . (decode :: LBS.ByteString -> Maybe PromoteUserToAuthorRequest)
+                            . (decode :: LBS.ByteString -> Maybe PromoteUserToAuthorRequest) . lbsRequest
                             ),
 --                    ((["authors"], "PATCH",
 --                        passSessionNameIfValidRequest maybeEditAuthorRequestJSON
@@ -214,14 +225,15 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
                     ((["comments"], "DELETE"),
                         passSessionNameIfValidRequest
                             (either id id $ passSessionNameIfHasUserId "deleteComment")
-                            . (decode :: LBS.ByteString -> Maybe CommentIdRequest)
+                            . (decode :: LBS.ByteString -> Maybe CommentIdRequest) . lbsRequest
                             ),
                     ((["articles"], "POST"),
-                        \ req -> if isJust (decode req :: Maybe ArticleDraftRequest)
+                        \ params -> if isJust (decode $ lbsRequest params :: Maybe ArticleDraftRequest)
                             then passSessionNameIfHasAuthorId "createArticleDraft"
                             else passSessionNameIfValidRequest
                                 (either id id $ passSessionNameIfHasAuthorId "publishArticleDraft")
-                                (decode req :: Maybe ArticleDraftIdRequest))
+                                (decode $ lbsRequest params :: Maybe ArticleDraftIdRequest)
+                                )
                     --((["articles"], "PATCH"),
                     --    passSessionNameIfValidRequest maybeArticleDraftEditRequestJSON
                     --        . either id id $ passSessionNameIfHasAuthorId "editArticleDraft"),
@@ -281,8 +293,7 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
                     ];
             } in pure (
                 case HMS.lookup (pathTextChunks, method) pathAndMethodToF of
-                    --    (isAdmin, sessionUserIdString, sessionAuthorIdString, requestBody) -> sessionNameOrError)
-                    Just checkRequest -> checkRequest requestBody 
+                    Just checkRequest -> checkRequest (Params requestBody isAdmin hasUserId hasAuthorId)
                     Nothing -> noSuchEndpoint
                 )
 
