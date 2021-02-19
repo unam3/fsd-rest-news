@@ -11,11 +11,15 @@ import qualified HasqlSessions as HSS
 import Control.Exception (bracket_)
 import Control.Monad (void, when)
 import Data.Aeson (decode)
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
 import Data.Either (fromRight)
 import Data.Int (Int32)
+import qualified Data.HashMap.Strict as HMS
 import Data.Maybe (fromJust, isJust)
 import Data.String (fromString)
+import Data.Text (Text)
 import qualified Data.Vault.Lazy as Vault
 import Database.PostgreSQL.Simple (Connection, ConnectInfo(..), connectPostgreSQL, postgreSQLConnectionString)
 import Hasql.Connection (Settings, settings)
@@ -35,8 +39,8 @@ import Web.Cookie (defaultSetCookie)
 wrongParamsOrValues :: Either String String
 wrongParamsOrValues = Left "Wrong parameters/parameters values"
 
-ifValidRequestPassSessionName :: Maybe request -> String -> Either String String
-ifValidRequestPassSessionName request sessionName = if sessionName == noSuchEndpointS
+passSessionNameIfValidRequest :: String -> Maybe request -> Either String String
+passSessionNameIfValidRequest sessionName request = if sessionName == noSuchEndpointS
     then noSuchEndpoint
     else maybe wrongParamsOrValues (const $ Right sessionName) request
 
@@ -73,8 +77,6 @@ restAPI :: Settings -> Vault.Key (Session IO String String) -> (Request -> IO ()
 restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let {
         endpointNeeded = Left "Endpoint needed";
         pathTextChunks = pathInfo request;
-        isRequestPathNotEmpty = (not $ null pathTextChunks);
-        pathHeadChunk = head pathTextChunks;
         method = requestMethod request;
         Just (sessionLookup, sessionInsert) = Vault.lookup vaultKey (vault request);
         processCredentials :: Either String (Int32, Bool, Int32) -> IO (Either String UTFLBS.ByteString);
@@ -123,10 +125,6 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
                     else noSuchEndpointS;
                 passSessionNameIfHasUserId sessionName = passSessionNameIf sessionName $ sessionUserIdString /= "0";
                 passSessionNameIfHasAuthorId sessionName = passSessionNameIf sessionName $ sessionAuthorIdString /= "0";
-                maybeAuthRequestJSON = decode requestBody :: Maybe AuthRequest;
-                maybeCreateUserRequestJSON = decode requestBody :: Maybe CreateUserRequest;
-                maybeUserIdRequestJSON = decode requestBody :: Maybe UserIdRequest;
-                maybePromoteUserToAuthorRequestJSON = decode requestBody :: Maybe PromoteUserToAuthorRequest;
                 maybeEditAuthorRequestJSON = decode requestBody :: Maybe EditAuthorRequest;
                 maybeAuthorIdRequestJSON = decode requestBody :: Maybe AuthorIdRequest;
                 maybeCreateCategoryRequestJSON = decode requestBody :: Maybe CreateCategoryRequest;
@@ -137,11 +135,9 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
                 maybeTagIdRequestJSON = decode requestBody :: Maybe TagIdRequest;
                 maybeTagIdRequestWithOffsetJSON = decode requestBody :: Maybe TagIdRequestWithOffset;
                 maybeCreateCommentRequestJSON = decode requestBody :: Maybe CreateCommentRequest;
-                maybeCommentIdRequestJSON = decode requestBody :: Maybe CommentIdRequest;
                 maybeArticleCommentsRequestJSON = decode requestBody :: Maybe ArticleCommentsRequest;
                 maybeArticleDraftRequestJSON = decode requestBody :: Maybe ArticleDraftRequest;
                 maybeArticleDraftEditRequestJSON = decode requestBody :: Maybe ArticleDraftEditRequest;
-                maybeArticleDraftIdRequestJSON = decode requestBody :: Maybe ArticleDraftIdRequest;
                 maybeArticlesByCategoryIdRequestJSON = decode requestBody :: Maybe ArticlesByCategoryIdRequest;
                 maybeArticlesByTagIdListRequest = decode requestBody :: Maybe ArticlesByTagIdListRequest;
                 maybeArticlesByTitlePartRequest = decode requestBody :: Maybe ArticlesByTitlePartRequest;
@@ -149,127 +145,147 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
                 maybeArticlesByAuthorNamePartRequest = decode requestBody :: Maybe ArticlesByAuthorNamePartRequest;
                 maybeArticlesFilteredByCreationDate = decode requestBody :: Maybe ArticlesByCreationDateRequest;
                 maybeOffsetRequest = decode requestBody :: Maybe OffsetRequest;
+                pathAndMethodToF :: HMS.HashMap ([Text], BS.ByteString) (LBS.ByteString -> Either String String);
+                pathAndMethodToF = HMS.fromList [
+                    --( 
+                    --    (pathTextChunks, method),
+                    --    (requestBody) -> sessionNameOrError)
+                    ----- (isAdmin, sessionUserIdString, sessionAuthorIdString, requestBody) -> sessionNameOrError)
+                    --)
+                    ((["auth"], "POST"),
+                        passSessionNameIfValidRequest
+                            "auth"
+                            . (decode :: LBS.ByteString -> Maybe AuthRequest)
+                            ),
+                    ((["users"], "POST"),
+                        passSessionNameIfValidRequest
+                            "createUser"
+                            . (decode :: LBS.ByteString -> Maybe CreateUserRequest)
+                            ),
+                    ((["users"], "GET"),
+                        passSessionNameIfHasUserId
+                            "getUser"
+                        ),
+                    ((["users"], "DELETE"),
+                        passSessionNameIfValidRequest
+                            passSessionNameIfAdmin "deleteUser"
+                            . (decode :: LBS.ByteString -> Maybe UserIdRequest)
+                            ),
+                    ((["authors"], "POST"),
+                        passSessionNameIfValidRequest
+                            passSessionNameIfAdmin "promoteUserToAuthor"
+                            . (decode :: LBS.ByteString -> Maybe PromoteUserToAuthorRequest)
+                            ),
+--                    ((["authors"], "PATCH",
+--                        passSessionNameIfValidRequest maybeEditAuthorRequestJSON
+--                            $ passSessionNameIfAdmin "editAuthor"),
+--                    ((["authors"], "GET"),
+--                        passSessionNameIfValidRequest maybeAuthorIdRequestJSON
+--                            $ passSessionNameIfAdmin "getAuthor"),
+--                    ((["authors"], "DELETE"),
+--                        passSessionNameIfValidRequest maybeAuthorIdRequestJSON
+--                            $ passSessionNameIfAdmin "deleteAuthorRole"),
+--                    ((["categories"], "POST"),
+--                        passSessionNameIfValidRequest maybeCreateCategoryRequestJSON
+--                            $ passSessionNameIfAdmin "createCategory"),
+--                    ((["categories"], "PATCH"),
+--                        passSessionNameIfValidRequest maybeUpdateCategoryRequestJSON
+--                            $ passSessionNameIfAdmin "updateCategory"),
+--                    ((["categories"], "GET"),
+--                        passSessionNameIfValidRequest maybeCategoryIdRequestJSON "getCategory")
+--                    ((["categories"], "DELETE"),
+--                        passSessionNameIfValidRequest maybeCategoryIdRequestJSON
+--                            $ passSessionNameIfAdmin "deleteCategory"),
+--                    ((["tags"], "POST"),
+--                        passSessionNameIfValidRequest maybeCreateTagRequestJSON
+--                            $ passSessionNameIfAdmin "createTag"),
+--                    ((["tags"], "PATCH"),
+--                        passSessionNameIfValidRequest maybeEditTagRequestJSON
+--                            $ passSessionNameIfAdmin "editTag"),
+--                    ((["tags"], "GET"),
+--                        passSessionNameIfValidRequest maybeTagIdRequestJSON "getTag"),
+--                    ((["tags"], "DELETE"),
+--                        passSessionNameIfValidRequest maybeTagIdRequestJSON
+--                            $ passSessionNameIfAdmin "deleteTag"),
+--                    ((["comments"], "POST"),
+--                        passSessionNameIfValidRequest maybeCreateCommentRequestJSON
+--                            . either id id $ passSessionNameIfHasUserId "createComment"),
+--                    ((["comments"], "GET"),
+--                        passSessionNameIfValidRequest maybeArticleCommentsRequestJSON "getArticleComments"),
+                    ((["comments"], "DELETE"),
+                        passSessionNameIfValidRequest
+                            either id id $ passSessionNameIfHasUserId "deleteComment"
+                            . (decode :: LBS.ByteString -> Maybe CommentIdRequest)
+                            )
+                    --((["articles"], "POST"),
+                    --    if isJust maybeArticleDraftRequestJSON
+                    --        then passSessionNameIfHasAuthorId "createArticleDraft"
+                    --        else passSessionNameIfValidRequest
+                    --            (decode requestBody :: Maybe ArticleDraftIdRequest)
+                    --            . either id id $ passSessionNameIfHasAuthorId "publishArticleDraft"),
+                    --((["articles"], "PATCH"),
+                    --    passSessionNameIfValidRequest maybeArticleDraftEditRequestJSON
+                    --        . either id id $ passSessionNameIfHasAuthorId "editArticleDraft"),
+                    --((["articles"], "GET"),
+                    --    passSessionNameIfValidRequest
+                    --        (decode requestBody :: Maybe ArticleDraftIdRequest)
+                    --        . either id id $ passSessionNameIfHasAuthorId "getArticleDraft"),
+                    --((["articles"], "DELETE"),
+                    --    passSessionNameIfValidRequest
+                    --        (decode requestBody :: Maybe ArticleDraftIdRequest)
+                    --        . either id id $ passSessionNameIfHasAuthorId "deleteArticleDraft"),
+                    --((["articles", "category"], "GET"),
+                    --    passSessionNameIfValidRequest
+                    --        maybeArticlesByCategoryIdRequestJSON
+                    --        "getArticlesByCategoryId"),
+                    --((["articles", "tag"], "GET"),
+                    --    passSessionNameIfValidRequest maybeTagIdRequestWithOffsetJSON "getArticlesByTagId"),
+                    --((["articles", "tags__any"], "GET"),
+                    --    passSessionNameIfValidRequest maybeArticlesByTagIdListRequest "getArticlesByAnyTagId"),
+                    --((["articles", "tags__all"], "GET"),
+                    --    passSessionNameIfValidRequest maybeArticlesByTagIdListRequest "getArticlesByAllTagId"),
+                    --((["articles", "in__title"], "GET"),
+                    --    passSessionNameIfValidRequest maybeArticlesByTitlePartRequest "getArticlesByTitlePart"),
+                    --((["articles", "in__content"], "GET"),
+                    --    passSessionNameIfValidRequest maybeArticlesByContentPartRequest "getArticlesByContentPart")
+                    --((["articles", "in__author_name"], "GET"),
+                    --    passSessionNameIfValidRequest
+                    --        maybeArticlesByAuthorNamePartRequest
+                    --        "getArticlesByAuthorNamePart"),
+                    --((["articles", "byPhotosNumber"], "GET"),
+                    --    passSessionNameIfValidRequest
+                    --        maybeOffsetRequest
+                    --        "getArticlesSortedByPhotosNumber"),
+                    --((["articles", "byCreationDate"], "GET"),
+                    --    passSessionNameIfValidRequest
+                    --        maybeOffsetRequest
+                    --        "getArticlesSortedByCreationDate"),
+                    --((["articles", "sortByAuthor"], "GET"),
+                    --    passSessionNameIfValidRequest
+                    --        maybeOffsetRequest
+                    --        "getArticlesSortedByAuthor"),
+                    --((["articles", "sortByCategory"], "GET"),
+                    --    passSessionNameIfValidRequest
+                    --        maybeOffsetRequest
+                    --        "getArticlesSortedByCategory"),
+                    --((["articles", "createdAt"], "GET"),
+                    --    passSessionNameIfValidRequest
+                    --        maybeArticlesFilteredByCreationDate
+                    --        "getArticlesFilteredByCreationDate"),
+                    --((["articles", "createdBefore"], "GET"),
+                    --    passSessionNameIfValidRequest
+                    --        maybeArticlesFilteredByCreationDate
+                    --        "getArticlesCreatedBeforeDate"),
+                    --((["articles", "createdAfter"], "GET"), passSessionNameIfValidRequest
+                    --        maybeArticlesFilteredByCreationDate
+                    --        "getArticlesCreatedAfterDate")
+                    ];
             } in pure (
-                if isRequestPathNotEmpty
-                    then (case pathHeadChunk of
-                        "auth" -> case method of
-                            "POST"      -> ifValidRequestPassSessionName maybeAuthRequestJSON "auth"
-                            _ -> noSuchEndpoint
-                        "users" -> case method of
-                            "POST"      -> ifValidRequestPassSessionName maybeCreateUserRequestJSON "createUser"
-                            "GET"       -> passSessionNameIfHasUserId "getUser"
-                            "DELETE"    -> ifValidRequestPassSessionName maybeUserIdRequestJSON
-                                $ passSessionNameIfAdmin "deleteUser" 
-                            _ -> noSuchEndpoint
-                        "authors" -> case method of
-                            "POST"      -> ifValidRequestPassSessionName maybePromoteUserToAuthorRequestJSON
-                                $ passSessionNameIfAdmin "promoteUserToAuthor"
-                            "PATCH"     -> ifValidRequestPassSessionName maybeEditAuthorRequestJSON
-                                $ passSessionNameIfAdmin "editAuthor"
-                            "GET"       -> ifValidRequestPassSessionName maybeAuthorIdRequestJSON
-                                $ passSessionNameIfAdmin "getAuthor" 
-                            "DELETE"    -> ifValidRequestPassSessionName maybeAuthorIdRequestJSON
-                                $ passSessionNameIfAdmin "deleteAuthorRole" 
-                            _ -> noSuchEndpoint
-                        "categories" -> case method of
-                            "POST"      -> ifValidRequestPassSessionName maybeCreateCategoryRequestJSON
-                                $ passSessionNameIfAdmin "createCategory"
-                            "PATCH"     -> ifValidRequestPassSessionName maybeUpdateCategoryRequestJSON
-                                $ passSessionNameIfAdmin "updateCategory"
-                            "GET"       -> ifValidRequestPassSessionName maybeCategoryIdRequestJSON "getCategory"
-                            "DELETE"    -> ifValidRequestPassSessionName maybeCategoryIdRequestJSON
-                                $ passSessionNameIfAdmin "deleteCategory"
-                            _ -> noSuchEndpoint
-                        "tags" -> case method of
-                            "POST"      -> ifValidRequestPassSessionName maybeCreateTagRequestJSON
-                                $ passSessionNameIfAdmin "createTag"
-                            "PATCH"     -> ifValidRequestPassSessionName maybeEditTagRequestJSON
-                                $ passSessionNameIfAdmin "editTag"
-                            "GET"       -> ifValidRequestPassSessionName maybeTagIdRequestJSON "getTag"
-                            "DELETE"    -> ifValidRequestPassSessionName maybeTagIdRequestJSON
-                                $ passSessionNameIfAdmin "deleteTag"
-                            _ -> noSuchEndpoint
-                        "comments" -> case method of
-                            "POST"      -> ifValidRequestPassSessionName maybeCreateCommentRequestJSON
-                                . either id id $ passSessionNameIfHasUserId "createComment"
-                            "GET"       -> ifValidRequestPassSessionName maybeArticleCommentsRequestJSON "getArticleComments"
-                            "DELETE"    -> ifValidRequestPassSessionName maybeCommentIdRequestJSON
-                                . either id id $ passSessionNameIfHasUserId "deleteComment"
-                            _ -> noSuchEndpoint
-                        "articles" -> case tail pathTextChunks of
-                            [] -> case method of
-                                "POST" -> if isJust maybeArticleDraftRequestJSON
-                                    then passSessionNameIfHasAuthorId "createArticleDraft"
-                                    else ifValidRequestPassSessionName maybeArticleDraftIdRequestJSON
-                                        . either id id $ passSessionNameIfHasAuthorId "publishArticleDraft"
-                                "PATCH" -> ifValidRequestPassSessionName maybeArticleDraftEditRequestJSON
-                                    . either id id $ passSessionNameIfHasAuthorId "editArticleDraft"
-                                "GET" -> ifValidRequestPassSessionName maybeArticleDraftIdRequestJSON
-                                    . either id id $ passSessionNameIfHasAuthorId "getArticleDraft"
-                                "DELETE" -> ifValidRequestPassSessionName maybeArticleDraftIdRequestJSON
-                                    . either id id $ passSessionNameIfHasAuthorId "deleteArticleDraft"
-                                _ -> noSuchEndpoint
-                            ["category"] -> case method of
-                                "GET" -> ifValidRequestPassSessionName maybeArticlesByCategoryIdRequestJSON "getArticlesByCategoryId" 
-                                _ -> noSuchEndpoint
-                            ["tag"] -> case method of
-                                "GET" -> ifValidRequestPassSessionName maybeTagIdRequestWithOffsetJSON "getArticlesByTagId"
-                                _ -> noSuchEndpoint
-                            ["tags__any"] -> case method of
-                                "GET" -> ifValidRequestPassSessionName maybeArticlesByTagIdListRequest "getArticlesByAnyTagId"
-                                _ -> noSuchEndpoint
-                            ["tags__all"] -> case method of
-                                "GET" -> ifValidRequestPassSessionName maybeArticlesByTagIdListRequest "getArticlesByAllTagId"
-                                _ -> noSuchEndpoint
-                            ["in__title"] -> case method of
-                                "GET" -> ifValidRequestPassSessionName maybeArticlesByTitlePartRequest "getArticlesByTitlePart"
-                                _ -> noSuchEndpoint
-                            ["in__content"] -> case method of
-                                "GET" -> ifValidRequestPassSessionName maybeArticlesByContentPartRequest "getArticlesByContentPart"
-                                _ -> noSuchEndpoint
-                            ["in__author_name"] -> case method of
-                                "GET" -> ifValidRequestPassSessionName
-                                    maybeArticlesByAuthorNamePartRequest
-                                    "getArticlesByAuthorNamePart"
-                                _ -> noSuchEndpoint
-                            ["byPhotosNumber"] -> case method of
-                                "GET" -> ifValidRequestPassSessionName
-                                    maybeOffsetRequest
-                                    "getArticlesSortedByPhotosNumber"
-                                _ -> noSuchEndpoint
-                            ["byCreationDate"] -> case method of
-                                "GET" -> ifValidRequestPassSessionName
-                                    maybeOffsetRequest
-                                    "getArticlesSortedByCreationDate"
-                                _ -> noSuchEndpoint
-                            ["sortByAuthor"] -> case method of
-                                "GET" -> ifValidRequestPassSessionName
-                                    maybeOffsetRequest
-                                    "getArticlesSortedByAuthor"
-                                _ -> noSuchEndpoint
-                            ["sortByCategory"] -> case method of
-                                "GET" -> ifValidRequestPassSessionName
-                                    maybeOffsetRequest
-                                    "getArticlesSortedByCategory"
-                                _ -> noSuchEndpoint
-                            ["createdAt"] -> case method of
-                                "GET" -> ifValidRequestPassSessionName
-                                    maybeArticlesFilteredByCreationDate
-                                    "getArticlesFilteredByCreationDate"
-                                _ -> noSuchEndpoint
-                            ["createdBefore"] -> case method of
-                                "GET" -> ifValidRequestPassSessionName
-                                    maybeArticlesFilteredByCreationDate
-                                    "getArticlesCreatedBeforeDate"
-                                _ -> noSuchEndpoint
-                            ["createdAfter"] -> case method of
-                                "GET" -> ifValidRequestPassSessionName
-                                    maybeArticlesFilteredByCreationDate
-                                    "getArticlesCreatedAfterDate"
-                                _ -> noSuchEndpoint
-                            _ -> noSuchEndpoint
-                        _ -> noSuchEndpoint)
-                    else endpointNeeded)
+                case HMS.lookup (pathTextChunks, requestBody) of
+                    --    (isAdmin, sessionUserIdString, sessionAuthorIdString, requestBody) -> sessionNameOrError)
+                    Just checkRequest -> checkRequest requestBody 
+                    Nothing -> noSuchEndpoint
+                )
 
             eitherConnection <- HSS.getConnection dbConnectionSettings
 

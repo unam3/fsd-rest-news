@@ -26,6 +26,7 @@ dependencies:
 - http-types == 0.12.3
 - text
 - time
+- unordered-containers >= 0.2.12.0
 # to get text from pathInfo LBS
 - utf8-string
 - wai == 3.2.2.1
