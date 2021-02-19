@@ -162,10 +162,9 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
                             "createUser"
                             . (decode :: LBS.ByteString -> Maybe CreateUserRequest)
                             ),
-                    --((["users"], "GET"),
-                    --    passSessionNameIfHasUserId
-                    --        "getUser"
-                    --    ),
+                    ((["users"], "GET"),
+                        const $ passSessionNameIfHasUserId "getUser"
+                        ),
                     ((["users"], "DELETE"),
                         passSessionNameIfValidRequest
                             (passSessionNameIfAdmin "deleteUser")
@@ -216,13 +215,13 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
                         passSessionNameIfValidRequest
                             (either id id $ passSessionNameIfHasUserId "deleteComment")
                             . (decode :: LBS.ByteString -> Maybe CommentIdRequest)
-                            )
-                    --((["articles"], "POST"),
-                    --    if isJust maybeArticleDraftRequestJSON
-                    --        then passSessionNameIfHasAuthorId "createArticleDraft"
-                    --        else passSessionNameIfValidRequest
-                    --            (decode requestBody :: Maybe ArticleDraftIdRequest)
-                    --            . either id id $ passSessionNameIfHasAuthorId "publishArticleDraft"),
+                            ),
+                    ((["articles"], "POST"),
+                        \ req -> if isJust (decode req :: Maybe ArticleDraftRequest)
+                            then passSessionNameIfHasAuthorId "createArticleDraft"
+                            else passSessionNameIfValidRequest
+                                (either id id $ passSessionNameIfHasAuthorId "publishArticleDraft")
+                                (decode req :: Maybe ArticleDraftIdRequest))
                     --((["articles"], "PATCH"),
                     --    passSessionNameIfValidRequest maybeArticleDraftEditRequestJSON
                     --        . either id id $ passSessionNameIfHasAuthorId "editArticleDraft"),
