@@ -145,7 +145,7 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
                 maybeArticlesByAuthorNamePartRequest = decode requestBody :: Maybe ArticlesByAuthorNamePartRequest;
                 maybeArticlesFilteredByCreationDate = decode requestBody :: Maybe ArticlesByCreationDateRequest;
                 maybeOffsetRequest = decode requestBody :: Maybe OffsetRequest;
-                pathAndMethodToF :: HMS.HashMap ([Text], BS.ByteString) (LBS.ByteString -> Either String String);
+                pathAndMethodToF :: HMS.HashMap ([Text], BS.ByteString) (UTFLBS.ByteString -> Either String String);
                 pathAndMethodToF = HMS.fromList [
                     --( 
                     --    (pathTextChunks, method),
@@ -162,18 +162,18 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
                             "createUser"
                             . (decode :: LBS.ByteString -> Maybe CreateUserRequest)
                             ),
-                    ((["users"], "GET"),
-                        passSessionNameIfHasUserId
-                            "getUser"
-                        ),
+                    --((["users"], "GET"),
+                    --    passSessionNameIfHasUserId
+                    --        "getUser"
+                    --    ),
                     ((["users"], "DELETE"),
                         passSessionNameIfValidRequest
-                            passSessionNameIfAdmin "deleteUser"
+                            (passSessionNameIfAdmin "deleteUser")
                             . (decode :: LBS.ByteString -> Maybe UserIdRequest)
                             ),
                     ((["authors"], "POST"),
                         passSessionNameIfValidRequest
-                            passSessionNameIfAdmin "promoteUserToAuthor"
+                            (passSessionNameIfAdmin "promoteUserToAuthor")
                             . (decode :: LBS.ByteString -> Maybe PromoteUserToAuthorRequest)
                             ),
 --                    ((["authors"], "PATCH",
@@ -214,7 +214,7 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
 --                        passSessionNameIfValidRequest maybeArticleCommentsRequestJSON "getArticleComments"),
                     ((["comments"], "DELETE"),
                         passSessionNameIfValidRequest
-                            either id id $ passSessionNameIfHasUserId "deleteComment"
+                            (either id id $ passSessionNameIfHasUserId "deleteComment")
                             . (decode :: LBS.ByteString -> Maybe CommentIdRequest)
                             )
                     --((["articles"], "POST"),
@@ -281,7 +281,7 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
                     --        "getArticlesCreatedAfterDate")
                     ];
             } in pure (
-                case HMS.lookup (pathTextChunks, requestBody) of
+                case HMS.lookup (pathTextChunks, method) pathAndMethodToF of
                     --    (isAdmin, sessionUserIdString, sessionAuthorIdString, requestBody) -> sessionNameOrError)
                     Just checkRequest -> checkRequest requestBody 
                     Nothing -> noSuchEndpoint
