@@ -15,10 +15,10 @@ import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
 import Data.Either (fromRight)
 import Data.Int (Int32)
 import qualified Data.HashMap.Strict as HMS
-import Data.Maybe (fromJust, isJust)
+import Data.Maybe (fromJust, fromMaybe, isJust)
 import Data.String (fromString)
 import qualified Data.Vault.Lazy as Vault
-import Database.PostgreSQL.Simple (Connection, ConnectInfo(..), connectPostgreSQL, postgreSQLConnectionString)
+import Database.PostgreSQL.Simple (ConnectInfo(..), connectPostgreSQL, postgreSQLConnectionString)
 import Hasql.Connection (Settings, settings)
 import qualified Network.HTTP.Types as H
 import Network.Wai (Application, Request, pathInfo, requestMethod, responseLBS, strictRequestBody, vault)
@@ -37,17 +37,7 @@ dbError :: Either String UTFLBS.ByteString
 dbError = Left "DB error"
 
 getIdString :: Maybe String -> String
-getIdString = maybe "0" id
-
-dbconnect :: IO Connection
-dbconnect = let {
-    connectInfo = ConnectInfo {
-          connectHost = "localhost"
-        , connectPort = 5432
-        , connectUser = "rest-news-user"
-        , connectPassword = "rest"
-        , connectDatabase = "rest-news-db" };
-    } in connectPostgreSQL $ postgreSQLConnectionString connectInfo
+getIdString = fromMaybe "0"
 
 
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
@@ -220,16 +210,22 @@ router app request respond =
         then rewrite (staticApp (defaultWebAppSettings "static")) request respond
         else app request respond
 
-processArgs :: [String] -> Either String (Port, Settings)
--- settings :: ByteString -> Word16 -> ByteString -> ByteString -> ByteString -> Settings
--- connectionSettings = settings "localhost" 5432 "rest-news-user" "rest" "rest-news-db";
+processArgs :: [String] -> Either String (Port, Settings, ConnectInfo)
 processArgs [runAtPort, dbHost, dbPort, dbUser, dbPassword, dbName] =
     Right (
         read runAtPort,
-        settings (fromString dbHost) (read dbPort) (fromString dbUser) (fromString dbPassword) (fromString dbName)
+        settings (fromString dbHost) (read dbPort) (fromString dbUser) (fromString dbPassword) (fromString dbName),
+        ConnectInfo {
+            connectHost = dbHost,
+            connectPort = read dbPort,
+            connectUser = dbUser,
+            connectPassword = dbPassword,
+            connectDatabase = dbName
+        }
     )
         
 processArgs _ = Left "Exactly 6 arguments needed: port to run rest-news, db hostname, db port, db user, db password, db name"
+
 
 runWarp :: [String] -> IO ()
 runWarp argsList = let {
@@ -237,10 +233,11 @@ runWarp argsList = let {
 } in case processedArgs of
     Left error -> errorM "rest-news" error  
         >> exitFailure
-    Right (port, dbConnectionSettings) -> 
+    Right (port, dbConnectionSettings, connectInfo) -> 
         do
         vaultK <- Vault.newKey
-        simpleConnection <- dbconnect >>= fromSimpleConnection
+        simpleConnection <- connectPostgreSQL (postgreSQLConnectionString connectInfo)
+            >>= fromSimpleConnection
         -- IO (SessionStore IO String String)
         store <- dbStore simpleConnection defaultSettings
         void (purger simpleConnection defaultSettings)
