@@ -5,21 +5,18 @@ module RestNews
     processArgs
     ) where
 
-import AesonDefinitions (AuthRequest, CreateUserRequest, UserIdRequest, PromoteUserToAuthorRequest, EditAuthorRequest, AuthorIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest, TagIdRequestWithOffset, CreateCommentRequest, CreateCommentRequest, CommentIdRequest, ArticleCommentsRequest, ArticleDraftRequest, ArticleDraftEditRequest, ArticleDraftIdRequest, ArticlesByCategoryIdRequest, ArticlesByTagIdListRequest, ArticlesByTitlePartRequest, ArticlesByContentPartRequest, ArticlesByAuthorNamePartRequest, ArticlesByCreationDateRequest, OffsetRequest)
 import qualified HasqlSessions as HSS
+import qualified SessionPrerequisiteCheck as SessionPreCheck
 
 import Control.Exception (bracket_)
 import Control.Monad (void, when)
 import Data.Aeson (decode)
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
 import Data.Either (fromRight)
 import Data.Int (Int32)
 import qualified Data.HashMap.Strict as HMS
 import Data.Maybe (fromJust, isJust)
 import Data.String (fromString)
-import Data.Text (Text)
 import qualified Data.Vault.Lazy as Vault
 import Database.PostgreSQL.Simple (Connection, ConnectInfo(..), connectPostgreSQL, postgreSQLConnectionString)
 import Hasql.Connection (Settings, settings)
@@ -36,25 +33,6 @@ import System.Exit (exitFailure, exitSuccess)
 import System.Log.Logger (Priority (DEBUG, ERROR), debugM, errorM, setLevel, traplogging, updateGlobalLogger)
 import Web.Cookie (defaultSetCookie)
 
-wrongParamsOrValues :: Either String String
-wrongParamsOrValues = Left "Wrong parameters/parameters values"
-
-passSessionNameIfValidRequest :: String -> Maybe request -> Either String String
-passSessionNameIfValidRequest sessionName request = if sessionName == noSuchEndpointS
-    then noSuchEndpoint
-    else maybe wrongParamsOrValues (const $ Right sessionName) request
-
-noSuchEndpointS :: String
-noSuchEndpointS = "No such endpoint"
-
-noSuchEndpoint :: Either String String
-noSuchEndpoint = Left "No such endpoint"
-
-passSessionNameIf :: String -> Bool -> Either String String
-passSessionNameIf sessionName condition = if condition
-    then Right sessionName
-    else noSuchEndpoint;
-
 dbError :: Either String UTFLBS.ByteString
 dbError = Left "DB error"
 
@@ -70,25 +48,6 @@ dbconnect = let {
         , connectPassword = "rest"
         , connectDatabase = "rest-news-db" };
     } in connectPostgreSQL $ postgreSQLConnectionString connectInfo
-
-data RequestAndParams = Params {
-    lbsRequest :: LBS.ByteString,
-    isAdmin :: Bool,
-    hasUserId :: Bool,
-    hasAuthorId :: Bool
-} deriving Show
-
-class CheckMethods a where
-    passSessionNameIfHasUserId :: a -> String -> Either String String
-    passSessionNameIfHasAuthorId :: a -> String -> Either String String
-    passSessionNameIfAdmin :: a -> String -> String
-
-instance CheckMethods RequestAndParams where
-    passSessionNameIfHasUserId reqAndParams sessionName = passSessionNameIf sessionName $ hasUserId reqAndParams
-    passSessionNameIfHasAuthorId reqAndParams sessionName = passSessionNameIf sessionName $ hasAuthorId reqAndParams
-    passSessionNameIfAdmin reqAndParams sessionName = if isAdmin reqAndParams
-        then sessionName
-        else noSuchEndpointS;
 
 
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
@@ -137,207 +96,16 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
             debugM "rest-news" (show (method, pathTextChunks, requestBody))
 
             errorOrSessionName <- let {
-                params = Params {
-                    lbsRequest = requestBody,
-                    isAdmin = maybeIsAdmin == Just "True",
-                    hasUserId = sessionUserIdString /= "0",
-                    hasAuthorId = sessionAuthorIdString /= "0"
+                params = SessionPreCheck.Params {
+                    SessionPreCheck.lbsRequest = requestBody,
+                    SessionPreCheck.isAdmin = maybeIsAdmin == Just "True",
+                    SessionPreCheck.hasUserId = sessionUserIdString /= "0",
+                    SessionPreCheck.hasAuthorId = sessionAuthorIdString /= "0"
                     };
-                passSessionNameIfAdmin' = passSessionNameIfAdmin params;
-                passSessionNameIfHasUserId' = passSessionNameIfHasUserId params;
-                passSessionNameIfHasAuthorId' = passSessionNameIfHasAuthorId params;
-                pathAndMethodToF :: HMS.HashMap ([Text], BS.ByteString) (RequestAndParams -> Either String String);
-                pathAndMethodToF = HMS.fromList [
-                    ((["auth"], "POST"),
-                        passSessionNameIfValidRequest
-                            "auth"
-                            . (decode :: LBS.ByteString -> Maybe AuthRequest) . lbsRequest
-                            ),
-                    ((["users"], "POST"),
-                        passSessionNameIfValidRequest
-                            "createUser"
-                            . (decode :: LBS.ByteString -> Maybe CreateUserRequest) . lbsRequest
-                            ),
-                    ((["users"], "GET"),
-                        const $ passSessionNameIfHasUserId' "getUser"
-                        ),
-                    ((["users"], "DELETE"),
-                        passSessionNameIfValidRequest
-                            (passSessionNameIfAdmin' "deleteUser")
-                            . (decode :: LBS.ByteString -> Maybe UserIdRequest) . lbsRequest
-                            ),
-                    ((["authors"], "POST"),
-                        passSessionNameIfValidRequest
-                            (passSessionNameIfAdmin' "promoteUserToAuthor")
-                            . (decode :: LBS.ByteString -> Maybe PromoteUserToAuthorRequest) . lbsRequest
-                            ),
-                    ((["authors"], "PATCH"),
-                        passSessionNameIfValidRequest
-                            (passSessionNameIfAdmin' "editAuthor")
-                            . (decode :: LBS.ByteString -> Maybe EditAuthorRequest) . lbsRequest
-                            ),
-                    ((["authors"], "GET"),
-                        passSessionNameIfValidRequest
-                            (passSessionNameIfAdmin' "getAuthor")
-                            . (decode :: LBS.ByteString -> Maybe AuthorIdRequest) . lbsRequest
-                            ),
-                    ((["authors"], "DELETE"),
-                        passSessionNameIfValidRequest
-                            (passSessionNameIfAdmin' "deleteAuthorRole")
-                            . (decode :: LBS.ByteString -> Maybe AuthorIdRequest) . lbsRequest
-                            ),
-                    ((["categories"], "POST"),
-                        passSessionNameIfValidRequest
-                            (passSessionNameIfAdmin' "createCategory")
-                            . (decode :: LBS.ByteString -> Maybe CreateCategoryRequest) . lbsRequest
-                            ),
-                    ((["categories"], "PATCH"),
-                        passSessionNameIfValidRequest
-                            (passSessionNameIfAdmin' "updateCategory")
-                            . (decode :: LBS.ByteString -> Maybe UpdateCategoryRequest) . lbsRequest
-                            ),
-                    ((["categories"], "GET"),
-                        passSessionNameIfValidRequest
-                            "getCategory"
-                            . (decode :: LBS.ByteString -> Maybe CategoryIdRequest) . lbsRequest
-                            ),
-                    ((["categories"], "DELETE"),
-                        passSessionNameIfValidRequest
-                            (passSessionNameIfAdmin' "deleteCategory")
-                            . (decode :: LBS.ByteString -> Maybe CategoryIdRequest) . lbsRequest
-                            ),
-                    ((["tags"], "POST"),
-                        passSessionNameIfValidRequest
-                            (passSessionNameIfAdmin' "createTag")
-                            . (decode :: LBS.ByteString -> Maybe CreateTagRequest) . lbsRequest
-                            ),
-                    ((["tags"], "PATCH"),
-                        passSessionNameIfValidRequest
-                            (passSessionNameIfAdmin' "editTag")
-                            . (decode :: LBS.ByteString -> Maybe EditTagRequest) . lbsRequest
-                            ),
-                    ((["tags"], "GET"),
-                        passSessionNameIfValidRequest
-                            "getTag"
-                            . (decode :: LBS.ByteString -> Maybe TagIdRequest) . lbsRequest
-                            ),
-                    ((["tags"], "DELETE"),
-                        passSessionNameIfValidRequest
-                            (passSessionNameIfAdmin' "deleteTag")
-                            . (decode :: LBS.ByteString -> Maybe TagIdRequest) . lbsRequest
-                            ),
-                    ((["comments"], "POST"),
-                        passSessionNameIfValidRequest
-                            (either id id $ passSessionNameIfHasUserId' "createComment")
-                            . (decode :: LBS.ByteString -> Maybe CreateCommentRequest) . lbsRequest
-                            ),
-                    ((["comments"], "GET"),
-                        passSessionNameIfValidRequest
-                            "getArticleComments"
-                            . (decode :: LBS.ByteString -> Maybe ArticleCommentsRequest) . lbsRequest
-                            ),
-                    ((["comments"], "DELETE"),
-                        passSessionNameIfValidRequest
-                            (either id id $ passSessionNameIfHasUserId' "deleteComment")
-                            . (decode :: LBS.ByteString -> Maybe CommentIdRequest) . lbsRequest
-                            ),
-                    ((["articles"], "POST"),
-                        \ params' -> if isJust (decode $ lbsRequest params' :: Maybe ArticleDraftRequest)
-                            then passSessionNameIfHasAuthorId' "createArticleDraft"
-                            else passSessionNameIfValidRequest
-                                (either id id $ passSessionNameIfHasAuthorId' "publishArticleDraft")
-                                (decode $ lbsRequest params' :: Maybe ArticleDraftIdRequest)
-                                ),
-                    ((["articles"], "PATCH"),
-                        passSessionNameIfValidRequest
-                            (either id id $ passSessionNameIfHasAuthorId' "editArticleDraft")
-                            . (decode :: LBS.ByteString -> Maybe ArticleDraftEditRequest) . lbsRequest
-                            ),
-                    ((["articles"], "GET"),
-                        passSessionNameIfValidRequest
-                            (either id id $ passSessionNameIfHasAuthorId' "getArticleDraft")
-                            . (decode :: LBS.ByteString -> Maybe ArticleDraftIdRequest) . lbsRequest
-                            ),
-                    ((["articles"], "DELETE"),
-                        passSessionNameIfValidRequest
-                            (either id id $ passSessionNameIfHasAuthorId' "deleteArticleDraft")
-                            . (decode :: LBS.ByteString -> Maybe ArticleDraftIdRequest) . lbsRequest
-                            ),
-                    ((["articles", "category"], "GET"),
-                        passSessionNameIfValidRequest
-                            "getArticlesByCategoryId"
-                            . (decode :: LBS.ByteString -> Maybe ArticlesByCategoryIdRequest) . lbsRequest
-                            ),
-                    ((["articles", "tag"], "GET"),
-                        passSessionNameIfValidRequest
-                            "getArticlesByTagId"
-                            . (decode :: LBS.ByteString -> Maybe TagIdRequestWithOffset) . lbsRequest
-                            ),
-                    ((["articles", "tags__any"], "GET"),
-                        passSessionNameIfValidRequest
-                            "getArticlesByAnyTagId"
-                            . (decode :: LBS.ByteString -> Maybe ArticlesByTagIdListRequest) . lbsRequest
-                            ),
-                    ((["articles", "tags__all"], "GET"),
-                        passSessionNameIfValidRequest
-                            "getArticlesByAllTagId"
-                            . (decode :: LBS.ByteString -> Maybe ArticlesByTagIdListRequest) . lbsRequest
-                            ),
-                    ((["articles", "in__title"], "GET"),
-                        passSessionNameIfValidRequest
-                            "getArticlesByTitlePart"
-                            . (decode :: LBS.ByteString -> Maybe ArticlesByTitlePartRequest) . lbsRequest
-                            ),
-                    ((["articles", "in__content"], "GET"),
-                        passSessionNameIfValidRequest
-                            "getArticlesByContentPart"
-                            . (decode :: LBS.ByteString -> Maybe ArticlesByContentPartRequest) . lbsRequest
-                            ),
-                    ((["articles", "in__author_name"], "GET"),
-                        passSessionNameIfValidRequest
-                            "getArticlesByAuthorNamePart"
-                            . (decode :: LBS.ByteString -> Maybe ArticlesByAuthorNamePartRequest) . lbsRequest
-                            ),
-                    ((["articles", "byPhotosNumber"], "GET"),
-                        passSessionNameIfValidRequest
-                            "getArticlesSortedByPhotosNumber"
-                            . (decode :: LBS.ByteString -> Maybe OffsetRequest) . lbsRequest
-                            ),
-                    ((["articles", "byCreationDate"], "GET"),
-                        passSessionNameIfValidRequest
-                            "getArticlesSortedByCreationDate"
-                            . (decode :: LBS.ByteString -> Maybe OffsetRequest) . lbsRequest
-                            ),
-                    ((["articles", "sortByAuthor"], "GET"),
-                        passSessionNameIfValidRequest
-                            "getArticlesSortedByAuthor"
-                            . (decode :: LBS.ByteString -> Maybe OffsetRequest) . lbsRequest
-                            ),
-                    ((["articles", "sortByCategory"], "GET"),
-                        passSessionNameIfValidRequest
-                            "getArticlesSortedByCategory"
-                            . (decode :: LBS.ByteString -> Maybe OffsetRequest) . lbsRequest
-                            ),
-                    ((["articles", "createdAt"], "GET"),
-                        passSessionNameIfValidRequest
-                            "getArticlesFilteredByCreationDate"
-                            . (decode :: LBS.ByteString -> Maybe  ArticlesByCreationDateRequest) . lbsRequest
-                            ),
-                    ((["articles", "createdBefore"], "GET"),
-                        passSessionNameIfValidRequest
-                            "getArticlesCreatedBeforeDate"
-                            . (decode :: LBS.ByteString -> Maybe  ArticlesByCreationDateRequest) . lbsRequest
-                            ),
-                    ((["articles", "createdAfter"], "GET"),
-                        passSessionNameIfValidRequest
-                            "getArticlesCreatedAfterDate"
-                            . (decode :: LBS.ByteString -> Maybe ArticlesByCreationDateRequest) . lbsRequest
-                        )
-                    ];
             } in pure (
-                case HMS.lookup (pathTextChunks, method) pathAndMethodToF of
+                case HMS.lookup (pathTextChunks, method) SessionPreCheck.endpointToEitherSessionName of
                     Just checkRequest -> checkRequest params
-                    Nothing -> noSuchEndpoint
+                    Nothing -> SessionPreCheck.noSuchEndpoint
                 )
 
             eitherConnection <- HSS.getConnection dbConnectionSettings
@@ -425,8 +193,9 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
 
             let {
                 httpStatus
-                    | errorOrSessionName == endpointNeeded || errorOrSessionName == noSuchEndpoint = H.status404
-                    | errorOrSessionName == wrongParamsOrValues = H.status400
+                    | errorOrSessionName == endpointNeeded
+                        || errorOrSessionName == SessionPreCheck.noSuchEndpoint = H.status404
+                    | errorOrSessionName == SessionPreCheck.wrongParamsOrValues = H.status400
                     | fst results == dbError = H.status500
                     | otherwise = H.status200;
             } in respond $ responseLBS httpStatus [] processedResults)
