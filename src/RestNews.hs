@@ -15,7 +15,7 @@ import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
 import Data.Either (fromRight)
 import Data.Int (Int32)
 import qualified Data.HashMap.Strict as HMS
-import Data.Maybe (fromJust, fromMaybe, isJust)
+import Data.Maybe (fromJust, fromMaybe, isJust, isNothing)
 import Data.String (fromString)
 import qualified Data.Vault.Lazy as Vault
 import Database.PostgreSQL.Simple (ConnectInfo(..), connectPostgreSQL, postgreSQLConnectionString)
@@ -46,30 +46,17 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
         endpointNeeded = Left "Endpoint needed";
         pathTextChunks = pathInfo request;
         method = requestMethod request;
-        Just (sessionLookup, sessionInsert) = Vault.lookup vaultKey (vault request);
-        processCredentials :: Either String (Int32, Bool, Int32) -> IO (Either String UTFLBS.ByteString);
-        processCredentials sessionResults = let {
-            (user_id, is_admin, author_id) = fromRight (0, False, 0) sessionResults;
-        } in
-            -- clearSession will fail if request has no associated session with cookies:
-            -- https://github.com/hce/postgresql-session/blob/master/src/Network/Wai/Session/PostgreSQL.hs#L232
-            (do
-                session_user_id <- sessionLookup "user_id"
-                when
-                    (isJust session_user_id)
-                    (debugM "rest-news" "invalidating session"
-                        >> clearSessionPartial request)
-                )
-            >> (debugM "rest-news" $ show ("put into sessions:" :: String, user_id, is_admin, author_id))
-            >> (sessionInsert "is_admin" $ show is_admin)
-            >> (sessionInsert "user_id" $ show user_id)
-            >> (sessionInsert "author_id" $ show author_id)
-
-            >> (pure $ fmap (const "cookies are baked") sessionResults);
+        sessionMethods = Vault.lookup vaultKey (vault request);
+        (sessionLookup, sessionInsert) = fromJust sessionMethods;
     } in bracket_
         (debugM "rest-news" "Allocating scarce resource")
         (debugM "rest-news" "Cleaning up")
         (do
+            when
+                (isNothing sessionMethods)
+                (errorM "rest-news" "vault session error"
+                    >> exitFailure)
+
             maybeUserId <- sessionLookup "user_id"
             maybeIsAdmin <- sessionLookup "is_admin"
             maybeAuthorId <- sessionLookup "author_id"
@@ -115,6 +102,26 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
                                 )
                             Right connection -> let {
                                 runSession session = (session connection . fromJust $ decode requestBody);
+                                processCredentials :: Either String (Int32, Bool, Int32)
+                                    -> IO (Either String UTFLBS.ByteString);
+                                processCredentials sessionResults' = let {
+                                    (user_id, is_admin, author_id) = fromRight (0, False, 0) sessionResults';
+                                } in
+                                    -- clearSession will fail if request has no associated session with cookies:
+                                    -- https://github.com/hce/postgresql-session/blob/master/src/Network/Wai/Session/PostgreSQL.hs#L232
+                                    (do
+                                        session_user_id <- sessionLookup "user_id"
+                                        when
+                                            (isJust session_user_id)
+                                            (debugM "rest-news" "invalidating session"
+                                                >> clearSessionPartial request)
+                                        )
+                                    >> (debugM "rest-news"
+                                        $ show ("put into sessions:" :: String, user_id, is_admin, author_id))
+                                    >> (sessionInsert "is_admin" $ show is_admin)
+                                    >> (sessionInsert "user_id" $ show user_id)
+                                    >> (sessionInsert "author_id" $ show author_id)
+                                    >> (pure $ fmap (const "cookies are baked") sessionResults');
                             } in case sessionName of
                                 "auth" -> runSession HSS.getCredentials
                                     >>= (\ (eitherSessionResult, errorForClient) ->
