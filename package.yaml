@@ -49,7 +49,7 @@ dependencies:
 ghc-options:
 - -Wall
 - -Wincomplete-uni-patterns
-# - -Werror
+- -Werror
 - -threaded
 
 library:

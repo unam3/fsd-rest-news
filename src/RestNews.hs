@@ -11,6 +11,7 @@ import qualified SessionPrerequisiteCheck as SessionPreCheck
 import Control.Exception (bracket_)
 import Control.Monad (void, when)
 import Data.Aeson (decode)
+import Data.Bifunctor (bimap)
 import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
 import Data.Either (fromRight)
 import Data.Int (Int32)
@@ -102,10 +103,10 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
                                 )
                             Right connection -> let {
                                 runSession session = (session connection . fromJust $ decode requestBody);
-                                processCredentials :: Either String (Int32, Bool, Int32)
-                                    -> IO (Either String UTFLBS.ByteString);
+                                processCredentials :: (Either String (Int32, Bool, Int32), Maybe UTFLBS.ByteString)
+                                    -> IO (Either String (Int32, Bool, Int32), Maybe UTFLBS.ByteString);
                                 processCredentials sessionResults' = let {
-                                    (user_id, is_admin, author_id) = fromRight (0, False, 0) sessionResults';
+                                    (user_id, is_admin, author_id) = fromRight (0, False, 0) $ fst sessionResults';
                                 } in
                                     -- clearSession will fail if request has no associated session with cookies:
                                     -- https://github.com/hce/postgresql-session/blob/master/src/Network/Wai/Session/PostgreSQL.hs#L232
@@ -121,16 +122,11 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
                                     >> (sessionInsert "is_admin" $ show is_admin)
                                     >> (sessionInsert "user_id" $ show user_id)
                                     >> (sessionInsert "author_id" $ show author_id)
-                                    >> (pure $ fmap (const "cookies are baked") sessionResults');
+                                    >> pure sessionResults'
                             } in case sessionName of
                                 "auth" -> runSession HSS.getCredentials
-                                    >>= (\ (eitherSessionResult, errorForClient) ->
-                                        processCredentials eitherSessionResult
-                                        >>= (\ processedCreds -> pure (
-                                            processedCreds,
-                                            errorForClient
-                                            ))
-                                    )
+                                    >>= processCredentials
+                                    >>= pure . bimap (fmap $ const "cookies are baked") id
                                 "createUser" -> runSession HSS.createUser;
                                 "getUser" -> HSS.getUser connection sessionUserId
                                 "deleteUser" -> runSession HSS.deleteUser
