@@ -40,6 +40,30 @@ dbError = Left "DB error"
 getIdString :: Maybe String -> String
 getIdString = fromMaybe "0"
 
+processCredentials :: (String -> IO (Maybe String))
+    -> (Request -> IO ())
+    -> Request
+    -> (String -> String -> IO ())
+    -> (Either String (Int32, Bool, Int32), Maybe UTFLBS.ByteString)
+    -> IO (Either String (Int32, Bool, Int32), Maybe UTFLBS.ByteString);
+processCredentials sessionLookup clearSessionPartial request sessionInsert sessionResults' = let {
+    (user_id, is_admin, author_id) = fromRight (0, False, 0) $ fst sessionResults';
+} in
+    -- clearSession will fail if request has no associated session with cookies:
+    -- https://github.com/hce/postgresql-session/blob/master/src/Network/Wai/Session/PostgreSQL.hs#L232
+    (do
+        session_user_id <- sessionLookup "user_id"
+        when
+            (isJust session_user_id)
+            (debugM "rest-news" "invalidating session"
+                >> clearSessionPartial request)
+        )
+    >> (debugM "rest-news"
+        $ show ("put into sessions:" :: String, user_id, is_admin, author_id))
+    >> (sessionInsert "is_admin" $ show is_admin)
+    >> (sessionInsert "user_id" $ show user_id)
+    >> (sessionInsert "author_id" $ show author_id)
+    >> pure sessionResults'
 
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
 restAPI :: Settings -> Vault.Key (Session IO String String) -> (Request -> IO ()) -> Application;
@@ -103,29 +127,9 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
                                 )
                             Right connection -> let {
                                 runSession session = (session connection . fromJust $ decode requestBody);
-                                processCredentials :: (Either String (Int32, Bool, Int32), Maybe UTFLBS.ByteString)
-                                    -> IO (Either String (Int32, Bool, Int32), Maybe UTFLBS.ByteString);
-                                processCredentials sessionResults' = let {
-                                    (user_id, is_admin, author_id) = fromRight (0, False, 0) $ fst sessionResults';
-                                } in
-                                    -- clearSession will fail if request has no associated session with cookies:
-                                    -- https://github.com/hce/postgresql-session/blob/master/src/Network/Wai/Session/PostgreSQL.hs#L232
-                                    (do
-                                        session_user_id <- sessionLookup "user_id"
-                                        when
-                                            (isJust session_user_id)
-                                            (debugM "rest-news" "invalidating session"
-                                                >> clearSessionPartial request)
-                                        )
-                                    >> (debugM "rest-news"
-                                        $ show ("put into sessions:" :: String, user_id, is_admin, author_id))
-                                    >> (sessionInsert "is_admin" $ show is_admin)
-                                    >> (sessionInsert "user_id" $ show user_id)
-                                    >> (sessionInsert "author_id" $ show author_id)
-                                    >> pure sessionResults'
                             } in case sessionName of
                                 "auth" -> runSession HSS.getCredentials
-                                    >>= processCredentials
+                                    >>= processCredentials sessionLookup clearSessionPartial request sessionInsert
                                     >>= pure . bimap (fmap $ const "cookies are baked") id
                                 "createUser" -> runSession HSS.createUser;
                                 "getUser" -> HSS.getUser connection sessionUserId
@@ -167,7 +171,7 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
                                 nonMatched -> pure (
                                     Left nonMatched,
                                     Nothing);
-                } in sessionResults
+            } in sessionResults
 
             debugM
                 "rest-news"
