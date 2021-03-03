@@ -11,7 +11,7 @@ import qualified SessionPrerequisiteCheck as SessionPreCheck
 import Control.Exception (bracket_)
 import Control.Monad (void, when)
 import Data.Aeson (decode)
-import Data.Bifunctor (bimap)
+import Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
 import Data.Either (fromRight)
 import Data.Int (Int32)
@@ -20,7 +20,7 @@ import Data.Maybe (fromJust, fromMaybe, isJust, isNothing)
 import Data.String (fromString)
 import qualified Data.Vault.Lazy as Vault
 import Database.PostgreSQL.Simple (ConnectInfo(..), connectPostgreSQL, postgreSQLConnectionString)
-import Hasql.Connection (Settings, settings)
+import Hasql.Connection (Connection, Settings, settings)
 import qualified Network.HTTP.Types as H
 import Network.Wai (Application, Request, pathInfo, requestMethod, responseLBS, strictRequestBody, vault)
 import Network.Wai.Application.Static
@@ -46,8 +46,8 @@ processCredentials :: (String -> IO (Maybe String))
     -> (String -> String -> IO ())
     -> (Either String (Int32, Bool, Int32), Maybe UTFLBS.ByteString)
     -> IO (Either String (Int32, Bool, Int32), Maybe UTFLBS.ByteString);
-processCredentials sessionLookup clearSessionPartial request sessionInsert sessionResults' = let {
-    (user_id, is_admin, author_id) = fromRight (0, False, 0) $ fst sessionResults';
+processCredentials sessionLookup clearSessionPartial request sessionInsert sessionResults = let {
+    (user_id, is_admin, author_id) = fromRight (0, False, 0) $ fst sessionResults;
 } in
     -- clearSession will fail if request has no associated session with cookies:
     -- https://github.com/hce/postgresql-session/blob/master/src/Network/Wai/Session/PostgreSQL.hs#L232
@@ -63,7 +63,71 @@ processCredentials sessionLookup clearSessionPartial request sessionInsert sessi
     >> (sessionInsert "is_admin" $ show is_admin)
     >> (sessionInsert "user_id" $ show user_id)
     >> (sessionInsert "author_id" $ show author_id)
-    >> pure sessionResults'
+    >> pure sessionResults
+
+runSession :: 
+    Connection
+    -> UTFLBS.ByteString
+    -> ((Either String (Int32, Bool, Int32), Maybe UTFLBS.ByteString)
+        -> IO (Either String (Int32, Bool, Int32), Maybe UTFLBS.ByteString))
+    -> Int32
+    -> Int32
+    -> String
+    -> IO (Either String UTFLBS.ByteString, Maybe UTFLBS.ByteString)
+runSession
+    connection
+    requestBody
+    processCredentialsPartial
+    sessionUserId
+    sessionAuthorId
+    sessionName = let {
+        runSessionWithJSON session = session connection . fromJust $ decode requestBody;
+    } in case sessionName of
+        "auth" -> runSessionWithJSON HSS.getCredentials
+            >>= processCredentialsPartial
+            >>= pure . first (fmap $ const "cookies are baked")
+        "createUser" -> runSessionWithJSON HSS.createUser;
+        "getUser" -> HSS.getUser connection sessionUserId
+        "deleteUser" -> runSessionWithJSON HSS.deleteUser
+        "promoteUserToAuthor" -> runSessionWithJSON HSS.promoteUserToAuthor;
+        "editAuthor" -> runSessionWithJSON HSS.editAuthor
+        "getAuthor" -> runSessionWithJSON HSS.getAuthor
+        "deleteAuthorRole" -> runSessionWithJSON HSS.deleteAuthorRole
+        "createCategory" -> runSessionWithJSON HSS.createCategory
+        "updateCategory" -> runSessionWithJSON HSS.updateCategory
+        "getCategory" -> runSessionWithJSON HSS.getCategory
+        "deleteCategory" -> runSessionWithJSON HSS.deleteCategory
+        "createTag" -> runSessionWithJSON HSS.createTag
+        "editTag" -> runSessionWithJSON HSS.editTag
+        "getTag" -> runSessionWithJSON HSS.getTag
+        "deleteTag" -> runSessionWithJSON HSS.deleteTag
+        "createComment" -> runSessionWithJSON HSS.createComment sessionUserId
+        "deleteComment" -> runSessionWithJSON HSS.deleteComment sessionUserId
+        "getArticleComments" -> runSessionWithJSON HSS.getArticleComments
+        "createArticleDraft" -> runSessionWithJSON HSS.createArticleDraft sessionAuthorId
+        "editArticleDraft" -> runSessionWithJSON HSS.editArticleDraft sessionAuthorId
+        "publishArticleDraft" -> runSessionWithJSON HSS.publishArticleDraft sessionAuthorId
+        "getArticleDraft" -> runSessionWithJSON HSS.getArticleDraft sessionAuthorId
+        "deleteArticleDraft" -> runSessionWithJSON HSS.deleteArticleDraft sessionAuthorId
+        "getArticlesByCategoryId" -> runSessionWithJSON HSS.getArticlesByCategoryId
+        "getArticlesByTagId" -> runSessionWithJSON HSS.getArticlesByTagId
+        "getArticlesByAnyTagId" -> runSessionWithJSON HSS.getArticlesByAnyTagId
+        "getArticlesByAllTagId" -> runSessionWithJSON HSS.getArticlesByAllTagId
+        "getArticlesByTitlePart" -> runSessionWithJSON HSS.getArticlesByTitlePart
+        "getArticlesByContentPart" -> runSessionWithJSON HSS.getArticlesByContentPart
+        "getArticlesByAuthorNamePart" -> runSessionWithJSON HSS.getArticlesByAuthorNamePart
+        "getArticlesSortedByPhotosNumber" -> runSessionWithJSON HSS.getArticlesSortedByPhotosNumber
+        "getArticlesSortedByCreationDate" -> runSessionWithJSON HSS.getArticlesSortedByCreationDate
+        "getArticlesSortedByAuthor" -> runSessionWithJSON HSS.getArticlesSortedByAuthor
+        "getArticlesSortedByCategory" -> runSessionWithJSON HSS.getArticlesSortedByCategory
+        "getArticlesFilteredByCreationDate" -> runSessionWithJSON HSS.getArticlesFilteredByCreationDate
+        "getArticlesCreatedBeforeDate" -> runSessionWithJSON HSS.getArticlesCreatedBeforeDate
+        "getArticlesCreatedAfterDate" -> runSessionWithJSON HSS.getArticlesCreatedAfterDate
+        nonMatched -> pure (
+            Left nonMatched,
+            Nothing
+            )
+
 
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
 restAPI :: Settings -> Vault.Key (Session IO String String) -> (Request -> IO ()) -> Application;
@@ -125,52 +189,17 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
                                 dbError,
                                 Just "DB connection error"
                             )
-                        Right connection -> let {
-                            runSession session = (session connection . fromJust $ decode requestBody);
-                        } in case sessionName of
-                            "auth" -> runSession HSS.getCredentials
-                                >>= processCredentials sessionLookup clearSessionPartial request sessionInsert
-                                >>= pure . bimap (fmap $ const "cookies are baked") id
-                            "createUser" -> runSession HSS.createUser;
-                            "getUser" -> HSS.getUser connection sessionUserId
-                            "deleteUser" -> runSession HSS.deleteUser
-                            "promoteUserToAuthor" -> runSession HSS.promoteUserToAuthor;
-                            "editAuthor" -> runSession HSS.editAuthor
-                            "getAuthor" -> runSession HSS.getAuthor
-                            "deleteAuthorRole" -> runSession HSS.deleteAuthorRole
-                            "createCategory" -> runSession HSS.createCategory
-                            "updateCategory" -> runSession HSS.updateCategory
-                            "getCategory" -> runSession HSS.getCategory
-                            "deleteCategory" -> runSession HSS.deleteCategory
-                            "createTag" -> runSession HSS.createTag
-                            "editTag" -> runSession HSS.editTag
-                            "getTag" -> runSession HSS.getTag
-                            "deleteTag" -> runSession HSS.deleteTag
-                            "createComment" -> runSession HSS.createComment sessionUserId
-                            "deleteComment" -> runSession HSS.deleteComment sessionUserId
-                            "getArticleComments" -> runSession HSS.getArticleComments
-                            "createArticleDraft" -> runSession HSS.createArticleDraft sessionAuthorId
-                            "editArticleDraft" -> runSession HSS.editArticleDraft sessionAuthorId
-                            "publishArticleDraft" -> runSession HSS.publishArticleDraft sessionAuthorId
-                            "getArticleDraft" -> runSession HSS.getArticleDraft sessionAuthorId
-                            "deleteArticleDraft" -> runSession HSS.deleteArticleDraft sessionAuthorId
-                            "getArticlesByCategoryId" -> runSession HSS.getArticlesByCategoryId
-                            "getArticlesByTagId" -> runSession HSS.getArticlesByTagId
-                            "getArticlesByAnyTagId" -> runSession HSS.getArticlesByAnyTagId
-                            "getArticlesByAllTagId" -> runSession HSS.getArticlesByAllTagId
-                            "getArticlesByTitlePart" -> runSession HSS.getArticlesByTitlePart
-                            "getArticlesByContentPart" -> runSession HSS.getArticlesByContentPart
-                            "getArticlesByAuthorNamePart" -> runSession HSS.getArticlesByAuthorNamePart
-                            "getArticlesSortedByPhotosNumber" -> runSession HSS.getArticlesSortedByPhotosNumber
-                            "getArticlesSortedByCreationDate" -> runSession HSS.getArticlesSortedByCreationDate
-                            "getArticlesSortedByAuthor" -> runSession HSS.getArticlesSortedByAuthor
-                            "getArticlesSortedByCategory" -> runSession HSS.getArticlesSortedByCategory
-                            "getArticlesFilteredByCreationDate" -> runSession HSS.getArticlesFilteredByCreationDate
-                            "getArticlesCreatedBeforeDate" -> runSession HSS.getArticlesCreatedBeforeDate
-                            "getArticlesCreatedAfterDate" -> runSession HSS.getArticlesCreatedAfterDate
-                            nonMatched -> pure (
-                                Left nonMatched,
-                                Nothing);
+                        Right connection ->
+                            let {
+                                processCredentialsPartial =
+                                    processCredentials sessionLookup clearSessionPartial request sessionInsert;
+                            } in runSession
+                                connection
+                                requestBody
+                                processCredentialsPartial
+                                sessionUserId
+                                sessionAuthorId
+                                sessionName
 
             debugM
                 "rest-news"
