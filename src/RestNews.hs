@@ -65,7 +65,7 @@ processCredentials sessionLookup clearSessionPartial request sessionInsert sessi
     >> (sessionInsert "author_id" $ show author_id)
     >> pure sessionResults
 
-runSession :: 
+runSession ::
     Connection
     -> UTFLBS.ByteString
     -> ((Either String (Int32, Bool, Int32), Maybe UTFLBS.ByteString)
@@ -132,7 +132,6 @@ runSession
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
 restAPI :: Settings -> Vault.Key (Session IO String String) -> (Request -> IO ()) -> Application;
 restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let {
-        endpointNeeded = Left "Endpoint needed";
         pathTextChunks = pathInfo request;
         method = requestMethod request;
         sessionMethods = Vault.lookup vaultKey (vault request);
@@ -176,10 +175,7 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
 
             eitherConnection <- HSS.getConnection dbConnectionSettings
 
-            results <- let {
-                sessionAuthorId = (read sessionAuthorIdString :: Int32);
-                sessionUserId = (read sessionUserIdString :: Int32);
-            } in case errorOrSessionName of
+            results <- case errorOrSessionName of
                 Left error -> pure (Left error, Just $ UTFLBS.fromString error)
                 Right sessionName -> 
                     case eitherConnection of
@@ -193,6 +189,8 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
                             let {
                                 processCredentialsPartial =
                                     processCredentials sessionLookup clearSessionPartial request sessionInsert;
+                                    sessionAuthorId = (read sessionAuthorIdString :: Int32);
+                                    sessionUserId = (read sessionUserIdString :: Int32);
                             } in runSession
                                 connection
                                 requestBody
@@ -217,6 +215,7 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
                     _ -> no_output_for_the_user_in_case_of_unhandled_exception)
 
             let {
+                endpointNeeded = Left "Endpoint needed";
                 httpStatus
                     | errorOrSessionName == endpointNeeded
                         || errorOrSessionName == SessionPreCheck.noSuchEndpoint = H.status404
