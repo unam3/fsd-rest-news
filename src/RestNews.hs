@@ -5,7 +5,6 @@ module RestNews
     processArgs
     ) where
 
-import HasqlSessions (getConnection)
 import HasqlSessionsRunner (runSession)
 import qualified SessionPrerequisiteCheck as SessionPreCheck
 import qualified Static (router)
@@ -20,7 +19,7 @@ import Data.Maybe (fromJust, fromMaybe, isJust, isNothing)
 import Data.String (fromString)
 import qualified Data.Vault.Lazy as Vault
 import Database.PostgreSQL.Simple (ConnectInfo(..), connectPostgreSQL, postgreSQLConnectionString)
-import Hasql.Connection (Settings, settings)
+import Hasql.Connection (Settings, acquire, settings)
 import qualified Network.HTTP.Types as H
 import Network.Wai (Application, Request, pathInfo, requestMethod, responseLBS, strictRequestBody, vault)
 import Network.Wai.Handler.Warp (Port, run)
@@ -108,7 +107,7 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
                     Nothing -> SessionPreCheck.noSuchEndpoint
                 )
 
-            eitherConnection <- getConnection dbConnectionSettings
+            eitherConnection <- acquire dbConnectionSettings
 
             results <- case errorOrSessionName of
                 Left error -> pure (Left error, Just $ UTFLBS.fromString error)
