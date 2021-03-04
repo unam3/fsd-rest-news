@@ -2,7 +2,6 @@
 {-# LANGUAGE OverloadedStrings  #-}
 
 module HasqlSessions (
-    getConnection,
     createUser,
     deleteUser,
     getUser,
@@ -51,7 +50,7 @@ import Data.Int (Int32)
 import Data.Text (Text, pack)
 --import Data.Text.IO (putStrLn)
 import Data.Time.Calendar (showGregorian)
-import Hasql.Connection (Connection, ConnectionError, Settings, acquire)
+import Hasql.Connection (Connection)
 import qualified Hasql.Session as Session
 import Hasql.Statement (Statement)
 
@@ -144,9 +143,6 @@ getError _ = Nothing
 --runSession params statement =
 --    Right connection <- acquire connectionSettings
 --    sessionResults <- Session.run (Session.statement params statement) connection
-
-getConnection :: Settings -> IO (Either ConnectionError Connection)
-getConnection = acquire
 
 getErrorCode :: Either Session.QueryError resultsType -> Maybe String
 getErrorCode = fmap fst . getError
