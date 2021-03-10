@@ -42,13 +42,13 @@ module HasqlSessions (
     getCredentials
     ) where
 
+import Control.Monad.IO.Class
 import Data.Aeson (Value, encode)
 import Data.Bifunctor (bimap)
 import Data.ByteString.Lazy.UTF8 (ByteString)
 import Data.ByteString.Internal (unpackChars)
 import Data.Int (Int32)
 import Data.Text (Text, pack)
---import Data.Text.IO (putStrLn)
 import Data.Time.Calendar (showGregorian)
 import Hasql.Connection (Connection)
 import qualified Hasql.Session as Session
@@ -139,15 +139,10 @@ getError (Left (Session.QueryError _ _ (Session.ResultError (Session.RowError 0 
     Just ("0", Nothing)
 getError _ = Nothing
 
--- params and statement type are different
---runSession params statement =
---    Right connection <- acquire connectionSettings
---    sessionResults <- Session.run (Session.statement params statement) connection
-
 getErrorCode :: Either Session.QueryError resultsType -> Maybe String
 getErrorCode = fmap fst . getError
 
-createUser :: Connection -> CreateUserRequest -> IO (Either String ByteString, Maybe ByteString)
+createUser :: MonadIO m => Connection -> CreateUserRequest -> m (Either String ByteString, Maybe ByteString)
 createUser connection createUserRequest = let {
     params = (
         username (createUserRequest :: CreateUserRequest),
@@ -157,7 +152,7 @@ createUser connection createUserRequest = let {
         avatar createUserRequest
         );
 } in do
-    sessionResults <- Session.run (Session.statement params HST.createUser) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.createUser) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -166,11 +161,11 @@ createUser connection createUserRequest = let {
             _ -> Nothing
         )
 
-deleteUser :: Connection -> UserIdRequest -> IO (Either String ByteString, Maybe ByteString)
+deleteUser :: MonadIO m => Connection -> UserIdRequest -> m (Either String ByteString, Maybe ByteString)
 deleteUser connection deleteUserRequest = let {
     params = user_id (deleteUserRequest :: UserIdRequest);
 } in do
-    sessionResults <- Session.run (Session.statement params HST.deleteUser) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.deleteUser) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -178,9 +173,9 @@ deleteUser connection deleteUserRequest = let {
             _ -> Nothing
         )
 
-getUser :: Connection -> Int32 -> IO (Either String ByteString, Maybe ByteString)
+getUser :: MonadIO m => Connection -> Int32 -> m (Either String ByteString, Maybe ByteString)
 getUser connection userId = do
-    sessionResults <- Session.run (Session.statement userId HST.getUser) connection
+    sessionResults <- liftIO $ Session.run (Session.statement userId HST.getUser) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -189,14 +184,14 @@ getUser connection userId = do
         )
 
 
-promoteUserToAuthor :: Connection -> PromoteUserToAuthorRequest
-    -> IO (Either String ByteString, Maybe ByteString)
+promoteUserToAuthor :: MonadIO m => Connection -> PromoteUserToAuthorRequest
+    -> m (Either String ByteString, Maybe ByteString)
 promoteUserToAuthor connection promoteUserToAuthorRequest = let {
     params = (
         user_id (promoteUserToAuthorRequest :: PromoteUserToAuthorRequest),
         description (promoteUserToAuthorRequest :: PromoteUserToAuthorRequest));
 } in do
-    sessionResults <- Session.run (Session.statement params HST.promoteUserToAuthor) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.promoteUserToAuthor) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -205,13 +200,13 @@ promoteUserToAuthor connection promoteUserToAuthorRequest = let {
             _ -> Nothing
         )
 
-editAuthor :: Connection -> EditAuthorRequest -> IO (Either String ByteString, Maybe ByteString)
+editAuthor :: MonadIO m => Connection -> EditAuthorRequest -> m (Either String ByteString, Maybe ByteString)
 editAuthor connection editAuthorRequest = let {
     params = (
         author_id (editAuthorRequest :: EditAuthorRequest),
         description (editAuthorRequest :: EditAuthorRequest));
 } in do
-    sessionResults <- Session.run (Session.statement params HST.editAuthor) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.editAuthor) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -220,11 +215,11 @@ editAuthor connection editAuthorRequest = let {
             _ -> Nothing
         )
 
-getAuthor :: Connection -> AuthorIdRequest -> IO (Either String ByteString, Maybe ByteString)
+getAuthor :: MonadIO m => Connection -> AuthorIdRequest -> m (Either String ByteString, Maybe ByteString)
 getAuthor connection authorIdRequest = let {
     params = author_id (authorIdRequest :: AuthorIdRequest);
 } in do
-    sessionResults <- Session.run (Session.statement params HST.getAuthor) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.getAuthor) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -232,12 +227,12 @@ getAuthor connection authorIdRequest = let {
             _ -> Nothing
         )
 
-deleteAuthorRole :: Connection -> AuthorIdRequest
-    -> IO (Either String ByteString, Maybe ByteString)
+deleteAuthorRole :: MonadIO m => Connection -> AuthorIdRequest
+    -> m (Either String ByteString, Maybe ByteString)
 deleteAuthorRole connection authorIdRequest = let {
     params = author_id (authorIdRequest :: AuthorIdRequest);
 } in do
-    sessionResults <- Session.run (Session.statement params HST.deleteAuthorRole) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.deleteAuthorRole) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -245,14 +240,14 @@ deleteAuthorRole connection authorIdRequest = let {
             _ -> Nothing
         )
 
-createCategory :: Connection -> CreateCategoryRequest -> IO (Either String ByteString, Maybe ByteString)
+createCategory :: MonadIO m => Connection -> CreateCategoryRequest -> m (Either String ByteString, Maybe ByteString)
 createCategory connection createCategoryRequest = let {
     params = (
         name (createCategoryRequest :: CreateCategoryRequest),
         parent_id (createCategoryRequest :: CreateCategoryRequest)
         );
 } in do
-    sessionResults <- Session.run (Session.statement params HST.createCategory) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.createCategory) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -261,7 +256,7 @@ createCategory connection createCategoryRequest = let {
             _ -> Nothing
         )
 
-updateCategory :: Connection -> UpdateCategoryRequest -> IO (Either String ByteString, Maybe ByteString)
+updateCategory :: MonadIO m => Connection -> UpdateCategoryRequest -> m (Either String ByteString, Maybe ByteString)
 updateCategory connection updateCategoryRequest = let {
     params = (
         category_id (updateCategoryRequest :: UpdateCategoryRequest),
@@ -269,7 +264,7 @@ updateCategory connection updateCategoryRequest = let {
         parent_id (updateCategoryRequest :: UpdateCategoryRequest)
         );
 } in do
-    sessionResults <- Session.run (Session.statement params HST.updateCategory) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.updateCategory) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -279,11 +274,11 @@ updateCategory connection updateCategoryRequest = let {
             _ -> Nothing
         )
 
-getCategory :: Connection -> CategoryIdRequest -> IO (Either String ByteString, Maybe ByteString)
+getCategory :: MonadIO m => Connection -> CategoryIdRequest -> m (Either String ByteString, Maybe ByteString)
 getCategory connection categoryIdRequest = let {
     params = category_id (categoryIdRequest :: CategoryIdRequest);
 } in do
-    sessionResults <- Session.run (Session.statement params HST.getCategory) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.getCategory) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -291,11 +286,11 @@ getCategory connection categoryIdRequest = let {
             _ -> Nothing
         )
 
-deleteCategory :: Connection -> CategoryIdRequest -> IO (Either String ByteString, Maybe ByteString)
+deleteCategory :: MonadIO m => Connection -> CategoryIdRequest -> m (Either String ByteString, Maybe ByteString)
 deleteCategory connection categoryIdRequest = let {
     params = category_id (categoryIdRequest :: CategoryIdRequest);
 } in do
-    sessionResults <- Session.run (Session.statement params HST.deleteCategory) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.deleteCategory) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -305,11 +300,11 @@ deleteCategory connection categoryIdRequest = let {
         )
 
 
-createTag :: Connection -> CreateTagRequest -> IO (Either String ByteString, Maybe ByteString)
+createTag :: MonadIO m => Connection -> CreateTagRequest -> m (Either String ByteString, Maybe ByteString)
 createTag connection createTagRequest = let {
     params = tag_name (createTagRequest :: CreateTagRequest);
 } in do
-    sessionResults <- Session.run (Session.statement params HST.createTag) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.createTag) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -318,11 +313,11 @@ createTag connection createTagRequest = let {
             _ -> Nothing
         )
 
-editTag :: Connection -> EditTagRequest -> IO (Either String ByteString, Maybe ByteString)
+editTag :: MonadIO m => Connection -> EditTagRequest -> m (Either String ByteString, Maybe ByteString)
 editTag connection editTagRequest = let {
     params = (tag_id (editTagRequest :: EditTagRequest), tag_name (editTagRequest :: EditTagRequest));
 } in do
-    sessionResults <- Session.run (Session.statement params HST.editTag) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.editTag) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -332,11 +327,11 @@ editTag connection editTagRequest = let {
             _ -> Nothing
         )
 
-deleteTag :: Connection -> TagIdRequest -> IO (Either String ByteString, Maybe ByteString)
+deleteTag :: MonadIO m => Connection -> TagIdRequest -> m (Either String ByteString, Maybe ByteString)
 deleteTag connection deleteTagRequest = let {
     params = tag_id (deleteTagRequest :: TagIdRequest);
 } in do
-    sessionResults <- Session.run (Session.statement params HST.deleteTag) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.deleteTag) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -345,11 +340,11 @@ deleteTag connection deleteTagRequest = let {
             _ -> Nothing
         )
 
-getTag :: Connection -> TagIdRequest -> IO (Either String ByteString, Maybe ByteString)
+getTag :: MonadIO m => Connection -> TagIdRequest -> m (Either String ByteString, Maybe ByteString)
 getTag connection getTagRequest = let {
     params = tag_id (getTagRequest :: TagIdRequest);
 } in do
-    sessionResults <- Session.run (Session.statement params HST.getTag) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.getTag) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -358,7 +353,7 @@ getTag connection getTagRequest = let {
         )
 
 
-createComment :: Connection -> CreateCommentRequest -> Int32 -> IO (Either String ByteString, Maybe ByteString)
+createComment :: MonadIO m => Connection -> CreateCommentRequest -> Int32 -> m (Either String ByteString, Maybe ByteString)
 createComment connection createCommentRequest user_id' = let {
     params = (
         article_id (createCommentRequest :: CreateCommentRequest),
@@ -366,7 +361,7 @@ createComment connection createCommentRequest user_id' = let {
         user_id'
         );
 } in do
-    sessionResults <- Session.run (Session.statement params HST.createComment) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.createComment) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -374,14 +369,14 @@ createComment connection createCommentRequest user_id' = let {
             _ -> Nothing
         )
 
-deleteComment :: Connection -> CommentIdRequest -> Int32 -> IO (Either String ByteString, Maybe ByteString)
+deleteComment :: MonadIO m => Connection -> CommentIdRequest -> Int32 -> m (Either String ByteString, Maybe ByteString)
 deleteComment connection deleteCommentRequest user_id' = let {
     params = (
         comment_id (deleteCommentRequest :: CommentIdRequest),
         user_id'
     );
 } in do
-    sessionResults <- Session.run (Session.statement params HST.deleteComment) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.deleteComment) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -389,21 +384,21 @@ deleteComment connection deleteCommentRequest user_id' = let {
             _ -> Nothing
         )
 
-getArticleComments :: Connection -> ArticleCommentsRequest -> IO (Either String ByteString, Maybe ByteString)
+getArticleComments :: MonadIO m => Connection -> ArticleCommentsRequest -> m (Either String ByteString, Maybe ByteString)
 getArticleComments connection articleCommentsRequest = let {
     params = (
         article_id (articleCommentsRequest :: ArticleCommentsRequest),
         offset (articleCommentsRequest :: ArticleCommentsRequest)
         );
 } in do
-    sessionResults <- Session.run (Session.statement params HST.getArticleComments) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.getArticleComments) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
         )
 
 
-createArticleDraft :: Connection -> ArticleDraftRequest -> Int32 -> IO (Either String ByteString, Maybe ByteString)
+createArticleDraft :: MonadIO m => Connection -> ArticleDraftRequest -> Int32 -> m (Either String ByteString, Maybe ByteString)
 createArticleDraft connection articleDraftRequest author_id' = let {
     params = (
         author_id',
@@ -415,7 +410,7 @@ createArticleDraft connection articleDraftRequest author_id' = let {
         additional_photos (articleDraftRequest :: ArticleDraftRequest)
         );
 } in do
-    sessionResults <- Session.run (Session.statement params HST.createArticleDraft) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.createArticleDraft) connection
     pure (
         valueToUTFLBS sessionResults,
         case getError sessionResults of
@@ -431,14 +426,14 @@ createArticleDraft connection articleDraftRequest author_id' = let {
             _ -> Nothing
         )
 
-publishArticleDraft :: Connection -> ArticleDraftIdRequest -> Int32 -> IO (Either String ByteString, Maybe ByteString)
+publishArticleDraft :: MonadIO m => Connection -> ArticleDraftIdRequest -> Int32 -> m (Either String ByteString, Maybe ByteString)
 publishArticleDraft connection articleDraftIdRequest author_id' = let {
     params = (
         author_id',
         article_id (articleDraftIdRequest :: ArticleDraftIdRequest)
         );
 } in do
-    sessionResults <- Session.run (Session.statement params HST.publishArticleDraft) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.publishArticleDraft) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -446,7 +441,7 @@ publishArticleDraft connection articleDraftIdRequest author_id' = let {
             _ -> Nothing
         )
 
-editArticleDraft :: Connection -> ArticleDraftEditRequest -> Int32 -> IO (Either String ByteString, Maybe ByteString)
+editArticleDraft :: MonadIO m => Connection -> ArticleDraftEditRequest -> Int32 -> m (Either String ByteString, Maybe ByteString)
 editArticleDraft connection articleDraftEditRequest author_id' = let {
     params = (
         author_id',
@@ -459,7 +454,7 @@ editArticleDraft connection articleDraftEditRequest author_id' = let {
         tags (articleDraftEditRequest :: ArticleDraftEditRequest)
         );
 } in do
-    sessionResults <- Session.run (Session.statement params HST.editArticleDraft) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.editArticleDraft) connection
     pure (
         valueToUTFLBS sessionResults,
         case getError sessionResults of
@@ -476,14 +471,14 @@ editArticleDraft connection articleDraftEditRequest author_id' = let {
             _ -> Nothing
         )
 
-getArticleDraft :: Connection -> ArticleDraftIdRequest -> Int32 -> IO (Either String ByteString, Maybe ByteString)
+getArticleDraft :: MonadIO m => Connection -> ArticleDraftIdRequest -> Int32 -> m (Either String ByteString, Maybe ByteString)
 getArticleDraft connection articleDraftIdRequest author_id' = let {
     params = (
         article_id (articleDraftIdRequest :: ArticleDraftIdRequest),
         author_id'
         );
 } in do
-    sessionResults <- Session.run (Session.statement params HST.getArticleDraft) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.getArticleDraft) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -491,14 +486,14 @@ getArticleDraft connection articleDraftIdRequest author_id' = let {
             _ -> Nothing
         )
 
-deleteArticleDraft :: Connection -> ArticleDraftIdRequest -> Int32 -> IO (Either String ByteString, Maybe ByteString)
+deleteArticleDraft :: MonadIO m => Connection -> ArticleDraftIdRequest -> Int32 -> m (Either String ByteString, Maybe ByteString)
 deleteArticleDraft connection articleDraftIdRequest author_id' = let {
     params = (
         article_id (articleDraftIdRequest :: ArticleDraftIdRequest),
         author_id'
         );
 } in do
-    sessionResults <- Session.run (Session.statement params HST.deleteArticleDraft) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.deleteArticleDraft) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -507,180 +502,180 @@ deleteArticleDraft connection articleDraftIdRequest author_id' = let {
         )
 
 
-getArticlesByCategoryId :: Connection -> ArticlesByCategoryIdRequest -> IO (Either String ByteString, Maybe ByteString)
+getArticlesByCategoryId :: MonadIO m => Connection -> ArticlesByCategoryIdRequest -> m (Either String ByteString, Maybe ByteString)
 getArticlesByCategoryId connection articlesByCategoryIdRequest = let {
     params = (
         category_id (articlesByCategoryIdRequest :: ArticlesByCategoryIdRequest),
         offset (articlesByCategoryIdRequest :: ArticlesByCategoryIdRequest)
         );
 } in do
-    sessionResults <- Session.run (Session.statement params HST.getArticlesByCategoryId) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.getArticlesByCategoryId) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
         )
 
-getArticlesByTagId :: Connection -> TagIdRequestWithOffset -> IO (Either String ByteString, Maybe ByteString)
+getArticlesByTagId :: MonadIO m => Connection -> TagIdRequestWithOffset -> m (Either String ByteString, Maybe ByteString)
 getArticlesByTagId connection tagIdRequestWithOffset = let {
     params = (
         tag_id (tagIdRequestWithOffset :: TagIdRequestWithOffset),
         offset (tagIdRequestWithOffset :: TagIdRequestWithOffset)
         );
 } in do
-    sessionResults <- Session.run (Session.statement params HST.getArticlesByTagId) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.getArticlesByTagId) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
         )
 
 
-getArticlesByAnyTagId :: Connection -> ArticlesByTagIdListRequest -> IO (Either String ByteString, Maybe ByteString)
+getArticlesByAnyTagId :: MonadIO m => Connection -> ArticlesByTagIdListRequest -> m (Either String ByteString, Maybe ByteString)
 getArticlesByAnyTagId connection tagIdsRequest = let {
     params = (
         tags_ids (tagIdsRequest :: ArticlesByTagIdListRequest),
         offset (tagIdsRequest :: ArticlesByTagIdListRequest)
         );
 } in do
-    sessionResults <- Session.run (Session.statement params HST.getArticlesByAnyTagId) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.getArticlesByAnyTagId) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
         )
 
-getArticlesByAllTagId :: Connection -> ArticlesByTagIdListRequest -> IO (Either String ByteString, Maybe ByteString)
+getArticlesByAllTagId :: MonadIO m => Connection -> ArticlesByTagIdListRequest -> m (Either String ByteString, Maybe ByteString)
 getArticlesByAllTagId connection tagIdsRequest = let {
     params = (
         tags_ids (tagIdsRequest :: ArticlesByTagIdListRequest),
         offset (tagIdsRequest :: ArticlesByTagIdListRequest)
         );
 } in do
-    sessionResults <- Session.run (Session.statement params HST.getArticlesByAllTagId) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.getArticlesByAllTagId) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
         )
 
-getArticlesByTitlePart :: Connection -> ArticlesByTitlePartRequest -> IO (Either String ByteString, Maybe ByteString)
+getArticlesByTitlePart :: MonadIO m => Connection -> ArticlesByTitlePartRequest -> m (Either String ByteString, Maybe ByteString)
 getArticlesByTitlePart connection substringRequest = let {
     params = (
         title_substring (substringRequest :: ArticlesByTitlePartRequest),
         offset (substringRequest :: ArticlesByTitlePartRequest)
         );
 } in do
-    sessionResults <- Session.run (Session.statement params HST.getArticlesByTitlePart) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.getArticlesByTitlePart) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
         )
 
-getArticlesByContentPart :: Connection -> ArticlesByContentPartRequest -> IO (Either String ByteString, Maybe ByteString)
+getArticlesByContentPart :: MonadIO m => Connection -> ArticlesByContentPartRequest -> m (Either String ByteString, Maybe ByteString)
 getArticlesByContentPart connection substringRequest = let {
     params = (
         content_substring (substringRequest :: ArticlesByContentPartRequest),
         offset (substringRequest :: ArticlesByContentPartRequest)
         );
 } in do
-    sessionResults <- Session.run (Session.statement params HST.getArticlesByContentPart) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.getArticlesByContentPart) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
         )
 
-getArticlesByAuthorNamePart :: Connection -> ArticlesByAuthorNamePartRequest -> IO (Either String ByteString, Maybe ByteString)
+getArticlesByAuthorNamePart :: MonadIO m => Connection -> ArticlesByAuthorNamePartRequest -> m (Either String ByteString, Maybe ByteString)
 getArticlesByAuthorNamePart connection substringRequest = let {
     params = (
         author_name_substring (substringRequest :: ArticlesByAuthorNamePartRequest),
         offset (substringRequest :: ArticlesByAuthorNamePartRequest)
         );
 } in do
-    sessionResults <- Session.run (Session.statement params HST.getArticlesByAuthorNamePart) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.getArticlesByAuthorNamePart) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
         )
 
-getArticlesSortedByPhotosNumber :: Connection -> OffsetRequest -> IO (Either String ByteString, Maybe ByteString)
+getArticlesSortedByPhotosNumber :: MonadIO m => Connection -> OffsetRequest -> m (Either String ByteString, Maybe ByteString)
 getArticlesSortedByPhotosNumber connection request = let {
     params = (
         offset (request :: OffsetRequest)
         );
 } in do
-    sessionResults <- Session.run (Session.statement params HST.getArticlesSortedByPhotosNumber) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.getArticlesSortedByPhotosNumber) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
         )
 
-getArticlesSortedByCreationDate :: Connection -> OffsetRequest -> IO (Either String ByteString, Maybe ByteString)
+getArticlesSortedByCreationDate :: MonadIO m => Connection -> OffsetRequest -> m (Either String ByteString, Maybe ByteString)
 getArticlesSortedByCreationDate connection request = let {
     params = (
         offset (request :: OffsetRequest)
         );
 } in do
-    sessionResults <- Session.run (Session.statement params HST.getArticlesSortedByCreationDate) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.getArticlesSortedByCreationDate) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
         )
 
-getArticlesSortedByAuthor :: Connection -> OffsetRequest -> IO (Either String ByteString, Maybe ByteString)
+getArticlesSortedByAuthor :: MonadIO m => Connection -> OffsetRequest -> m (Either String ByteString, Maybe ByteString)
 getArticlesSortedByAuthor connection request = let {
     params = (
         offset (request :: OffsetRequest)
         );
 } in do
-    sessionResults <- Session.run (Session.statement params HST.getArticlesSortedByAuthor) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.getArticlesSortedByAuthor) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
         )
 
-getArticlesSortedByCategory :: Connection -> OffsetRequest -> IO (Either String ByteString, Maybe ByteString)
+getArticlesSortedByCategory :: MonadIO m => Connection -> OffsetRequest -> m (Either String ByteString, Maybe ByteString)
 getArticlesSortedByCategory connection request = let {
     params = (
         offset (request :: OffsetRequest)
         );
 } in do
-    sessionResults <- Session.run (Session.statement params HST.getArticlesSortedByCategory) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.getArticlesSortedByCategory) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
         )
 
-getArticlesFilteredBy :: Statement (Text, Maybe Int32) Value -> Connection -> ArticlesByCreationDateRequest
-    -> IO (Either String ByteString, Maybe ByteString)
+getArticlesFilteredBy :: MonadIO m => Statement (Text, Maybe Int32) Value -> Connection -> ArticlesByCreationDateRequest
+    -> m (Either String ByteString, Maybe ByteString)
 getArticlesFilteredBy statement connection articlesByCreationDateRequest = let {
     params = (
         pack . showGregorian $ day (articlesByCreationDateRequest :: ArticlesByCreationDateRequest),
         offset (articlesByCreationDateRequest :: ArticlesByCreationDateRequest)
         );
 } in do
-    sessionResults <- Session.run (Session.statement params statement) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params statement) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
         )
 
-getArticlesFilteredByCreationDate :: Connection -> ArticlesByCreationDateRequest
-    -> IO (Either String ByteString, Maybe ByteString)
+getArticlesFilteredByCreationDate :: MonadIO m => Connection -> ArticlesByCreationDateRequest
+    -> m (Either String ByteString, Maybe ByteString)
 getArticlesFilteredByCreationDate = getArticlesFilteredBy HST.getArticlesFilteredByCreationDate
 
-getArticlesCreatedBeforeDate :: Connection -> ArticlesByCreationDateRequest
-    -> IO (Either String ByteString, Maybe ByteString)
+getArticlesCreatedBeforeDate :: MonadIO m => Connection -> ArticlesByCreationDateRequest
+    -> m (Either String ByteString, Maybe ByteString)
 getArticlesCreatedBeforeDate = getArticlesFilteredBy HST.getArticlesCreatedBeforeDate
 
-getArticlesCreatedAfterDate :: Connection -> ArticlesByCreationDateRequest -> IO (Either String ByteString, Maybe ByteString)
+getArticlesCreatedAfterDate :: MonadIO m => Connection -> ArticlesByCreationDateRequest -> m (Either String ByteString, Maybe ByteString)
 getArticlesCreatedAfterDate = getArticlesFilteredBy HST.getArticlesCreatedAfterDate
 
 
-getCredentials :: Connection -> AuthRequest -> IO (Either String (Int32, Bool, Int32), Maybe ByteString)
+getCredentials :: MonadIO m => Connection -> AuthRequest -> m (Either String (Int32, Bool, Int32), Maybe ByteString)
 getCredentials connection authRequest = let {
     params = (
         username (authRequest :: AuthRequest),
         password (authRequest :: AuthRequest)
         );
 } in do
-    sessionResults <- Session.run (Session.statement params HST.getCredentials) connection
+    sessionResults <- liftIO $ Session.run (Session.statement params HST.getCredentials) connection
     pure (
         bimap show id sessionResults,
         case getErrorCode sessionResults of
