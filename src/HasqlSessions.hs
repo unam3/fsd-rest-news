@@ -53,6 +53,7 @@ import Data.Time.Calendar (showGregorian)
 import Hasql.Connection (Connection)
 import qualified Hasql.Session as Session
 import Hasql.Statement (Statement)
+import qualified Util
 
 import AesonDefinitions
 import qualified HasqlStatements as HST
@@ -142,8 +143,13 @@ getError _ = Nothing
 getErrorCode :: Either Session.QueryError resultsType -> Maybe String
 getErrorCode = fmap fst . getError
 
-createUser :: MonadIO m => Connection -> CreateUserRequest -> m (Either String ByteString, Maybe ByteString)
-createUser connection createUserRequest = let {
+
+createUser' :: MonadIO m =>
+    (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
+    -> Connection
+    -> CreateUserRequest
+    -> m (Either String ByteString, Maybe ByteString)
+createUser' sessionRun connection createUserRequest = let {
     params = (
         username (createUserRequest :: CreateUserRequest),
         password (createUserRequest :: CreateUserRequest),
@@ -152,7 +158,7 @@ createUser connection createUserRequest = let {
         avatar createUserRequest
         );
 } in do
-    sessionResults <- liftIO $ Session.run (Session.statement params HST.createUser) connection
+    sessionResults <- sessionRun (Session.statement params HST.createUser) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -160,6 +166,10 @@ createUser connection createUserRequest = let {
             Just "23505" -> Just "{\"error\": \"user with this username already exists\"}"
             _ -> Nothing
         )
+
+createUser :: MonadIO m =>
+    (Connection -> CreateUserRequest -> m (Either String ByteString, Maybe ByteString))
+createUser = createUser' $ liftIO Util.∘∘ Session.run
 
 deleteUser :: MonadIO m => Connection -> UserIdRequest -> m (Either String ByteString, Maybe ByteString)
 deleteUser connection deleteUserRequest = let {
