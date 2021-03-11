@@ -45,6 +45,7 @@ dependencies:
 - postgresql-syntax
 - fast-builder
 - headed-megaparsec
+- util
 
 ghc-options:
 - -Wall
