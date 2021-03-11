@@ -142,11 +142,12 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
 
             processedResults <- let {
                 no_output_for_the_user_in_case_of_unhandled_exception = "";
-            } in pure (case fst results of
-                Right ulbs -> ulbs
+            } in (case fst results of
+                Right ulbs -> pure ulbs
                 _ -> case snd results of
-                    Just errorForClient -> errorForClient
-                    _ -> no_output_for_the_user_in_case_of_unhandled_exception)
+                    Just errorForClient -> pure errorForClient
+                    _ -> (errorM "rest-news" "\n^^^ unhandled exception ^^^\n\n"
+                        >> pure no_output_for_the_user_in_case_of_unhandled_exception))
 
             let {
                 endpointNeeded = Left "Endpoint needed";
