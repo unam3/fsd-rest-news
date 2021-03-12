@@ -6,12 +6,15 @@ module HasqlSessionsRunner
 
 import qualified HasqlSessions as HSS
 
+import Control.Monad.IO.Class (liftIO)
 import Data.Aeson (decode)
 import Data.Bifunctor (first)
 import Data.ByteString.Lazy.UTF8 (ByteString)
 import Data.Int (Int32)
 import Data.Maybe (fromJust)
 import Hasql.Connection (Connection)
+import qualified Hasql.Session as Session
+import qualified Util
 
 
 runSession ::
@@ -30,13 +33,15 @@ runSession
     sessionUserId
     sessionAuthorId
     sessionName = let {
-        runSessionWithJSON session = session connection . fromJust $ decode requestBody;
+        -- (Util.∘∘) == (.).(.)
+        sessionRun = (Util.∘∘) liftIO  Session.run;
+        runSessionWithJSON session = session sessionRun connection . fromJust $ decode requestBody;
     } in case sessionName of
         "auth" -> runSessionWithJSON HSS.getCredentials
             >>= processCredentialsPartial
             >>= pure . first (fmap $ const "cookies are baked")
         "createUser" -> runSessionWithJSON HSS.createUser;
-        "getUser" -> HSS.getUser connection sessionUserId
+        "getUser" -> HSS.getUser sessionRun connection sessionUserId
         "deleteUser" -> runSessionWithJSON HSS.deleteUser
         "promoteUserToAuthor" -> runSessionWithJSON HSS.promoteUserToAuthor;
         "editAuthor" -> runSessionWithJSON HSS.editAuthor
