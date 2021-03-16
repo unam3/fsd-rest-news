@@ -1,7 +1,7 @@
 {-# LANGUAGE DuplicateRecordFields  #-}
 {-# LANGUAGE OverloadedStrings  #-}
 
-module HasqlSessions (
+module RestNews.DB.ProcessRequest (
     createUser,
     deleteUser,
     getUser,
@@ -54,8 +54,8 @@ import Hasql.Connection (Connection)
 import qualified Hasql.Session as Session
 import Hasql.Statement (Statement)
 
-import AesonDefinitions
-import qualified HasqlStatements as HST
+import RestNews.Requests.JSON
+import qualified RestNews.DB.Request as DBR
 
 -- https://hackage.haskell.org/package/hasql-1.4.4
 -- https://github.com/nikita-volkov/hasql-tutorial1
@@ -156,7 +156,7 @@ createUser sessionRun connection createUserRequest = let {
         avatar createUserRequest
         );
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.createUser) connection
+    sessionResults <- sessionRun (Session.statement params DBR.createUser) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -173,7 +173,7 @@ deleteUser :: MonadIO m =>
 deleteUser sessionRun connection deleteUserRequest = let {
     params = user_id (deleteUserRequest :: UserIdRequest);
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.deleteUser) connection
+    sessionResults <- sessionRun (Session.statement params DBR.deleteUser) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -187,7 +187,7 @@ getUser :: MonadIO m =>
     -> Int32
     -> m (Either String ByteString, Maybe ByteString)
 getUser sessionRun connection userId = do
-    sessionResults <- sessionRun (Session.statement userId HST.getUser) connection
+    sessionResults <- sessionRun (Session.statement userId DBR.getUser) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -205,7 +205,7 @@ promoteUserToAuthor sessionRun connection promoteUserToAuthorRequest = let {
         user_id (promoteUserToAuthorRequest :: PromoteUserToAuthorRequest),
         description (promoteUserToAuthorRequest :: PromoteUserToAuthorRequest));
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.promoteUserToAuthor) connection
+    sessionResults <- sessionRun (Session.statement params DBR.promoteUserToAuthor) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -224,7 +224,7 @@ editAuthor sessionRun connection editAuthorRequest = let {
         author_id (editAuthorRequest :: EditAuthorRequest),
         description (editAuthorRequest :: EditAuthorRequest));
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.editAuthor) connection
+    sessionResults <- sessionRun (Session.statement params DBR.editAuthor) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -241,7 +241,7 @@ getAuthor :: MonadIO m =>
 getAuthor sessionRun connection authorIdRequest = let {
     params = author_id (authorIdRequest :: AuthorIdRequest);
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.getAuthor) connection
+    sessionResults <- sessionRun (Session.statement params DBR.getAuthor) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -257,7 +257,7 @@ deleteAuthorRole :: MonadIO m =>
 deleteAuthorRole sessionRun connection authorIdRequest = let {
     params = author_id (authorIdRequest :: AuthorIdRequest);
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.deleteAuthorRole) connection
+    sessionResults <- sessionRun (Session.statement params DBR.deleteAuthorRole) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -276,7 +276,7 @@ createCategory sessionRun connection createCategoryRequest = let {
         parent_id (createCategoryRequest :: CreateCategoryRequest)
         );
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.createCategory) connection
+    sessionResults <- sessionRun (Session.statement params DBR.createCategory) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -297,7 +297,7 @@ updateCategory sessionRun connection updateCategoryRequest = let {
         parent_id (updateCategoryRequest :: UpdateCategoryRequest)
         );
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.updateCategory) connection
+    sessionResults <- sessionRun (Session.statement params DBR.updateCategory) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -315,7 +315,7 @@ getCategory :: MonadIO m =>
 getCategory sessionRun connection categoryIdRequest = let {
     params = category_id (categoryIdRequest :: CategoryIdRequest);
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.getCategory) connection
+    sessionResults <- sessionRun (Session.statement params DBR.getCategory) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -331,7 +331,7 @@ deleteCategory :: MonadIO m =>
 deleteCategory sessionRun connection categoryIdRequest = let {
     params = category_id (categoryIdRequest :: CategoryIdRequest);
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.deleteCategory) connection
+    sessionResults <- sessionRun (Session.statement params DBR.deleteCategory) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -349,7 +349,7 @@ createTag :: MonadIO m =>
 createTag sessionRun connection createTagRequest = let {
     params = tag_name (createTagRequest :: CreateTagRequest);
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.createTag) connection
+    sessionResults <- sessionRun (Session.statement params DBR.createTag) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -366,7 +366,7 @@ editTag :: MonadIO m =>
 editTag sessionRun connection editTagRequest = let {
     params = (tag_id (editTagRequest :: EditTagRequest), tag_name (editTagRequest :: EditTagRequest));
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.editTag) connection
+    sessionResults <- sessionRun (Session.statement params DBR.editTag) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -384,7 +384,7 @@ deleteTag :: MonadIO m =>
 deleteTag sessionRun connection deleteTagRequest = let {
     params = tag_id (deleteTagRequest :: TagIdRequest);
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.deleteTag) connection
+    sessionResults <- sessionRun (Session.statement params DBR.deleteTag) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -401,7 +401,7 @@ getTag :: MonadIO m =>
 getTag sessionRun connection getTagRequest = let {
     params = tag_id (getTagRequest :: TagIdRequest);
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.getTag) connection
+    sessionResults <- sessionRun (Session.statement params DBR.getTag) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -423,7 +423,7 @@ createComment sessionRun connection createCommentRequest user_id' = let {
         user_id'
         );
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.createComment) connection
+    sessionResults <- sessionRun (Session.statement params DBR.createComment) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -443,7 +443,7 @@ deleteComment sessionRun connection deleteCommentRequest user_id' = let {
         user_id'
     );
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.deleteComment) connection
+    sessionResults <- sessionRun (Session.statement params DBR.deleteComment) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -462,7 +462,7 @@ getArticleComments sessionRun connection articleCommentsRequest = let {
         offset (articleCommentsRequest :: ArticleCommentsRequest)
         );
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.getArticleComments) connection
+    sessionResults <- sessionRun (Session.statement params DBR.getArticleComments) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
@@ -486,7 +486,7 @@ createArticleDraft sessionRun connection articleDraftRequest author_id' = let {
         additional_photos (articleDraftRequest :: ArticleDraftRequest)
         );
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.createArticleDraft) connection
+    sessionResults <- sessionRun (Session.statement params DBR.createArticleDraft) connection
     pure (
         valueToUTFLBS sessionResults,
         case getError sessionResults of
@@ -514,7 +514,7 @@ publishArticleDraft sessionRun connection articleDraftIdRequest author_id' = let
         article_id (articleDraftIdRequest :: ArticleDraftIdRequest)
         );
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.publishArticleDraft) connection
+    sessionResults <- sessionRun (Session.statement params DBR.publishArticleDraft) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -540,7 +540,7 @@ editArticleDraft sessionRun connection articleDraftEditRequest author_id' = let 
         tags (articleDraftEditRequest :: ArticleDraftEditRequest)
         );
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.editArticleDraft) connection
+    sessionResults <- sessionRun (Session.statement params DBR.editArticleDraft) connection
     pure (
         valueToUTFLBS sessionResults,
         case getError sessionResults of
@@ -569,7 +569,7 @@ getArticleDraft sessionRun connection articleDraftIdRequest author_id' = let {
         author_id'
         );
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.getArticleDraft) connection
+    sessionResults <- sessionRun (Session.statement params DBR.getArticleDraft) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -589,7 +589,7 @@ deleteArticleDraft sessionRun connection articleDraftIdRequest author_id' = let 
         author_id'
         );
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.deleteArticleDraft) connection
+    sessionResults <- sessionRun (Session.statement params DBR.deleteArticleDraft) connection
     pure (
         valueToUTFLBS sessionResults,
         case getErrorCode sessionResults of
@@ -609,7 +609,7 @@ getArticlesByCategoryId sessionRun connection articlesByCategoryIdRequest = let 
         offset (articlesByCategoryIdRequest :: ArticlesByCategoryIdRequest)
         );
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.getArticlesByCategoryId) connection
+    sessionResults <- sessionRun (Session.statement params DBR.getArticlesByCategoryId) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
@@ -626,7 +626,7 @@ getArticlesByTagId sessionRun connection tagIdRequestWithOffset = let {
         offset (tagIdRequestWithOffset :: TagIdRequestWithOffset)
         );
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.getArticlesByTagId) connection
+    sessionResults <- sessionRun (Session.statement params DBR.getArticlesByTagId) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
@@ -644,7 +644,7 @@ getArticlesByAnyTagId sessionRun connection tagIdsRequest = let {
         offset (tagIdsRequest :: ArticlesByTagIdListRequest)
         );
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.getArticlesByAnyTagId) connection
+    sessionResults <- sessionRun (Session.statement params DBR.getArticlesByAnyTagId) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
@@ -661,7 +661,7 @@ getArticlesByAllTagId sessionRun connection tagIdsRequest = let {
         offset (tagIdsRequest :: ArticlesByTagIdListRequest)
         );
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.getArticlesByAllTagId) connection
+    sessionResults <- sessionRun (Session.statement params DBR.getArticlesByAllTagId) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
@@ -678,7 +678,7 @@ getArticlesByTitlePart sessionRun connection substringRequest = let {
         offset (substringRequest :: ArticlesByTitlePartRequest)
         );
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.getArticlesByTitlePart) connection
+    sessionResults <- sessionRun (Session.statement params DBR.getArticlesByTitlePart) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
@@ -695,7 +695,7 @@ getArticlesByContentPart sessionRun connection substringRequest = let {
         offset (substringRequest :: ArticlesByContentPartRequest)
         );
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.getArticlesByContentPart) connection
+    sessionResults <- sessionRun (Session.statement params DBR.getArticlesByContentPart) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
@@ -712,7 +712,7 @@ getArticlesByAuthorNamePart sessionRun connection substringRequest = let {
         offset (substringRequest :: ArticlesByAuthorNamePartRequest)
         );
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.getArticlesByAuthorNamePart) connection
+    sessionResults <- sessionRun (Session.statement params DBR.getArticlesByAuthorNamePart) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
@@ -728,7 +728,7 @@ getArticlesSortedByPhotosNumber sessionRun connection request = let {
         offset (request :: OffsetRequest)
         );
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.getArticlesSortedByPhotosNumber) connection
+    sessionResults <- sessionRun (Session.statement params DBR.getArticlesSortedByPhotosNumber) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
@@ -744,7 +744,7 @@ getArticlesSortedByCreationDate sessionRun connection request = let {
         offset (request :: OffsetRequest)
         );
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.getArticlesSortedByCreationDate) connection
+    sessionResults <- sessionRun (Session.statement params DBR.getArticlesSortedByCreationDate) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
@@ -760,7 +760,7 @@ getArticlesSortedByAuthor sessionRun connection request = let {
         offset (request :: OffsetRequest)
         );
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.getArticlesSortedByAuthor) connection
+    sessionResults <- sessionRun (Session.statement params DBR.getArticlesSortedByAuthor) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
@@ -776,7 +776,7 @@ getArticlesSortedByCategory sessionRun connection request = let {
         offset (request :: OffsetRequest)
         );
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.getArticlesSortedByCategory) connection
+    sessionResults <- sessionRun (Session.statement params DBR.getArticlesSortedByCategory) connection
     pure (
         valueToUTFLBS sessionResults,
         Nothing
@@ -805,21 +805,21 @@ getArticlesFilteredByCreationDate :: MonadIO m =>
     -> Connection
     -> ArticlesByCreationDateRequest
     -> m (Either String ByteString, Maybe ByteString)
-getArticlesFilteredByCreationDate = getArticlesFilteredBy HST.getArticlesFilteredByCreationDate
+getArticlesFilteredByCreationDate = getArticlesFilteredBy DBR.getArticlesFilteredByCreationDate
 
 getArticlesCreatedBeforeDate :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> ArticlesByCreationDateRequest
     -> m (Either String ByteString, Maybe ByteString)
-getArticlesCreatedBeforeDate = getArticlesFilteredBy HST.getArticlesCreatedBeforeDate
+getArticlesCreatedBeforeDate = getArticlesFilteredBy DBR.getArticlesCreatedBeforeDate
 
 getArticlesCreatedAfterDate :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> ArticlesByCreationDateRequest ->
     m (Either String ByteString, Maybe ByteString)
-getArticlesCreatedAfterDate = getArticlesFilteredBy HST.getArticlesCreatedAfterDate
+getArticlesCreatedAfterDate = getArticlesFilteredBy DBR.getArticlesCreatedAfterDate
 
 
 getCredentials :: MonadIO m => 
@@ -831,7 +831,7 @@ getCredentials sessionRun connection authRequest = let {
         password (authRequest :: AuthRequest)
         );
 } in do
-    sessionResults <- sessionRun (Session.statement params HST.getCredentials) connection
+    sessionResults <- sessionRun (Session.statement params DBR.getCredentials) connection
     pure (
         bimap show id sessionResults,
         case getErrorCode sessionResults of

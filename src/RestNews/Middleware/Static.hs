@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings  #-}
 
-module Static
+module RestNews.Middleware.Static
     ( router
     ) where
 

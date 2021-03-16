@@ -1,6 +1,6 @@
 {-# LANGUAGE QuasiQuotes        #-}
 
-module HasqlStatements (
+module RestNews.DB.Request (
     createUser,
     deleteUser,
     getUser,

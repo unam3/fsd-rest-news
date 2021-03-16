@@ -1,7 +1,7 @@
 {-# LANGUAGE DuplicateRecordFields  #-}
 {-# LANGUAGE DeriveGeneric      #-}
 
-module AesonDefinitions (
+module RestNews.Requests.JSON (
     CreateUserRequest(..),
     UserIdRequest(..),
     AuthRequest(..),

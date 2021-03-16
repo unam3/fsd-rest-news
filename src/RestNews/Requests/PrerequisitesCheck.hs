@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings  #-}
 
-module SessionPrerequisiteCheck
+module RestNews.Requests.PrerequisitesCheck
     (
     RequestAndParams(..),
     endpointToEitherSessionName,
@@ -8,7 +8,7 @@ module SessionPrerequisiteCheck
     wrongParamsOrValues
     ) where
 
-import AesonDefinitions (AuthRequest, CreateUserRequest, UserIdRequest, PromoteUserToAuthorRequest, EditAuthorRequest, AuthorIdRequest, CreateCategoryRequest, UpdateCategoryRequest, CategoryIdRequest, CreateTagRequest, EditTagRequest, TagIdRequest, TagIdRequestWithOffset, CreateCommentRequest, CreateCommentRequest, CommentIdRequest, ArticleCommentsRequest, ArticleDraftRequest, ArticleDraftEditRequest, ArticleDraftIdRequest, ArticlesByCategoryIdRequest, ArticlesByTagIdListRequest, ArticlesByTitlePartRequest, ArticlesByContentPartRequest, ArticlesByAuthorNamePartRequest, ArticlesByCreationDateRequest, OffsetRequest)
+import RestNews.Requests.JSON
 
 import Data.Aeson (decode)
 import qualified Data.ByteString as BS
