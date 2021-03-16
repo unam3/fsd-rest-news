@@ -37,13 +37,14 @@ dbError = Left "DB error"
 getIdString :: Maybe String -> String
 getIdString = fromMaybe "0"
 
-processCredentials :: (String -> IO (Maybe String))
-    -> (Request -> IO ())
+processCredentials :: Monad m => (String -> String -> m ())
+    -> (String -> m (Maybe String))
+    -> (Request -> m ())
     -> Request
-    -> (String -> String -> IO ())
+    -> (String -> String -> m ())
     -> (Either String (Int32, Bool, Int32), Maybe UTFLBS.ByteString)
-    -> IO (Either String (Int32, Bool, Int32), Maybe UTFLBS.ByteString);
-processCredentials sessionLookup clearSessionPartial request sessionInsert sessionResults = let {
+    -> m (Either String (Int32, Bool, Int32), Maybe UTFLBS.ByteString);
+processCredentials debug sessionLookup clearSessionPartial request sessionInsert sessionResults = let {
     (user_id, is_admin, author_id) = fromRight (0, False, 0) $ fst sessionResults;
 } in
     -- clearSession will fail if request has no associated session with cookies:
@@ -55,7 +56,7 @@ processCredentials sessionLookup clearSessionPartial request sessionInsert sessi
             (debug "rest-news" "invalidating session"
                 >> clearSessionPartial request)
         )
-    >> debugM "rest-news"
+    >> debug "rest-news"
         (show ("put into sessions:" :: String, user_id, is_admin, author_id))
     >> sessionInsert "is_admin" (show is_admin)
     >> sessionInsert "user_id" (show user_id)
@@ -122,7 +123,7 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
                         Right connection ->
                             let {
                                 processCredentialsPartial =
-                                    processCredentials sessionLookup clearSessionPartial request sessionInsert;
+                                    processCredentials debugM sessionLookup clearSessionPartial request sessionInsert;
                                     sessionAuthorId = (read sessionAuthorIdString :: Int32);
                                     sessionUserId = (read sessionUserIdString :: Int32);
                             } in runSession
