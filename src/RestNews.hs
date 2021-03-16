@@ -52,14 +52,14 @@ processCredentials sessionLookup clearSessionPartial request sessionInsert sessi
         session_user_id <- sessionLookup "user_id"
         when
             (isJust session_user_id)
-            (debugM "rest-news" "invalidating session"
+            (debug "rest-news" "invalidating session"
                 >> clearSessionPartial request)
         )
-    >> (debugM "rest-news"
-        $ show ("put into sessions:" :: String, user_id, is_admin, author_id))
-    >> (sessionInsert "is_admin" $ show is_admin)
-    >> (sessionInsert "user_id" $ show user_id)
-    >> (sessionInsert "author_id" $ show author_id)
+    >> debugM "rest-news"
+        (show ("put into sessions:" :: String, user_id, is_admin, author_id))
+    >> sessionInsert "is_admin" (show is_admin)
+    >> sessionInsert "user_id" (show user_id)
+    >> sessionInsert "author_id" (show author_id)
     >> pure sessionResults
 
 
@@ -146,8 +146,8 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
                 Right ulbs -> pure ulbs
                 _ -> case snd results of
                     Just errorForClient -> pure errorForClient
-                    _ -> (errorM "rest-news" "\n^^^ unhandled exception ^^^\n\n"
-                        >> pure no_output_for_the_user_in_case_of_unhandled_exception))
+                    _ -> errorM "rest-news" "\n^^^ unhandled exception ^^^\n\n"
+                        >> pure no_output_for_the_user_in_case_of_unhandled_exception)
 
             let {
                 endpointNeeded = Left "Endpoint needed";

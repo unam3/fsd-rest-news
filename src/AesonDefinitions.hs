@@ -81,7 +81,7 @@ data EditAuthorRequest = EditAuthorRequest {
 instance FromJSON EditAuthorRequest
 
 
-data AuthorIdRequest = AuthorIdRequest {
+newtype AuthorIdRequest = AuthorIdRequest {
     author_id :: Int32
 } deriving (Show, Generic)
 
@@ -106,7 +106,7 @@ data UpdateCategoryRequest = UpdateCategoryRequest {
 instance FromJSON UpdateCategoryRequest
 
 
-data CategoryIdRequest = CategoryIdRequest {
+newtype CategoryIdRequest = CategoryIdRequest {
     category_id :: Int32
 } deriving (Show, Generic)
 
@@ -194,7 +194,7 @@ data ArticleDraftEditRequest = ArticleDraftEditRequest {
 instance FromJSON ArticleDraftEditRequest
 
 
-data ArticleDraftIdRequest = ArticleDraftIdRequest {
+newtype ArticleDraftIdRequest = ArticleDraftIdRequest {
     article_id :: Int32
 } deriving (Show, Generic)
 
@@ -246,7 +246,7 @@ data ArticlesByCreationDateRequest = ArticlesByCreationDateRequest {
 instance FromJSON ArticlesByCreationDateRequest
 
 
-data OffsetRequest = OffsetRequest {
+newtype OffsetRequest = OffsetRequest {
     offset :: Int32
 } deriving (Show, Generic)
 
