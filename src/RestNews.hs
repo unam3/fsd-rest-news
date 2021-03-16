@@ -5,9 +5,9 @@ module RestNews
     processArgs
     ) where
 
-import HasqlSessionsRunner (runSession)
-import qualified SessionPrerequisiteCheck as SessionPreCheck
-import qualified Static (router)
+import RestNews.DB.RequestRunner (runSession)
+import qualified RestNews.Requests.PrerequisitesCheck as PrerequisitesCheck
+import qualified RestNews.Middleware.Static as Static
 
 import Control.Exception (bracket_)
 import Control.Monad (void, when)
@@ -96,16 +96,16 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
             debugM "rest-news" (show (method, pathTextChunks, requestBody))
 
             errorOrSessionName <- let {
-                params = SessionPreCheck.Params {
-                    SessionPreCheck.lbsRequest = requestBody,
-                    SessionPreCheck.isAdmin = maybeIsAdmin == Just "True",
-                    SessionPreCheck.hasUserId = sessionUserIdString /= "0",
-                    SessionPreCheck.hasAuthorId = sessionAuthorIdString /= "0"
+                params = PrerequisitesCheck.Params {
+                    PrerequisitesCheck.lbsRequest = requestBody,
+                    PrerequisitesCheck.isAdmin = maybeIsAdmin == Just "True",
+                    PrerequisitesCheck.hasUserId = sessionUserIdString /= "0",
+                    PrerequisitesCheck.hasAuthorId = sessionAuthorIdString /= "0"
                     };
             } in pure (
-                case HMS.lookup (pathTextChunks, method) SessionPreCheck.endpointToEitherSessionName of
+                case HMS.lookup (pathTextChunks, method) PrerequisitesCheck.endpointToEitherSessionName of
                     Just checkRequest -> checkRequest params
-                    Nothing -> SessionPreCheck.noSuchEndpoint
+                    Nothing -> PrerequisitesCheck.noSuchEndpoint
                 )
 
             eitherConnection <- acquire dbConnectionSettings
@@ -154,8 +154,8 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
                 endpointNeeded = Left "Endpoint needed";
                 httpStatus
                     | errorOrSessionName == endpointNeeded
-                        || errorOrSessionName == SessionPreCheck.noSuchEndpoint = H.status404
-                    | errorOrSessionName == SessionPreCheck.wrongParamsOrValues = H.status400
+                        || errorOrSessionName == PrerequisitesCheck.noSuchEndpoint = H.status404
+                    | errorOrSessionName == PrerequisitesCheck.wrongParamsOrValues = H.status400
                     | fst results == dbError = H.status500
                     | otherwise = H.status200;
             } in respond $ responseLBS httpStatus [] processedResults)
