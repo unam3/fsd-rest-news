@@ -8,6 +8,21 @@ import Data.ByteString.Internal (unpackChars)
 import Hasql.Session
 import Test.Hspec
 
+
+e2201X :: Either QueryError resultsType
+e2201X =
+    Left (
+        QueryError
+            "SELECT CASE WHEN count(ordered) = 0 THEN to_json(ARRAY [] :: INT[]) ELSE json_agg(ordered.*) END :: json FROM (SELECT comment_id, comment_text FROM articles_comments WHERE article_id = $1 :: int4 ORDER BY comment_id LIMIT 20 OFFSET $2 :: int4) AS ordered"
+            ["2","-1"]
+            (
+                ResultError (
+                    ServerError "2201X" "OFFSET must not be negative" Nothing Nothing
+                )
+            )
+    )
+
+
 e22001 :: Either QueryError resultsType
 e22001 =
     Left (
@@ -95,6 +110,9 @@ spec =
         $ do
             it "process 22001"
                 $ shouldBe (getError e22001) $ Just ("22001", Nothing)
+
+            it "process 2201X"
+                $ shouldBe (getError e2201X) $ Just ("2201X", Just "OFFSET must not be negative")
 
             it "process 23503"
                 $ shouldBe (getError e23503)
