@@ -5,6 +5,7 @@ module RestNews
     processArgs
     ) where
 
+import qualified RestNews.Logger as L
 import RestNews.DB.RequestRunner (runSession)
 import qualified RestNews.Requests.PrerequisitesCheck as PrerequisitesCheck
 import qualified RestNews.Middleware.Static as Static
@@ -37,7 +38,7 @@ dbError = Left "DB error"
 getIdString :: Maybe String -> String
 getIdString = fromMaybe "0"
 
-processCredentials :: Monad m => (String -> String -> m ())
+processCredentials :: Monad m => (String -> m ())
     -> (String -> m (Maybe String))
     -> (Request -> m ())
     -> Request
@@ -46,34 +47,33 @@ processCredentials :: Monad m => (String -> String -> m ())
     -> m (Either String (Int32, Bool, Int32), Maybe UTFLBS.ByteString);
 processCredentials debug sessionLookup clearSessionPartial request sessionInsert sessionResults = let {
     (user_id, is_admin, author_id) = fromRight (0, False, 0) $ fst sessionResults;
-} in
+} in do
     -- clearSession will fail if request has no associated session with cookies:
     -- https://github.com/hce/postgresql-session/blob/master/src/Network/Wai/Session/PostgreSQL.hs#L232
     (do
         session_user_id <- sessionLookup "user_id"
         when
             (isJust session_user_id)
-            (debug "rest-news" "invalidating session"
+            (debug "invalidating session"
                 >> clearSessionPartial request)
         )
-    >> debug "rest-news"
-        (show ("put into sessions:" :: String, user_id, is_admin, author_id))
-    >> sessionInsert "is_admin" (show is_admin)
-    >> sessionInsert "user_id" (show user_id)
-    >> sessionInsert "author_id" (show author_id)
-    >> pure sessionResults
+    debug (show ("put into sessions:" :: String, user_id, is_admin, author_id))
+    sessionInsert "is_admin" (show is_admin)
+    sessionInsert "user_id" (show user_id)
+    sessionInsert "author_id" (show author_id)
+    pure sessionResults
 
 
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
-restAPI :: Settings -> Vault.Key (Session IO String String) -> (Request -> IO ()) -> Application;
-restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let {
+restAPI :: L.Handle -> Settings -> Vault.Key (Session IO String String) -> (Request -> IO ()) -> Application;
+restAPI loggerH dbConnectionSettings vaultKey clearSessionPartial request respond = let {
         pathTextChunks = pathInfo request;
         method = requestMethod request;
         sessionMethods = Vault.lookup vaultKey (vault request);
         (sessionLookup, sessionInsert) = fromJust sessionMethods;
     } in bracket_
-        (debugM "rest-news" "Allocating scarce resource")
-        (debugM "rest-news" "Cleaning up")
+        ((L.hDebug loggerH) "Allocating scarce resource")
+        ((L.hDebug loggerH) "Cleaning up")
         (do
             when
                 (isNothing sessionMethods)
@@ -86,14 +86,14 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
             let sessionUserIdString = getIdString maybeUserId
             let sessionAuthorIdString = getIdString maybeAuthorId
 
-            debugM "rest-news" $ show request
-            debugM "rest-news" $ show ("session user_id" :: String, maybeUserId)
-            debugM "rest-news" $ show ("session is_admin" :: String, maybeIsAdmin)
-            debugM "rest-news" $ show ("session author_id" :: String, maybeAuthorId)
+            (L.hDebug loggerH) $ show request
+            (L.hDebug loggerH) $ show ("session user_id" :: String, maybeUserId)
+            (L.hDebug loggerH) $ show ("session is_admin" :: String, maybeIsAdmin)
+            (L.hDebug loggerH) $ show ("session author_id" :: String, maybeAuthorId)
 
             requestBody <- strictRequestBody request
             
-            debugM "rest-news" (show (method, pathTextChunks, requestBody))
+            (L.hDebug loggerH) (show (method, pathTextChunks, requestBody))
 
             errorOrSessionName <- let {
                 params = PrerequisitesCheck.Params {
@@ -123,7 +123,7 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
                         Right connection ->
                             let {
                                 processCredentialsPartial =
-                                    processCredentials debugM sessionLookup clearSessionPartial request sessionInsert;
+                                    processCredentials (L.hDebug loggerH) sessionLookup clearSessionPartial request sessionInsert;
                                     sessionAuthorId = (read sessionAuthorIdString :: Int32);
                                     sessionUserId = (read sessionUserIdString :: Int32);
                             } in runSession
@@ -134,8 +134,7 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
                                 sessionAuthorId
                                 sessionName
 
-            debugM
-                "rest-news"
+            (L.hDebug loggerH)
                 (case fst results of
                     Left leftErr -> show (snd results) ++ ", " ++ leftErr
                     Right ulbs -> UTFLBS.toString ulbs
@@ -147,7 +146,7 @@ restAPI dbConnectionSettings vaultKey clearSessionPartial request respond = let 
                 Right ulbs -> pure ulbs
                 _ -> case snd results of
                     Just errorForClient -> pure errorForClient
-                    _ -> errorM "rest-news" "\n^^^ unhandled exception ^^^\n\n"
+                    _ -> (L.hError loggerH) "\n^^^ unhandled exception ^^^\n\n"
                         >> pure no_output_for_the_user_in_case_of_unhandled_exception)
 
             let {
@@ -178,11 +177,11 @@ processArgs [runAtPort, dbHost, dbPort, dbUser, dbPassword, dbName] =
 processArgs _ = Left "Exactly 6 arguments needed: port to run rest-news, db hostname, db port, db user, db password, db name"
 
 
-runWarp :: [String] -> IO ()
-runWarp argsList = let {
+runWarp :: L.Handle -> [String] -> IO ()
+runWarp loggerH argsList = let {
     processedArgs = processArgs argsList;
 } in case processedArgs of
-    Left error -> errorM "rest-news" error  
+    Left error' -> (L.hError loggerH) error'
         >> exitFailure
     Right (port, dbConnectionSettings, connectInfo) -> 
         do
@@ -197,12 +196,21 @@ runWarp argsList = let {
             } in run port
                 (Static.router (
                     withSession store "SESSION" defaultSetCookie vaultK
-                    $ restAPI dbConnectionSettings vaultK clearSessionPartial
+                    $ restAPI loggerH dbConnectionSettings vaultK clearSessionPartial
                     )
                 )
             >> exitSuccess
 
 runWarpWithLogger :: IO ()
-runWarpWithLogger = traplogging "rest-news" ERROR "shutdown due to"
-    $ updateGlobalLogger "rest-news" (setLevel DEBUG)
-    >> getArgs >>= runWarp
+runWarpWithLogger = L.withLogger
+    (L.Config
+        DEBUG
+        (\ priority -> traplogging
+            "rest-news"
+            ERROR
+            "Unhandled exception occured"
+            $ updateGlobalLogger "rest-news" (setLevel priority))
+        (debugM "rest-news")
+        (errorM "rest-news"))
+
+    (\ loggerH -> getArgs >>= runWarp loggerH)

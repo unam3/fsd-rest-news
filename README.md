@@ -55,8 +55,7 @@ su postgres
 createdb rest-news-test
 psql rest-news-test -c "CREATE EXTENSION pgcrypto;"
 
-stack build
-stack exec rest-news-exe 8081 "localhost" 5432 "rest-news-user" "rest" "rest-news-test"
+stack build && stack exec rest-news-exe 8081 "localhost" 5432 "rest-news-user" "rest" "rest-news-test"
 
 psql -h 0.0.0.0 -W -f schema.psql rest-news-test rest-news-user
 psql -h 0.0.0.0 -W -f tests-fixtures.psql rest-news-test rest-news-user
