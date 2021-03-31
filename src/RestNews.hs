@@ -6,6 +6,7 @@ module RestNews
     ) where
 
 import qualified RestNews.Logger as L
+import qualified RestNews.Middleware.Sessions as S
 import RestNews.DB.RequestRunner (runSession)
 import qualified RestNews.Requests.PrerequisitesCheck as PrerequisitesCheck
 import qualified RestNews.Middleware.Static as Static
@@ -24,7 +25,7 @@ import Hasql.Connection (Settings, acquire, settings)
 import qualified Network.HTTP.Types as H
 import Network.Wai (Application, Request, pathInfo, requestMethod, responseLBS, strictRequestBody, vault)
 import Network.Wai.Handler.Warp (Port, run)
-import Network.Wai.Session (withSession, Session)
+import Network.Wai.Session (withSession)
 import Prelude hiding (error)
 import Network.Wai.Session.PostgreSQL (clearSession, dbStore, defaultSettings, fromSimpleConnection, purger)
 import System.Environment (getArgs)
@@ -65,18 +66,23 @@ processCredentials debug sessionLookup clearSessionPartial request sessionInsert
 
 
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
-restAPI :: L.Handle -> Settings -> Vault.Key (Session IO String String) -> (Request -> IO ()) -> Application;
-restAPI loggerH dbConnectionSettings vaultKey clearSessionPartial request respond = let {
+restAPI ::
+    L.Handle
+    -> S.Handle
+    -> Settings
+    -> (Request -> IO ())
+    -> Application
+restAPI loggerH sessionH dbConnectionSettings clearSessionPartial request respond = let {
         pathTextChunks = pathInfo request;
         method = requestMethod request;
-        sessionMethods = Vault.lookup vaultKey (vault request);
-        (sessionLookup, sessionInsert) = fromJust sessionMethods;
+        maybeSessionMethods = S.hMaybeSessionMethods sessionH request;
+        (sessionLookup, sessionInsert) = fromJust maybeSessionMethods;
     } in bracket_
         ((L.hDebug loggerH) "Allocating scarce resource")
         ((L.hDebug loggerH) "Cleaning up")
         (do
             when
-                (isNothing sessionMethods)
+                (isNothing maybeSessionMethods)
                 (errorM "rest-news" "vault session error"
                     >> exitFailure)
 
@@ -185,21 +191,28 @@ runWarp loggerH argsList = let {
         >> exitFailure
     Right (port, dbConnectionSettings, connectInfo) -> 
         do
-        vaultK <- Vault.newKey
-        simpleConnection <- connectPostgreSQL (postgreSQLConnectionString connectInfo)
-            >>= fromSimpleConnection
-        -- IO (SessionStore IO String String)
-        store <- dbStore simpleConnection defaultSettings
-        void (purger simpleConnection defaultSettings)
-        let {
-                clearSessionPartial = clearSession simpleConnection "SESSION";
-            } in run port
-                (Static.router (
-                    withSession store "SESSION" defaultSetCookie vaultK
-                    $ restAPI loggerH dbConnectionSettings vaultK clearSessionPartial
+            --withSession connectInfo
+            vaultKey <- Vault.newKey
+            simpleConnection <- connectPostgreSQL (postgreSQLConnectionString connectInfo)
+                >>= fromSimpleConnection
+            -- IO (SessionStore IO String String)
+            store <- dbStore simpleConnection defaultSettings
+            void (purger simpleConnection defaultSettings)
+            let clearSessionPartial = clearSession simpleConnection "SESSION";
+                in S.withSessions
+                    (S.Config
+                        (withSession store "SESSION" defaultSetCookie vaultKey)
+                        (Vault.lookup vaultKey . vault)
+                        )
+                    (\ sessionsH -> run port
+                        (Static.router (
+                            S.hWithSession
+                                sessionsH
+                                $ restAPI loggerH sessionsH dbConnectionSettings clearSessionPartial
+                            )
+                        )
+                        >> exitSuccess
                     )
-                )
-            >> exitSuccess
 
 runWarpWithLogger :: IO ()
 runWarpWithLogger = L.withLogger
