@@ -5,6 +5,7 @@ module RestNews
     processArgs
     ) where
 
+import qualified RestNews.DBConnection as DBC
 import qualified RestNews.Logger as L
 import qualified RestNews.Middleware.Sessions as S
 import RestNews.DB.RequestRunner (runSession)
@@ -70,9 +71,9 @@ processCredentials debug sessionLookup clearSessionPartial request sessionInsert
 restAPI ::
     L.Handle
     -> S.Handle
-    -> Settings
+    -> DBC.Handle
     -> Application
-restAPI loggerH sessionsH dbConnectionSettings request respond = let {
+restAPI loggerH sessionsH dbH request respond = let {
         pathTextChunks = pathInfo request;
         method = requestMethod request;
         maybeSessionMethods = S.hMaybeSessionMethods sessionsH request;
@@ -114,7 +115,7 @@ restAPI loggerH sessionsH dbConnectionSettings request respond = let {
                     Nothing -> PrerequisitesCheck.noSuchEndpoint
                 )
 
-            eitherConnection <- acquire dbConnectionSettings
+            eitherConnection <- DBC.hAcquiredConnection dbH
 
             results <- case errorOrSessionName of
                 Left error -> pure (Left error, Just $ UTFLBS.fromString error)
@@ -191,7 +192,6 @@ runWarp loggerH argsList = let {
         >> exitFailure
     Right (port, dbConnectionSettings, connectInfo) -> 
         do
-            --withSession connectInfo
             vaultKey <- Vault.newKey
             simpleConnection <- connectPostgreSQL (postgreSQLConnectionString connectInfo)
                 >>= fromSimpleConnection
@@ -204,14 +204,18 @@ runWarp loggerH argsList = let {
                     (Vault.lookup vaultKey . vault)
                     (clearSession simpleConnection "SESSION")
                     )
-                (\ sessionsH -> run port
-                    (Static.router (
-                        S.hWithSession
-                            sessionsH
-                            $ restAPI loggerH sessionsH dbConnectionSettings
-                        )
-                    )
-                    >> exitSuccess
+                (\ sessionsH ->
+                    DBC.withDBConnection
+                        (DBC.Config $ acquire dbConnectionSettings)
+                        (\ dbH -> run port
+                            (Static.router (
+                                S.hWithSession
+                                    sessionsH
+                                    $ restAPI loggerH sessionsH dbH
+                                )
+                            )
+                            >> exitSuccess
+                            )
                 )
 
 runWarpWithLogger :: IO ()
