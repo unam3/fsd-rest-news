@@ -79,8 +79,8 @@ restAPI loggerH sessionsH dbH request respond = let {
         maybeSessionMethods = S.hMaybeSessionMethods sessionsH request;
         (sessionLookup, sessionInsert) = fromJust maybeSessionMethods;
     } in bracket_
-        ((L.hDebug loggerH) "Allocating scarce resource")
-        ((L.hDebug loggerH) "Cleaning up")
+        (L.hDebug loggerH "Allocating scarce resource")
+        (L.hDebug loggerH "Cleaning up")
         (do
             when
                 (isNothing maybeSessionMethods)
@@ -93,14 +93,14 @@ restAPI loggerH sessionsH dbH request respond = let {
             let sessionUserIdString = getIdString maybeUserId
             let sessionAuthorIdString = getIdString maybeAuthorId
 
-            (L.hDebug loggerH) $ show request
-            (L.hDebug loggerH) $ show ("session user_id" :: String, maybeUserId)
-            (L.hDebug loggerH) $ show ("session is_admin" :: String, maybeIsAdmin)
-            (L.hDebug loggerH) $ show ("session author_id" :: String, maybeAuthorId)
+            L.hDebug loggerH $ show request
+            L.hDebug loggerH $ show ("session user_id" :: String, maybeUserId)
+            L.hDebug loggerH $ show ("session is_admin" :: String, maybeIsAdmin)
+            L.hDebug loggerH $ show ("session author_id" :: String, maybeAuthorId)
 
             requestBody <- strictRequestBody request
             
-            (L.hDebug loggerH) (show (method, pathTextChunks, requestBody))
+            L.hDebug loggerH $ show (method, pathTextChunks, requestBody)
 
             errorOrSessionName <- let {
                 params = PrerequisitesCheck.Params {
@@ -141,7 +141,8 @@ restAPI loggerH sessionsH dbH request respond = let {
                                 sessionAuthorId
                                 sessionName
 
-            (L.hDebug loggerH)
+            L.hDebug
+                loggerH
                 (case fst results of
                     Left leftErr -> show (snd results) ++ ", " ++ leftErr
                     Right ulbs -> UTFLBS.toString ulbs
@@ -153,7 +154,7 @@ restAPI loggerH sessionsH dbH request respond = let {
                 Right ulbs -> pure ulbs
                 _ -> case snd results of
                     Just errorForClient -> pure errorForClient
-                    _ -> (L.hError loggerH) "\n^^^ unhandled exception ^^^\n\n"
+                    _ -> L.hError loggerH "\n^^^ unhandled exception ^^^\n\n"
                         >> pure no_output_for_the_user_in_case_of_unhandled_exception)
 
             let {
@@ -188,7 +189,7 @@ runWarp :: L.Handle -> [String] -> IO ()
 runWarp loggerH argsList = let {
     processedArgs = processArgs argsList;
 } in case processedArgs of
-    Left error' -> (L.hError loggerH) error'
+    Left error' -> L.hError loggerH error'
         >> exitFailure
     Right (port, dbConnectionSettings, connectInfo) -> 
         do
@@ -222,11 +223,11 @@ runWarpWithLogger :: IO ()
 runWarpWithLogger = L.withLogger
     (L.Config
         DEBUG
-        (\ priority -> traplogging
+        (traplogging
             "rest-news"
             ERROR
             "Unhandled exception occured"
-            $ updateGlobalLogger "rest-news" (setLevel priority))
+            . updateGlobalLogger "rest-news" . setLevel)
         (debugM "rest-news")
         (errorM "rest-news"))
 
