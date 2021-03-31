@@ -46,23 +46,24 @@ processCredentials :: Monad m => (String -> m ())
     -> (String -> String -> m ())
     -> (Either String (Int32, Bool, Int32), Maybe UTFLBS.ByteString)
     -> m (Either String (Int32, Bool, Int32), Maybe UTFLBS.ByteString);
-processCredentials debug sessionLookup clearSessionPartial request sessionInsert sessionResults = let {
-    (user_id, is_admin, author_id) = fromRight (0, False, 0) $ fst sessionResults;
-} in do
-    -- clearSession will fail if request has no associated session with cookies:
-    -- https://github.com/hce/postgresql-session/blob/master/src/Network/Wai/Session/PostgreSQL.hs#L232
-    (do
-        session_user_id <- sessionLookup "user_id"
-        when
-            (isJust session_user_id)
-            (debug "invalidating session"
-                >> clearSessionPartial request)
-        )
-    debug (show ("put into sessions:" :: String, user_id, is_admin, author_id))
-    sessionInsert "is_admin" (show is_admin)
-    sessionInsert "user_id" (show user_id)
-    sessionInsert "author_id" (show author_id)
-    pure sessionResults
+processCredentials debug sessionLookup clearSessionPartial request sessionInsert sessionResults =
+    let {
+        (user_id, is_admin, author_id) = fromRight (0, False, 0) $ fst sessionResults;
+    } in do
+        -- clearSession will fail if request has no associated session with cookies:
+        -- https://github.com/hce/postgresql-session/blob/master/src/Network/Wai/Session/PostgreSQL.hs#L232
+        (do
+            session_user_id <- sessionLookup "user_id"
+            when
+                (isJust session_user_id)
+                (debug "invalidating session"
+                    >> clearSessionPartial request)
+            )
+        debug (show ("put into sessions:" :: String, user_id, is_admin, author_id))
+        sessionInsert "is_admin" (show is_admin)
+        sessionInsert "user_id" (show user_id)
+        sessionInsert "author_id" (show author_id)
+        pure sessionResults
 
 
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
@@ -70,12 +71,11 @@ restAPI ::
     L.Handle
     -> S.Handle
     -> Settings
-    -> (Request -> IO ())
     -> Application
-restAPI loggerH sessionH dbConnectionSettings clearSessionPartial request respond = let {
+restAPI loggerH sessionsH dbConnectionSettings request respond = let {
         pathTextChunks = pathInfo request;
         method = requestMethod request;
-        maybeSessionMethods = S.hMaybeSessionMethods sessionH request;
+        maybeSessionMethods = S.hMaybeSessionMethods sessionsH request;
         (sessionLookup, sessionInsert) = fromJust maybeSessionMethods;
     } in bracket_
         ((L.hDebug loggerH) "Allocating scarce resource")
@@ -129,7 +129,7 @@ restAPI loggerH sessionH dbConnectionSettings clearSessionPartial request respon
                         Right connection ->
                             let {
                                 processCredentialsPartial =
-                                    processCredentials (L.hDebug loggerH) sessionLookup clearSessionPartial request sessionInsert;
+                                    processCredentials (L.hDebug loggerH) sessionLookup (S.hClearSession sessionsH) request sessionInsert;
                                     sessionAuthorId = (read sessionAuthorIdString :: Int32);
                                     sessionUserId = (read sessionUserIdString :: Int32);
                             } in runSession
@@ -198,21 +198,21 @@ runWarp loggerH argsList = let {
             -- IO (SessionStore IO String String)
             store <- dbStore simpleConnection defaultSettings
             void (purger simpleConnection defaultSettings)
-            let clearSessionPartial = clearSession simpleConnection "SESSION";
-                in S.withSessions
-                    (S.Config
-                        (withSession store "SESSION" defaultSetCookie vaultKey)
-                        (Vault.lookup vaultKey . vault)
-                        )
-                    (\ sessionsH -> run port
-                        (Static.router (
-                            S.hWithSession
-                                sessionsH
-                                $ restAPI loggerH sessionsH dbConnectionSettings clearSessionPartial
-                            )
-                        )
-                        >> exitSuccess
+            S.withSessions
+                (S.Config
+                    (withSession store "SESSION" defaultSetCookie vaultKey)
+                    (Vault.lookup vaultKey . vault)
+                    (clearSession simpleConnection "SESSION")
                     )
+                (\ sessionsH -> run port
+                    (Static.router (
+                        S.hWithSession
+                            sessionsH
+                            $ restAPI loggerH sessionsH dbConnectionSettings
+                        )
+                    )
+                    >> exitSuccess
+                )
 
 runWarpWithLogger :: IO ()
 runWarpWithLogger = L.withLogger
