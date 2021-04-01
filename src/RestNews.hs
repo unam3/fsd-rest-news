@@ -73,34 +73,39 @@ restAPI ::
     -> S.Handle
     -> DBC.Handle
     -> Application
-restAPI loggerH sessionsH dbH request respond = let {
-        pathTextChunks = pathInfo request;
-        method = requestMethod request;
-        maybeSessionMethods = S.hMaybeSessionMethods sessionsH request;
-        (sessionLookup, sessionInsert) = fromJust maybeSessionMethods;
-    } in bracket_
+restAPI loggerH sessionsH dbH request respond =
+    bracket_
         (L.hDebug loggerH "Allocating scarce resource")
         (L.hDebug loggerH "Cleaning up")
         (do
+            let maybeSessionMethods = S.hMaybeSessionMethods sessionsH request
+
             when
                 (isNothing maybeSessionMethods)
                 (errorM "rest-news" "vault session error"
                     >> exitFailure)
 
+            let (sessionLookup, sessionInsert) = fromJust maybeSessionMethods
+
             maybeUserId <- sessionLookup "user_id"
             maybeIsAdmin <- sessionLookup "is_admin"
             maybeAuthorId <- sessionLookup "author_id"
-            let sessionUserIdString = getIdString maybeUserId
-            let sessionAuthorIdString = getIdString maybeAuthorId
 
             L.hDebug loggerH $ show request
             L.hDebug loggerH $ show ("session user_id" :: String, maybeUserId)
             L.hDebug loggerH $ show ("session is_admin" :: String, maybeIsAdmin)
             L.hDebug loggerH $ show ("session author_id" :: String, maybeAuthorId)
 
+
+            let method = requestMethod request
+                pathTextChunks = pathInfo request
+
             requestBody <- strictRequestBody request
-            
+
             L.hDebug loggerH $ show (method, pathTextChunks, requestBody)
+
+            let sessionUserIdString = getIdString maybeUserId
+                sessionAuthorIdString = getIdString maybeAuthorId
 
             errorOrSessionName <- let {
                 params = PrerequisitesCheck.Params {
