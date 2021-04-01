@@ -14,16 +14,19 @@ import qualified RestNews.Middleware.Static as Static
 
 import Control.Exception (bracket_)
 import Control.Monad (void, when)
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
 import Data.Either (fromRight)
 import Data.Int (Int32)
 import qualified Data.HashMap.Strict as HMS
 import Data.Maybe (fromJust, fromMaybe, isJust, isNothing)
 import Data.String (fromString)
+import Data.Text (Text)
 import qualified Data.Vault.Lazy as Vault
 import Database.PostgreSQL.Simple (ConnectInfo(..), connectPostgreSQL, postgreSQLConnectionString)
 import Hasql.Connection (Settings, acquire, settings)
 import qualified Network.HTTP.Types as H
+import Network.HTTP.Types.Method (Method)
 import Network.Wai (Application, Request, pathInfo, requestMethod, responseLBS, strictRequestBody, vault)
 import Network.Wai.Handler.Warp (Port, run)
 import Network.Wai.Session (withSession)
@@ -66,14 +69,36 @@ processCredentials debug sessionLookup clearSessionPartial request sessionInsert
         sessionInsert "author_id" (show author_id)
         pure sessionResults
 
+data Config a = Config {
+    cRun :: Application -> IO a,
+    cRequestMethod :: Request -> Method,
+    cPathInfo :: Request -> [Text],
+    cStrictRequestBody :: Request -> IO LBS.ByteString
+}
+
+-- how to name RestAPI? Server?
+data Handle a = Handle {
+    --to mock run :: Port -> Application -> IO (),
+    hRun :: Application -> IO a,
+    hRequestMethod :: Request -> Method,
+    hPathInfo :: Request -> [Text],
+    hStrictRequestBody :: Request -> IO LBS.ByteString
+
+    ---- PrerequisitesCheck?
+}
+
+
+withRestAPI :: Config a -> (Handle a -> IO a) -> IO a
+withRestAPI config f = f $ Handle (cRun config) (cRequestMethod config) (cPathInfo config) (cStrictRequestBody config)
 
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
 restAPI ::
     L.Handle
     -> S.Handle
     -> DBC.Handle
+    -> Handle a
     -> Application
-restAPI loggerH sessionsH dbH request respond =
+restAPI loggerH sessionsH dbH restAPIH request respond =
     bracket_
         (L.hDebug loggerH "Allocating scarce resource")
         (L.hDebug loggerH "Cleaning up")
@@ -97,10 +122,10 @@ restAPI loggerH sessionsH dbH request respond =
             L.hDebug loggerH $ show ("session author_id" :: String, maybeAuthorId)
 
 
-            let method = requestMethod request
-                pathTextChunks = pathInfo request
+            let method = hRequestMethod restAPIH request
+                pathTextChunks = hPathInfo restAPIH request
 
-            requestBody <- strictRequestBody request
+            requestBody <- hStrictRequestBody restAPIH request
 
             L.hDebug loggerH $ show (method, pathTextChunks, requestBody)
 
@@ -213,12 +238,20 @@ runWarp loggerH argsList = let {
                 (\ sessionsH ->
                     DBC.withDBConnection
                         (DBC.Config $ acquire dbConnectionSettings)
-                        (\ dbH -> run port
-                            (Static.router (
-                                S.hWithSession
-                                    sessionsH
-                                    $ restAPI loggerH sessionsH dbH
-                                )
+                        (\ dbH -> withRestAPI
+                            (Config
+                                (run port)
+                                requestMethod
+                                pathInfo
+                                strictRequestBody
+                            )
+                            (\ restAPIH -> hRun
+                                restAPIH
+                                $ Static.router (
+                                    S.hWithSession
+                                        sessionsH
+                                        $ restAPI loggerH sessionsH dbH restAPIH
+                                    )
                             )
                             >> exitSuccess
                             )
