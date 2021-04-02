@@ -145,31 +145,38 @@ restAPI loggerH sessionsH dbH restAPIH request respond =
                     Nothing -> PrerequisitesCheck.noSuchEndpoint
                 )
 
-            eitherConnection <- DBC.hAcquiredConnection dbH
 
             results <- case errorOrSessionName of
                 Left error -> pure (Left error, Just $ UTFLBS.fromString error)
                 Right sessionName -> 
-                    case eitherConnection of
-                        Left connectionError -> 
-                            errorM "rest-news" (show connectionError)
-                            >> pure (
-                                dbError,
-                                Just "DB connection error"
-                            )
-                        Right connection ->
-                            let {
-                                processCredentialsPartial =
-                                    processCredentials (L.hDebug loggerH) sessionLookup (S.hClearSession sessionsH) request sessionInsert;
+                    do
+                        eitherConnection <- DBC.hAcquiredConnection dbH
+
+                        case eitherConnection of
+                            Left connectionError -> 
+                                errorM "rest-news" (show connectionError)
+                                >> pure (
+                                    dbError,
+                                    Just "DB connection error"
+                                )
+                            Right connection ->
+                                let {
+                                    processCredentialsPartial =
+                                        processCredentials
+                                            (L.hDebug loggerH)
+                                            sessionLookup
+                                            (S.hClearSession sessionsH)
+                                            request
+                                            sessionInsert;
                                     sessionAuthorId = (read sessionAuthorIdString :: Int32);
                                     sessionUserId = (read sessionUserIdString :: Int32);
-                            } in runSession
-                                connection
-                                requestBody
-                                processCredentialsPartial
-                                sessionUserId
-                                sessionAuthorId
-                                sessionName
+                                } in runSession
+                                    connection
+                                    requestBody
+                                    processCredentialsPartial
+                                    sessionUserId
+                                    sessionAuthorId
+                                    sessionName
 
             L.hDebug
                 loggerH
