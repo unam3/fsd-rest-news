@@ -32,7 +32,6 @@ import Network.Wai.Handler.Warp (Port, run)
 import Network.Wai.Session (withSession)
 import Prelude hiding (error)
 import Network.Wai.Session.PostgreSQL (clearSession, dbStore, defaultSettings, fromSimpleConnection, purger)
-import System.Environment (getArgs)
 import System.Exit (exitFailure, exitSuccess)
 import System.Log.Logger (Priority (DEBUG, ERROR), debugM, errorM, setLevel, traplogging, updateGlobalLogger)
 import Web.Cookie (defaultSetCookie)
@@ -264,8 +263,8 @@ runWarp loggerH argsList = let {
                             )
                 )
 
-runWarpWithLogger :: IO ()
-runWarpWithLogger = L.withLogger
+runWarpWithLogger :: [String] -> IO ()
+runWarpWithLogger argsList = L.withLogger
     (L.Config
         DEBUG
         (traplogging
@@ -276,4 +275,4 @@ runWarpWithLogger = L.withLogger
         (debugM "rest-news")
         (errorM "rest-news"))
 
-    (\ loggerH -> getArgs >>= runWarp loggerH)
+    (`runWarp` argsList)
