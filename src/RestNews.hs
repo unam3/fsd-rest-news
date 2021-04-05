@@ -1,8 +1,9 @@
 {-# LANGUAGE OverloadedStrings  #-}
 
 module RestNews
-    ( runWarpWithLogger,
-    processArgs
+    ( runWarp
+    , runWarpWithLogger
+    , processArgs
     ) where
 
 import qualified RestNews.DBConnection as DBC
@@ -42,7 +43,7 @@ dbError = Left "DB error"
 getIdString :: Maybe String -> String
 getIdString = fromMaybe "0"
 
-processCredentials :: Monad m => (String -> m ())
+processCredentials :: Monad m => (String -> m a)
     -> (String -> m (Maybe String))
     -> (Request -> m ())
     -> Request
@@ -92,7 +93,7 @@ withRestAPI config f = f $ Handle (cRun config) (cRequestMethod config) (cPathIn
 
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
 restAPI ::
-    L.Handle
+    L.Handle a
     -> S.Handle
     -> DBC.Handle
     -> Handle a
@@ -106,7 +107,7 @@ restAPI loggerH sessionsH dbH restAPIH request respond =
 
             when
                 (isNothing maybeSessionMethods)
-                (errorM "rest-news" "vault session error"
+                (L.hError loggerH "vault session error"
                     >> exitFailure)
 
             let (sessionLookup, sessionInsert) = fromJust maybeSessionMethods
@@ -153,7 +154,7 @@ restAPI loggerH sessionsH dbH restAPIH request respond =
 
                         case eitherConnection of
                             Left connectionError -> 
-                                errorM "rest-news" (show connectionError)
+                                L.hError loggerH (show connectionError)
                                 >> pure (
                                     dbError,
                                     Just "DB connection error"
@@ -221,7 +222,7 @@ processArgs [runAtPort, dbHost, dbPort, dbUser, dbPassword, dbName] =
 processArgs _ = Left "Exactly 6 arguments needed: port to run rest-news, db hostname, db port, db user, db password, db name"
 
 
-runWarp :: L.Handle -> [String] -> IO ()
+runWarp :: L.Handle a -> [String] -> IO a
 runWarp loggerH argsList = let {
     processedArgs = processArgs argsList;
 } in case processedArgs of

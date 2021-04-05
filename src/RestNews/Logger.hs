@@ -8,20 +8,20 @@ import Prelude hiding (init)
 import System.Log.Logger (Priority)
 
 
-data Config = Config {
+data Config a = Config {
     cPriorityLevelToLog :: Priority,
-    cInit :: Priority -> IO (),
-    cDebug :: String -> IO (),
-    cError :: String -> IO ()
+    cInit :: Priority -> IO a,
+    cDebug :: String -> IO a,
+    cError :: String -> IO a
 }
 
-data Handle = Handle {
-    hDebug :: String -> IO (),
-    hError :: String -> IO ()
+data Handle a = Handle {
+    hDebug :: String -> IO a,
+    hError :: String -> IO a
 }
 
 
-withLogger :: Config -> (Handle -> IO ()) -> IO ()
+withLogger :: Config a -> (Handle a -> IO a) -> IO a
 withLogger config f = do
     let handle = Handle (cDebug config) (cError config)
     (cInit config) (cPriorityLevelToLog config)
