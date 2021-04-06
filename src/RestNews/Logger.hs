@@ -24,5 +24,5 @@ data Handle a = Handle {
 withLogger :: Config a -> (Handle a -> IO a) -> IO a
 withLogger config f = do
     let handle = Handle (cDebug config) (cError config)
-    (cInit config) (cPriorityLevelToLog config)
+    _ <- (cInit config) (cPriorityLevelToLog config)
     f handle 

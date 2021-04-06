@@ -30,7 +30,7 @@ import qualified Network.HTTP.Types as H
 import Network.HTTP.Types.Method (Method)
 import Network.Wai (Application, Request, pathInfo, requestMethod, responseLBS, strictRequestBody, vault)
 import Network.Wai.Handler.Warp (Port, run)
-import Network.Wai.Session (withSession)
+import Network.Wai.Session (SessionStore, withSession)
 import Prelude hiding (error)
 import Network.Wai.Session.PostgreSQL (clearSession, dbStore, defaultSettings, fromSimpleConnection, purger)
 import System.Exit (exitFailure, exitSuccess)
@@ -45,9 +45,9 @@ getIdString = fromMaybe "0"
 
 processCredentials :: Monad m => (String -> m a)
     -> (String -> m (Maybe String))
-    -> (Request -> m ())
+    -> (Request -> m a)
     -> Request
-    -> (String -> String -> m ())
+    -> (String -> String -> m a)
     -> (Either String (Int32, Bool, Int32), Maybe UTFLBS.ByteString)
     -> m (Either String (Int32, Bool, Int32), Maybe UTFLBS.ByteString);
 processCredentials debug sessionLookup clearSessionPartial request sessionInsert sessionResults =
@@ -56,13 +56,12 @@ processCredentials debug sessionLookup clearSessionPartial request sessionInsert
     } in do
         -- clearSession will fail if request has no associated session with cookies:
         -- https://github.com/hce/postgresql-session/blob/master/src/Network/Wai/Session/PostgreSQL.hs#L232
-        (do
-            session_user_id <- sessionLookup "user_id"
-            when
-                (isJust session_user_id)
-                (debug "invalidating session"
-                    >> clearSessionPartial request)
-            )
+        --(do
+        --    session_user_id <- sessionLookup "user_id"
+        --    when
+        --        (isJust session_user_id)
+        --        (clearSessionPartial request)
+        --    )
         debug (show ("put into sessions:" :: String, user_id, is_admin, author_id))
         sessionInsert "is_admin" (show is_admin)
         sessionInsert "user_id" (show user_id)
@@ -78,13 +77,10 @@ data Config a = Config {
 
 -- how to name RestAPI? Server?
 data Handle a = Handle {
-    --to mock run :: Port -> Application -> IO (),
     hRun :: Application -> IO a,
     hRequestMethod :: Request -> Method,
     hPathInfo :: Request -> [Text],
     hStrictRequestBody :: Request -> IO LBS.ByteString
-
-    ---- PrerequisitesCheck?
 }
 
 
@@ -94,7 +90,7 @@ withRestAPI config f = f $ Handle (cRun config) (cRequestMethod config) (cPathIn
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
 restAPI ::
     L.Handle a
-    -> S.Handle
+    -> S.Handle a
     -> DBC.Handle
     -> Handle a
     -> Application
@@ -233,36 +229,16 @@ runWarp loggerH argsList = let {
             vaultKey <- Vault.newKey
             simpleConnection <- connectPostgreSQL (postgreSQLConnectionString connectInfo)
                 >>= fromSimpleConnection
-            -- IO (SessionStore IO String String)
-            store <- dbStore simpleConnection defaultSettings
+            store <- dbStore simpleConnection defaultSettings :: IO (SessionStore IO String String)
             void (purger simpleConnection defaultSettings)
+
             S.withSessions
                 (S.Config
                     (withSession store "SESSION" defaultSetCookie vaultKey)
                     (Vault.lookup vaultKey . vault)
                     (clearSession simpleConnection "SESSION")
-                    )
-                (\ sessionsH ->
-                    DBC.withDBConnection
-                        (DBC.Config $ acquire dbConnectionSettings)
-                        (\ dbH -> withRestAPI
-                            (Config
-                                (run port)
-                                requestMethod
-                                pathInfo
-                                strictRequestBody
-                            )
-                            (\ restAPIH -> hRun
-                                restAPIH
-                                $ Static.router (
-                                    S.hWithSession
-                                        sessionsH
-                                        $ restAPI loggerH sessionsH dbH restAPIH
-                                    )
-                            )
-                            >> exitSuccess
-                            )
                 )
+                (\ _ -> exitSuccess)
 
 runWarpWithLogger :: [String] -> IO ()
 runWarpWithLogger argsList = L.withLogger
@@ -277,3 +253,5 @@ runWarpWithLogger argsList = L.withLogger
         (errorM "rest-news"))
 
     (`runWarp` argsList)
+
+        >> pure ()

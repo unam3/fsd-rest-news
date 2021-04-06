@@ -5,6 +5,7 @@ module RestNewsSpec where
 import Control.Monad (void)
 import System.Log.Logger (Priority (DEBUG, ERROR), debugM, errorM, setLevel, traplogging, updateGlobalLogger)
 import System.Process (readProcess)
+import System.Exit (exitFailure)
 import Test.Hspec
 
 import RestNews (runWarp)
@@ -243,17 +244,15 @@ spec = do
     describe "restAPI" $ do
         --it "exit with failure if vault session error"
         it "exit with failure if wrong arguments"
-            $ (L.withLogger
-                (L.Config
-                    DEBUG
-                    (\ _ -> return ())
-                    (\ _ -> return ())
-                    (\ _ -> return ())
-                )
+            $ shouldBe
+                --L.withLogger
+                --    (L.Config
+                --        DEBUG
+                --        (\ _ -> return ())
+                --        (\ _ -> return ())
+                --        (\ _ -> return ())
+                --    )
+                --    (runWarp ["8081", "localhost", "5432"])
+                (runWarp ["8081", "localhost", "5432"])
 
-                (`runWarp` ["8081" "localhost" "5432" "rest-news-user" "rest"])
-
-            ) >>= (`shouldBe` 1)
-
-        it "returns ook"
-            $ 1 `shouldBe` 1
+                (pure "Shit")

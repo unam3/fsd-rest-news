@@ -8,19 +8,19 @@ import Network.Wai (Middleware, Request)
 import Prelude hiding (init)
 
 
-data Config = Config {
+data Config a = Config {
     cWithSession :: Middleware,
-    cMaybeSessionMethods :: Request -> Maybe (String -> IO (Maybe String), String -> String -> IO ()),
-    --(Request -> m ())
-    cClearSession :: Request -> IO ()
+    cMaybeSessionMethods :: Request -> Maybe (String -> IO (Maybe String), String -> String -> IO a),
+    --(Request -> m a)
+    cClearSession :: Request -> IO a
 }
 
-data Handle = Handle {
+data Handle a = Handle {
     hWithSession :: Middleware,
-    hMaybeSessionMethods :: Request -> Maybe (String -> IO (Maybe String),String -> String -> IO ()),
-    hClearSession :: Request -> IO ()
+    hMaybeSessionMethods :: Request -> Maybe (String -> IO (Maybe String), String -> String -> IO a),
+    hClearSession :: Request -> IO a
 }
 
 
-withSessions :: Config -> (Handle -> IO ()) -> IO ()
+withSessions :: Config a -> (Handle a -> IO a) -> IO a
 withSessions config f = f $ Handle (cWithSession config) (cMaybeSessionMethods config) (cClearSession config)

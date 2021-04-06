@@ -50,7 +50,6 @@ dependencies:
 ghc-options:
 - -Wall
 - -Wincomplete-uni-patterns
-- -Werror
 - -threaded
 
 library:
