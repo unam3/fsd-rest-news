@@ -10,15 +10,14 @@ import Prelude hiding (init)
 
 data Config a = Config {
     cWithSession :: Middleware,
-    cMaybeSessionMethods :: Request -> Maybe (String -> IO (Maybe String), String -> String -> IO a),
-    --(Request -> m a)
-    cClearSession :: Request -> IO a
+    cMaybeSessionMethods :: Request -> Maybe (String -> IO (Maybe String), String -> String -> IO ()),
+    cClearSession :: Request -> IO ()
 }
 
 data Handle a = Handle {
     hWithSession :: Middleware,
-    hMaybeSessionMethods :: Request -> Maybe (String -> IO (Maybe String), String -> String -> IO a),
-    hClearSession :: Request -> IO a
+    hMaybeSessionMethods :: Request -> Maybe (String -> IO (Maybe String), String -> String -> IO ()),
+    hClearSession :: Request -> IO ()
 }
 
 

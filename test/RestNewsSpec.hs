@@ -2,6 +2,7 @@
 
 module RestNewsSpec where
 
+--import Control.Exception
 import Control.Monad (void)
 import System.Log.Logger (Priority (DEBUG, ERROR), debugM, errorM, setLevel, traplogging, updateGlobalLogger)
 import System.Process (readProcess)
@@ -245,14 +246,15 @@ spec = do
         --it "exit with failure if vault session error"
         it "exit with failure if wrong arguments"
             $ shouldBe
-                --L.withLogger
-                --    (L.Config
-                --        DEBUG
-                --        (\ _ -> return ())
-                --        (\ _ -> return ())
-                --        (\ _ -> return ())
-                --    )
-                --    (runWarp ["8081", "localhost", "5432"])
-                (runWarp ["8081", "localhost", "5432"])
+                -- try (L.withLogger (L.Config DEBUG (\ _ -> return ()) (\ _ -> return ()) (\ _ -> return ())) (`runWarp` ["8081", "localhost", "5432", "rest-news-user", "rest", "rest-news-test"])) :: IO (Either SomeException ())
+                ((L.withLogger
+                    (L.Config
+                        DEBUG
+                        (\ _ -> return ())
+                        (\ _ -> return ())
+                        (\ _ -> return ())
+                    )
+                    (`runWarp` ["8081", "localhost", "5432"])
+                ))
 
-                (pure "Shit")
+                (pure ())

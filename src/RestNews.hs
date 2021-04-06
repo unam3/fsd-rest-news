@@ -45,9 +45,9 @@ getIdString = fromMaybe "0"
 
 processCredentials :: Monad m => (String -> m a)
     -> (String -> m (Maybe String))
-    -> (Request -> m a)
+    -> (Request -> m ())
     -> Request
-    -> (String -> String -> m a)
+    -> (String -> String -> m ())
     -> (Either String (Int32, Bool, Int32), Maybe UTFLBS.ByteString)
     -> m (Either String (Int32, Bool, Int32), Maybe UTFLBS.ByteString);
 processCredentials debug sessionLookup clearSessionPartial request sessionInsert sessionResults =
