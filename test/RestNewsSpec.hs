@@ -2,11 +2,11 @@
 
 module RestNewsSpec where
 
---import Control.Exception
+import Control.Exception
 import Control.Monad (void)
 import System.Log.Logger (Priority (DEBUG, ERROR), debugM, errorM, setLevel, traplogging, updateGlobalLogger)
 import System.Process (readProcess)
-import System.Exit (exitFailure)
+import System.Exit
 import Test.Hspec
 
 import RestNews (runWarp)
@@ -243,18 +243,34 @@ deleteComment params session = curl
 spec :: Spec
 spec = do
     describe "restAPI" $ do
-        --it "exit with failure if vault session error"
-        it "exit with failure if wrong arguments"
-            $ shouldBe
-                -- try (L.withLogger (L.Config DEBUG (\ _ -> return ()) (\ _ -> return ()) (\ _ -> return ())) (`runWarp` ["8081", "localhost", "5432", "rest-news-user", "rest", "rest-news-test"])) :: IO (Either SomeException ())
-                ((L.withLogger
-                    (L.Config
-                        DEBUG
-                        (\ _ -> return ())
-                        (\ _ -> return ())
-                        (\ _ -> return ())
-                    )
-                    (`runWarp` ["8081", "localhost", "5432"])
-                ))
+        it "exit with success if arguments are ok"
+            $ do 
+                eitherExitCode <- try 
+                    (L.withLogger 
+                        (L.Config
+                            DEBUG
+                            (\ _ -> return ())
+                            (\ _ -> return ())
+                            (\ _ -> return ())
+                        )
+                        (`runWarp` ["8081", "localhost", "5432", "rest-news-user", "rest", "rest-news-test"])
+                    ) :: IO (Either SomeException ())
+                shouldBe
+                    (show eitherExitCode)
+                    (show (Left $ toException ExitSuccess :: Either SomeException ()))
 
-                (pure ())
+        it "exit with failure if wrong number of arguments"
+            $ do 
+                eitherExitCode <- try 
+                    (L.withLogger 
+                        (L.Config
+                            DEBUG
+                            (\ _ -> return ())
+                            (\ _ -> return ())
+                            (\ _ -> return ())
+                        )
+                        (`runWarp` ["8081", "localhost", "5432", "rest-news-user", "rest"])
+                    ) :: IO (Either SomeException ())
+                shouldBe
+                    (show eitherExitCode)
+                    (show (Left $ toException (ExitFailure 1) :: Either SomeException ()))
