@@ -4,8 +4,8 @@ module RestNewsSpec where
 
 import Control.Exception
 import Control.Monad (void)
---import Network.Wai (responseLBS)
---import Network.Wai.Internal (ResponseReceived(..))
+import Network.Wai (pathInfo, requestMethod, strictRequestBody)
+import Network.Wai.Internal (ResponseReceived(..))
 import Network.Wai.Handler.Warp (run)
 import qualified Network.HTTP.Types as H
 import System.Log.Logger (Priority (DEBUG, ERROR), debugM, errorM, setLevel, traplogging, updateGlobalLogger)
@@ -13,8 +13,10 @@ import System.Process (readProcess)
 import System.Exit
 import Test.Hspec
 
-import RestNews (runWarp)
+import RestNews
+import qualified RestNews.DBConnection as DBC
 import qualified RestNews.Logger as L
+import qualified RestNews.Middleware.Sessions as S
 
 getSession :: IO String
 getSession =
@@ -248,7 +250,6 @@ runStub _ _ = pure ()
 
 spec :: Spec
 spec = do
-    --describe "restAPI" $ do
     describe "runWarp" $ do
         it "exit with success if arguments are ok"
             $ do 
@@ -286,6 +287,59 @@ spec = do
                                 loggerH
                                 runStub
                                 ["8081", "localhost", "5432", "rest-news-user", "rest"]
+                        )
+                    ) :: IO (Either SomeException ())
+                shouldBe
+                    (show eitherExitCode)
+                    (show (Left $ toException (ExitFailure 1) :: Either SomeException ()))
+
+
+    let withSessionStub _ _ _ = pure ResponseReceived
+        maybeSessionMethodsStub _ = Nothing
+        clearSessionStub _ = pure ()
+
+        acquireStub = pure $ Left Nothing
+
+    describe "restAPI" $ do
+        it "exit with failure if arguments no vault"
+            $ do 
+                eitherExitCode <- try 
+                    (L.withLogger 
+                        (L.Config
+                            DEBUG
+                            (\ _ -> return ())
+                            (\ _ -> return ())
+                            (\ _ -> return ())
+                        )
+                        (\ loggerH ->
+                            S.withSessions
+                                (S.Config
+                                    withSessionStub
+                                    maybeSessionMethodsStub
+                                    clearSessionStub
+                                )
+                                (\ sessionsH ->
+                                    DBC.withDBConnection
+                                        (DBC.Config acquireStub)
+                                        (\ dbH ->
+                                            withRestAPI
+                                                (Config
+                                                    (pure $ pure ())
+                                                    requestMethod
+                                                    pathInfo
+                                                    strictRequestBody
+                                                )
+                                                (\ restAPIH ->
+                                                    hRun
+                                                        restAPIH
+                                                             (S.hWithSession
+                                                                 sessionsH
+                                                                 $ restAPI loggerH sessionsH dbH restAPIH
+                                                             )
+                                                )
+                                                    >> exitSuccess
+                                        )
+                                )
                         )
                     ) :: IO (Either SomeException ())
                 shouldBe

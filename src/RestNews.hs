@@ -3,7 +3,11 @@
 module RestNews
     ( runWarp
     , runWarpWithLogger
+    , restAPI
     , processArgs
+    , Config(..)
+    , Handle(..)
+    , withRestAPI
     ) where
 
 import qualified RestNews.DBConnection as DBC
@@ -68,6 +72,7 @@ processCredentials debug sessionLookup clearSessionPartial request sessionInsert
         sessionInsert "author_id" (show author_id)
         pure sessionResults
 
+--type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
 data Config a = Config {
     cRun :: Application -> IO (),
     cRequestMethod :: Request -> Method,
@@ -87,7 +92,6 @@ data Handle a = Handle {
 withRestAPI :: Config a -> (Handle a -> IO ()) -> IO ()
 withRestAPI config f = f $ Handle (cRun config) (cRequestMethod config) (cPathInfo config) (cStrictRequestBody config)
 
---type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
 restAPI ::
     L.Handle a
     -> S.Handle a
@@ -222,8 +226,9 @@ runWarp :: L.Handle a -> (Port -> Application -> IO ()) -> [String] -> IO a
 runWarp loggerH run' argsList = let {
     processedArgs = processArgs argsList;
 } in case processedArgs of
-    Left error' -> L.hError loggerH error'
-        >> exitFailure
+    Left error' ->
+        L.hError loggerH error'
+            >> exitFailure
     Right (port, dbConnectionSettings, connectInfo) -> 
         do
             vaultKey <- Vault.newKey
@@ -262,7 +267,6 @@ runWarp loggerH run' argsList = let {
                         )
                 )
 
--- вызвать runWarp со своим hRun
 runWarpWithLogger :: [String] -> IO ()
 runWarpWithLogger argsList =
     do
