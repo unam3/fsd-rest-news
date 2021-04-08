@@ -56,12 +56,12 @@ processCredentials debug sessionLookup clearSessionPartial request sessionInsert
     } in do
         -- clearSession will fail if request has no associated session with cookies:
         -- https://github.com/hce/postgresql-session/blob/master/src/Network/Wai/Session/PostgreSQL.hs#L232
-        --(do
-        --    session_user_id <- sessionLookup "user_id"
-        --    when
-        --        (isJust session_user_id)
-        --        (clearSessionPartial request)
-        --    )
+        (do
+            session_user_id <- sessionLookup "user_id"
+            when
+                (isJust session_user_id)
+                (clearSessionPartial request)
+            )
         debug (show ("put into sessions:" :: String, user_id, is_admin, author_id))
         sessionInsert "is_admin" (show is_admin)
         sessionInsert "user_id" (show user_id)
@@ -69,7 +69,7 @@ processCredentials debug sessionLookup clearSessionPartial request sessionInsert
         pure sessionResults
 
 data Config a = Config {
-    cRun :: Application -> IO a,
+    cRun :: Application -> IO (),
     cRequestMethod :: Request -> Method,
     cPathInfo :: Request -> [Text],
     cStrictRequestBody :: Request -> IO LBS.ByteString
@@ -77,21 +77,21 @@ data Config a = Config {
 
 -- how to name RestAPI? Server?
 data Handle a = Handle {
-    hRun :: Application -> IO a,
+    hRun :: Application -> IO (),
     hRequestMethod :: Request -> Method,
     hPathInfo :: Request -> [Text],
     hStrictRequestBody :: Request -> IO LBS.ByteString
 }
 
 
-withRestAPI :: Config a -> (Handle a -> IO a) -> IO a
+withRestAPI :: Config a -> (Handle a -> IO ()) -> IO ()
 withRestAPI config f = f $ Handle (cRun config) (cRequestMethod config) (cPathInfo config) (cStrictRequestBody config)
 
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
 restAPI ::
     L.Handle a
     -> S.Handle a
-    -> DBC.Handle
+    -> DBC.Handle a
     -> Handle a
     -> Application
 restAPI loggerH sessionsH dbH restAPIH request respond =
@@ -218,8 +218,8 @@ processArgs [runAtPort, dbHost, dbPort, dbUser, dbPassword, dbName] =
 processArgs _ = Left "Exactly 6 arguments needed: port to run rest-news, db hostname, db port, db user, db password, db name"
 
 
-runWarp :: L.Handle a -> [String] -> IO a
-runWarp loggerH argsList = let {
+runWarp :: L.Handle a -> (Port -> Application -> IO ()) -> [String] -> IO a
+runWarp loggerH run' argsList = let {
     processedArgs = processArgs argsList;
 } in case processedArgs of
     Left error' -> L.hError loggerH error'
@@ -238,20 +238,49 @@ runWarp loggerH argsList = let {
                     (Vault.lookup vaultKey . vault)
                     (clearSession simpleConnection "SESSION")
                 )
-                (\ _ -> exitSuccess)
+                (\ sessionsH ->
+                    DBC.withDBConnection
+                        (DBC.Config $ acquire dbConnectionSettings)
+                        (\ dbH ->
+                            withRestAPI
+                                (Config
+                                    (run' port)
+                                    requestMethod
+                                    pathInfo
+                                    strictRequestBody
+                                )
+                                (\ restAPIH ->
+                                    hRun
+                                        restAPIH
+                                         $ Static.router (
+                                             S.hWithSession
+                                                 sessionsH
+                                                 $ restAPI loggerH sessionsH dbH restAPIH
+                                             )
+                                )
+                                    >> exitSuccess
+                        )
+                )
 
+-- вызвать runWarp со своим hRun
 runWarpWithLogger :: [String] -> IO ()
-runWarpWithLogger argsList = L.withLogger
-    (L.Config
-        DEBUG
-        (traplogging
-            "rest-news"
-            ERROR
-            "Unhandled exception occured"
-            . updateGlobalLogger "rest-news" . setLevel)
-        (debugM "rest-news")
-        (errorM "rest-news"))
+runWarpWithLogger argsList =
+    do
+        L.withLogger
+            (L.Config
+                DEBUG
+                (traplogging
+                    "rest-news"
+                    ERROR
+                    "Unhandled exception occured"
+                    . updateGlobalLogger "rest-news" . setLevel)
+                (debugM "rest-news")
+                (errorM "rest-news"))
 
-    (`runWarp` argsList)
+            (\ loggerH ->
+                runWarp
+                    loggerH
+                    run
+                    argsList)
 
-        >> pure ()
+        pure ()

@@ -4,6 +4,10 @@ module RestNewsSpec where
 
 import Control.Exception
 import Control.Monad (void)
+--import Network.Wai (responseLBS)
+--import Network.Wai.Internal (ResponseReceived(..))
+import Network.Wai.Handler.Warp (run)
+import qualified Network.HTTP.Types as H
 import System.Log.Logger (Priority (DEBUG, ERROR), debugM, errorM, setLevel, traplogging, updateGlobalLogger)
 import System.Process (readProcess)
 import System.Exit
@@ -240,9 +244,12 @@ deleteComment params session = curl
     "http://0.0.0.0:8081/comments"
 
 
+runStub _ _ = pure ()
+
 spec :: Spec
 spec = do
-    describe "restAPI" $ do
+    --describe "restAPI" $ do
+    describe "runWarp" $ do
         it "exit with success if arguments are ok"
             $ do 
                 eitherExitCode <- try 
@@ -253,7 +260,12 @@ spec = do
                             (\ _ -> return ())
                             (\ _ -> return ())
                         )
-                        (`runWarp` ["8081", "localhost", "5432", "rest-news-user", "rest", "rest-news-test"])
+                        (\ loggerH ->
+                            runWarp
+                                loggerH
+                                runStub
+                                ["8081", "localhost", "5432", "rest-news-user", "rest", "rest-news-test"]
+                        )
                     ) :: IO (Either SomeException ())
                 shouldBe
                     (show eitherExitCode)
@@ -269,7 +281,12 @@ spec = do
                             (\ _ -> return ())
                             (\ _ -> return ())
                         )
-                        (`runWarp` ["8081", "localhost", "5432", "rest-news-user", "rest"])
+                        (\ loggerH ->
+                            runWarp
+                                loggerH
+                                runStub
+                                ["8081", "localhost", "5432", "rest-news-user", "rest"]
+                        )
                     ) :: IO (Either SomeException ())
                 shouldBe
                     (show eitherExitCode)

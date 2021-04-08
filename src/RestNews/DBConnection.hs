@@ -5,17 +5,16 @@ module RestNews.DBConnection
     ) where
 
 import Hasql.Connection (Connection, ConnectionError)
-import Prelude hiding (init)
 
 
-newtype Config = Config {
+newtype Config a = Config {
     cAcquiredConnection :: IO (Either ConnectionError Connection)
 }
 
-newtype Handle = Handle {
+newtype Handle a = Handle {
     hAcquiredConnection :: IO (Either ConnectionError Connection)
 }
 
 
-withDBConnection :: Config -> (Handle -> IO ()) -> IO ()
+withDBConnection :: Config a -> (Handle a -> IO a) -> IO a
 withDBConnection config f = f . Handle $ cAcquiredConnection config
