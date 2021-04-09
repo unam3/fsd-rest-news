@@ -324,20 +324,21 @@ spec = do
                                         (\ dbH ->
                                             withRestAPI
                                                 (Config
-                                                    (pure $ pure ())
+                                                    (run 8081)
                                                     requestMethod
                                                     pathInfo
                                                     strictRequestBody
                                                 )
-                                                (\ restAPIH ->
-                                                    hRun
-                                                        restAPIH
-                                                             (S.hWithSession
-                                                                 sessionsH
-                                                                 $ restAPI loggerH sessionsH dbH restAPIH
-                                                             )
+                                                (
+                                                    (\ restAPIH ->
+                                                        hRun
+                                                            restAPIH
+                                                            --(\ _ _ -> pure ResponseReceived)
+                                                            . S.hWithSession
+                                                                sessionsH
+                                                                $ restAPI loggerH sessionsH dbH restAPIH
+                                                    )
                                                 )
-                                                    >> exitSuccess
                                         )
                                 )
                         )

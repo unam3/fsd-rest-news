@@ -106,7 +106,7 @@ restAPI loggerH sessionsH dbH restAPIH request respond =
             let maybeSessionMethods = S.hMaybeSessionMethods sessionsH request
 
             when
-                (isNothing maybeSessionMethods)
+                True
                 (L.hError loggerH "vault session error"
                     >> exitFailure)
 
@@ -247,7 +247,7 @@ runWarp loggerH run' argsList = let {
                     DBC.withDBConnection
                         (DBC.Config $ acquire dbConnectionSettings)
                         (\ dbH ->
-                            withRestAPI
+                            (withRestAPI
                                 (Config
                                     (run' port)
                                     requestMethod
@@ -257,15 +257,17 @@ runWarp loggerH run' argsList = let {
                                 (\ restAPIH ->
                                     hRun
                                         restAPIH
-                                         $ Static.router (
-                                             S.hWithSession
-                                                 sessionsH
-                                                 $ restAPI loggerH sessionsH dbH restAPIH
-                                             )
+                                        $ Static.router (
+                                            S.hWithSession
+                                                sessionsH
+                                                $ restAPI loggerH sessionsH dbH restAPIH
+                                            )
                                 )
-                                    >> exitSuccess
+                            ) >> exitSuccess
                         )
                 )
+            
+            -- exitSuccess?
 
 runWarpWithLogger :: [String] -> IO ()
 runWarpWithLogger argsList =
