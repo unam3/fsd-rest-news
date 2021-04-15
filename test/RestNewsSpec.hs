@@ -270,7 +270,8 @@ spec = do
                     ) :: IO (Either SomeException ())
                 shouldBe
                     (show eitherExitCode)
-                    (show (Left $ toException ExitSuccess :: Either SomeException ()))
+                    (show (Left $ toException (ExitFailure 1) :: Either SomeException ()))
+                    --(show (Left $ toException ExitSuccess :: Either SomeException ()))
 
         it "exit with failure if wrong number of arguments"
             $ do 

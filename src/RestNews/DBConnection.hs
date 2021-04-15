@@ -7,14 +7,14 @@ module RestNews.DBConnection
 import Hasql.Connection (Connection, ConnectionError)
 
 
-newtype Config a = Config {
+newtype Config = Config {
     cAcquiredConnection :: IO (Either ConnectionError Connection)
 }
 
-newtype Handle a = Handle {
+newtype Handle = Handle {
     hAcquiredConnection :: IO (Either ConnectionError Connection)
 }
 
 
-withDBConnection :: Config a -> (Handle a -> IO a) -> IO a
+withDBConnection :: Config -> (Handle -> IO ()) -> IO ()
 withDBConnection config f = f . Handle $ cAcquiredConnection config

@@ -94,8 +94,8 @@ withRestAPI config f = f $ Handle (cRun config) (cRequestMethod config) (cPathIn
 
 restAPI ::
     L.Handle a
-    -> S.Handle a
-    -> DBC.Handle a
+    -> S.Handle
+    -> DBC.Handle
     -> Handle a
     -> Application
 restAPI loggerH sessionsH dbH restAPIH request respond =
@@ -222,7 +222,7 @@ processArgs [runAtPort, dbHost, dbPort, dbUser, dbPassword, dbName] =
 processArgs _ = Left "Exactly 6 arguments needed: port to run rest-news, db hostname, db port, db user, db password, db name"
 
 
-runWarp :: L.Handle a -> (Port -> Application -> IO ()) -> [String] -> IO a
+runWarp :: L.Handle () -> (Port -> Application -> IO ()) -> [String] -> IO ()
 runWarp loggerH run' argsList = let {
     processedArgs = processArgs argsList;
 } in case processedArgs of
@@ -263,11 +263,10 @@ runWarp loggerH run' argsList = let {
                                                 $ restAPI loggerH sessionsH dbH restAPIH
                                             )
                                 )
-                            ) >> exitSuccess
+                            )
                         )
                 )
             
-            -- exitSuccess?
 
 runWarpWithLogger :: [String] -> IO ()
 runWarpWithLogger argsList =
