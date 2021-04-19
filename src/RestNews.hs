@@ -17,7 +17,7 @@ import RestNews.DB.RequestRunner (runSession)
 import qualified RestNews.Requests.PrerequisitesCheck as PrerequisitesCheck
 import qualified RestNews.Middleware.Static as Static
 
-import Control.Exception (bracket_)
+import Control.Exception (SomeException(..), bracket_, toException)
 import Control.Monad (void, when)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
@@ -33,11 +33,11 @@ import Hasql.Connection (Settings, acquire, settings)
 import qualified Network.HTTP.Types as H
 import Network.HTTP.Types.Method (Method)
 import Network.Wai (Application, Request, pathInfo, requestMethod, responseLBS, strictRequestBody, vault)
-import Network.Wai.Handler.Warp (Port, run)
+import qualified Network.Wai.Handler.Warp as W
 import Network.Wai.Session (SessionStore, withSession)
 import Prelude hiding (error)
 import Network.Wai.Session.PostgreSQL (clearSession, dbStore, defaultSettings, fromSimpleConnection, purger)
-import System.Exit (exitFailure, exitSuccess)
+import System.Exit (ExitCode(ExitFailure), exitFailure, exitSuccess)
 import System.Log.Logger (Priority (DEBUG, ERROR), debugM, errorM, setLevel, traplogging, updateGlobalLogger)
 import Web.Cookie (defaultSetCookie)
 
@@ -74,7 +74,7 @@ processCredentials debug sessionLookup clearSessionPartial request sessionInsert
 
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
 data Config a = Config {
-    cRun :: Application -> IO (),
+    cRunSettings :: Application -> IO (),
     cRequestMethod :: Request -> Method,
     cPathInfo :: Request -> [Text],
     cStrictRequestBody :: Request -> IO LBS.ByteString
@@ -90,7 +90,13 @@ data Handle a = Handle {
 
 
 withRestAPI :: Config a -> (Handle a -> IO ()) -> IO ()
-withRestAPI config f = f $ Handle (cRun config) (cRequestMethod config) (cPathInfo config) (cStrictRequestBody config)
+withRestAPI config f =
+    f
+        $ Handle
+            (cRunSettings config)
+            (cRequestMethod config)
+            (cPathInfo config)
+            (cStrictRequestBody config)
 
 restAPI ::
     L.Handle a
@@ -105,10 +111,8 @@ restAPI loggerH sessionsH dbH restAPIH request respond =
         (do
             let maybeSessionMethods = S.hMaybeSessionMethods sessionsH request
 
-            when
-                True
-                (L.hError loggerH "vault session error"
-                    >> exitFailure)
+            (L.hError loggerH "Vault session error"
+                >> exitFailure)
 
             let (sessionLookup, sessionInsert) = fromJust maybeSessionMethods
 
@@ -205,7 +209,7 @@ restAPI loggerH sessionsH dbH restAPIH request respond =
             } in respond $ responseLBS httpStatus [] processedResults)
 
 
-processArgs :: [String] -> Either String (Port, Settings, ConnectInfo)
+processArgs :: [String] -> Either String (W.Port, Settings, ConnectInfo)
 processArgs [runAtPort, dbHost, dbPort, dbUser, dbPassword, dbName] =
     Right (
         read runAtPort,
@@ -221,8 +225,15 @@ processArgs [runAtPort, dbHost, dbPort, dbUser, dbPassword, dbName] =
         
 processArgs _ = Left "Exactly 6 arguments needed: port to run rest-news, db hostname, db port, db user, db password, db name"
 
+throwOnExitFailure :: Maybe Request -> SomeException -> IO ()
+throwOnExitFailure _ someException =
+    let exitFailureS = show (toException (ExitFailure 1))
+        in if show someException == exitFailureS
+            then exitFailure
+            else print ("ERRR", someException, exitFailureS)
 
-runWarp :: L.Handle () -> (Port -> Application -> IO ()) -> [String] -> IO ()
+
+runWarp :: L.Handle () -> (W.Settings -> Application -> IO ()) -> [String] -> IO ()
 runWarp loggerH run' argsList = let {
     processedArgs = processArgs argsList;
 } in case processedArgs of
@@ -249,7 +260,10 @@ runWarp loggerH run' argsList = let {
                         (\ dbH ->
                             (withRestAPI
                                 (Config
-                                    (run' port)
+                                    (run'
+                                        . W.setOnException
+                                            throwOnExitFailure
+                                            $ W.setPort port W.defaultSettings)
                                     requestMethod
                                     pathInfo
                                     strictRequestBody
@@ -285,7 +299,7 @@ runWarpWithLogger argsList =
             (\ loggerH ->
                 runWarp
                     loggerH
-                    run
+                    W.runSettings
                     argsList)
 
         pure ()
