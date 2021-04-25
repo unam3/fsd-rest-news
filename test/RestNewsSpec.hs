@@ -2,11 +2,13 @@
 
 module RestNewsSpec where
 
+import Data.Typeable (typeOf)
+import Control.Concurrent (threadDelay)
 import Control.Exception
-import Control.Monad (void)
+import Control.Monad (void, when)
 import Network.Wai (pathInfo, requestMethod, strictRequestBody)
 import Network.Wai.Internal (ResponseReceived(..))
-import Network.Wai.Handler.Warp (run)
+import Network.Wai.Handler.Warp (run, testWithApplication)
 import qualified Network.HTTP.Types as H
 import System.Log.Logger (Priority (DEBUG, ERROR), debugM, errorM, setLevel, traplogging, updateGlobalLogger)
 import System.Process (readProcess)
@@ -250,49 +252,49 @@ runStub _ _ = pure ()
 
 spec :: Spec
 spec = do
-    describe "runWarp" $ do
-        it "exit with success if arguments are ok"
-            $ do 
-                eitherExitCode <- try 
-                    (L.withLogger 
-                        (L.Config
-                            DEBUG
-                            (\ _ -> return ())
-                            (\ _ -> return ())
-                            (\ _ -> return ())
-                        )
-                        (\ loggerH ->
-                            runWarp
-                                loggerH
-                                runStub
-                                ["8081", "localhost", "5432", "rest-news-user", "rest", "rest-news-test"]
-                        )
-                    ) :: IO (Either SomeException ())
-                shouldBe
-                    (show eitherExitCode)
-                    (show (Left $ toException (ExitFailure 1) :: Either SomeException ()))
-                    --(show (Left $ toException ExitSuccess :: Either SomeException ()))
+    --describe "runWarp" $ do
+    --    it "exit with success if arguments are ok"
+    --        $ do 
+    --            eitherExitCode <- try 
+    --                (L.withLogger 
+    --                    (L.Config
+    --                        DEBUG
+    --                        (\ _ -> return ())
+    --                        (\ _ -> return ())
+    --                        (\ _ -> return ())
+    --                    )
+    --                    (\ loggerH ->
+    --                        runWarp
+    --                            loggerH
+    --                            runStub
+    --                            ["8081", "localhost", "5432", "rest-news-user", "rest", "rest-news-test"]
+    --                    )
+    --                ) :: IO (Either SomeException ())
+    --            shouldBe
+    --                (show eitherExitCode)
+    --                (show (Left $ toException (ExitFailure 1) :: Either SomeException ()))
+    --                --(show (Left $ toException ExitSuccess :: Either SomeException ()))
 
-        it "exit with failure if wrong number of arguments"
-            $ do 
-                eitherExitCode <- try 
-                    (L.withLogger 
-                        (L.Config
-                            DEBUG
-                            (\ _ -> return ())
-                            (\ _ -> return ())
-                            (\ _ -> return ())
-                        )
-                        (\ loggerH ->
-                            runWarp
-                                loggerH
-                                runStub
-                                ["8081", "localhost", "5432", "rest-news-user", "rest"]
-                        )
-                    ) :: IO (Either SomeException ())
-                shouldBe
-                    (show eitherExitCode)
-                    (show (Left $ toException (ExitFailure 1) :: Either SomeException ()))
+    --    it "exit with failure if wrong number of arguments"
+    --        $ do 
+    --            eitherExitCode <- try 
+    --                (L.withLogger 
+    --                    (L.Config
+    --                        DEBUG
+    --                        (\ _ -> return ())
+    --                        (\ _ -> return ())
+    --                        (\ _ -> return ())
+    --                    )
+    --                    (\ loggerH ->
+    --                        runWarp
+    --                            loggerH
+    --                            runStub
+    --                            ["8081", "localhost", "5432", "rest-news-user", "rest"]
+    --                    )
+    --                ) :: IO (Either SomeException ())
+    --            shouldBe
+    --                (show eitherExitCode)
+    --                (show (Left $ toException (ExitFailure 1) :: Either SomeException ()))
 
 
     let withSessionStub _ _ _ = pure ResponseReceived
@@ -301,49 +303,54 @@ spec = do
 
         acquireStub = pure $ Left Nothing
 
+        restAPIH = 
+            (Handle
+                (run 8081)
+                requestMethod
+                pathInfo
+                strictRequestBody)
+        
+        sessionsH =
+            (S.Handle
+                withSessionStub
+                maybeSessionMethodsStub
+                clearSessionStub)
+
+        dbH = DBC.Handle acquireStub
+
+        --withLogger' = L.withLogger 
+        --    (L.Config
+        --        DEBUG
+        --        (\ _ -> return ())
+        --        (\ _ -> return ())
+        --        (\ _ -> return ()))
+        --    (\ loggerH -> restAPI loggerH sessionsH dbH restAPIH)
+
+        --restAPI' request respond =
+        restAPI' _ _ = pure ResponseReceived
+
     describe "restAPI" $ do
         it "exit with failure if arguments no vault"
             $ do 
-                eitherExitCode <- try 
-                    (L.withLogger 
-                        (L.Config
-                            DEBUG
-                            (\ _ -> return ())
-                            (\ _ -> return ())
-                            (\ _ -> return ())
-                        )
-                        (\ loggerH ->
-                            S.withSessions
-                                (S.Config
-                                    withSessionStub
-                                    maybeSessionMethodsStub
-                                    clearSessionStub
-                                )
-                                (\ sessionsH ->
-                                    DBC.withDBConnection
-                                        (DBC.Config acquireStub)
-                                        (\ dbH ->
-                                            withRestAPI
-                                                (Config
-                                                    (run 8081)
-                                                    requestMethod
-                                                    pathInfo
-                                                    strictRequestBody
-                                                )
-                                                (
-                                                    (\ restAPIH ->
-                                                        hRun
-                                                            restAPIH
-                                                            --(\ _ _ -> pure ResponseReceived)
-                                                            . S.hWithSession
-                                                                sessionsH
-                                                                $ restAPI loggerH sessionsH dbH restAPIH
-                                                    )
-                                                )
-                                        )
-                                )
-                        )
-                    ) :: IO (Either SomeException ())
+                result <-
+                    testWithApplication
+                        (threadDelay 1000000 >> when True exitSuccess >> pure restAPI')
+                        (\ _ -> exitFailure >> pure ResponseReceived)
+
                 shouldBe
-                    (show eitherExitCode)
-                    (show (Left $ toException (ExitFailure 1) :: Either SomeException ()))
+                    (show $ typeOf result)
+                    "ResponseReceived"
+
+                --eitherExitCode <- try 
+                --    (testWithApplication
+                --        restAPI'
+                --        (\ _ -> threadDelay 10000000 >> pure ResponseReceived)
+                --    ) :: IO (Either SomeException ())
+
+                --shouldBe
+                --    (show eitherExitCode)
+                --    (show (Left $ toException (ExitFailure 1) :: Either SomeException ()))
+
+                --shouldBe
+                --    1
+                --    1
