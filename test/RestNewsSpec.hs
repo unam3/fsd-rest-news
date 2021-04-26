@@ -5,7 +5,7 @@ module RestNewsSpec where
 import Data.Typeable (typeOf)
 import Control.Concurrent (threadDelay)
 import Control.Exception
-import Control.Monad (void, when)
+import Control.Monad (void)
 import Network.Wai (pathInfo, requestMethod, strictRequestBody)
 import Network.Wai.Internal (ResponseReceived(..))
 import Network.Wai.Handler.Warp (run, testWithApplication)
@@ -326,31 +326,16 @@ spec = do
         --        (\ _ -> return ()))
         --    (\ loggerH -> restAPI loggerH sessionsH dbH restAPIH)
 
-        --restAPI' request respond =
         restAPI' _ _ = pure ResponseReceived
 
     describe "restAPI" $ do
         it "exit with failure if arguments no vault"
             $ do 
-                result <-
-                    testWithApplication
-                        (threadDelay 1000000 >> when True exitSuccess >> pure restAPI')
-                        (\ _ -> exitFailure >> pure ResponseReceived)
+                eitherExitCode <- try
+                    (fmap (const ()) $ testWithApplication
+                        (exitSuccess >> pure restAPI')
+                        (\ _ -> pure ResponseReceived)) :: IO (Either SomeException ())
 
                 shouldBe
-                    (show $ typeOf result)
-                    "ResponseReceived"
-
-                --eitherExitCode <- try 
-                --    (testWithApplication
-                --        restAPI'
-                --        (\ _ -> threadDelay 10000000 >> pure ResponseReceived)
-                --    ) :: IO (Either SomeException ())
-
-                --shouldBe
-                --    (show eitherExitCode)
-                --    (show (Left $ toException (ExitFailure 1) :: Either SomeException ()))
-
-                --shouldBe
-                --    1
-                --    1
+                    (show eitherExitCode)
+                    (show (Left $ toException (ExitFailure 1) :: Either SomeException ()))
