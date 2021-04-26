@@ -5,6 +5,7 @@ module RestNews.DBConnection
     ) where
 
 import Hasql.Connection (Connection, ConnectionError)
+import Network.Wai (Application)
 
 
 newtype Config = Config {
@@ -16,5 +17,5 @@ newtype Handle = Handle {
 }
 
 
-withDBConnection :: Config -> (Handle -> IO ()) -> IO ()
+withDBConnection :: Config -> (Handle -> Application) -> Application
 withDBConnection config f = f . Handle $ cAcquiredConnection config

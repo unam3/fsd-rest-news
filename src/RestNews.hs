@@ -1,13 +1,13 @@
 {-# LANGUAGE OverloadedStrings  #-}
 
 module RestNews
-    ( runWarp
+    ( makeApplication
     , runWarpWithLogger
     , restAPI
     , processArgs
     , Config(..)
     , Handle(..)
-    , withRestAPI
+    , withWAI
     ) where
 
 import qualified RestNews.DBConnection as DBC
@@ -74,7 +74,6 @@ processCredentials debug sessionLookup clearSessionPartial request sessionInsert
 
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
 data Config a = Config {
-    cRun :: Application -> IO (),
     cRequestMethod :: Request -> Method,
     cPathInfo :: Request -> [Text],
     cStrictRequestBody :: Request -> IO LBS.ByteString
@@ -82,17 +81,15 @@ data Config a = Config {
 
 -- how to name RestAPI? Server?
 data Handle a = Handle {
-    hRun :: Application -> IO (),
     hRequestMethod :: Request -> Method,
     hPathInfo :: Request -> [Text],
     hStrictRequestBody :: Request -> IO LBS.ByteString
 }
 
-withRestAPI :: Config a -> (Handle a -> IO ()) -> IO ()
-withRestAPI config f =
+withWAI :: Config a -> (Handle a -> Application) -> Application
+withWAI config f =
     f
         $ Handle
-            (cRun config)
             (cRequestMethod config)
             (cPathInfo config)
             (cStrictRequestBody config)
@@ -230,14 +227,8 @@ processArgs [runAtPort, dbHost, dbPort, dbUser, dbPassword, dbName] =
 processArgs _ = Left "Exactly 6 arguments needed: port to run rest-news, db hostname, db port, db user, db password, db name"
 
 
-runWarp :: L.Handle () -> (Port -> Application -> IO ()) -> [String] -> IO ()
-runWarp loggerH run' argsList = let {
-    processedArgs = processArgs argsList;
-} in case processedArgs of
-    Left error' ->
-        L.hError loggerH error'
-            >> exitFailure
-    Right (port, dbConnectionSettings, connectInfo) -> 
+makeApplication :: L.Handle () -> Settings -> ConnectInfo -> IO Application
+makeApplication loggerH dbConnectionSettings connectInfo =  
         do
             vaultKey <- Vault.newKey
             simpleConnection <- connectPostgreSQL (postgreSQLConnectionString connectInfo)
@@ -245,7 +236,7 @@ runWarp loggerH run' argsList = let {
             store <- dbStore simpleConnection defaultSettings :: IO (SessionStore IO String String)
             void (purger simpleConnection defaultSettings)
 
-            S.withSessions
+            pure $ S.withSessions
                 (S.Config
                     (withSession store "SESSION" defaultSetCookie vaultKey)
                     (Vault.lookup vaultKey . vault)
@@ -255,21 +246,18 @@ runWarp loggerH run' argsList = let {
                     DBC.withDBConnection
                         (DBC.Config $ acquire dbConnectionSettings)
                         (\ dbH ->
-                            (withRestAPI
+                            (withWAI
                                 (Config
-                                    (run' port)
                                     requestMethod
                                     pathInfo
                                     strictRequestBody
                                 )
                                 (\ restAPIH ->
-                                    hRun
-                                        restAPIH
-                                        $ Static.router (
-                                            S.hWithSession
-                                                sessionsH
-                                                $ restAPI loggerH sessionsH dbH restAPIH
-                                            )
+                                    Static.router (
+                                        S.hWithSession
+                                            sessionsH
+                                            $ restAPI loggerH sessionsH dbH restAPIH
+                                        )
                                 )
                             )
                         )
@@ -289,11 +277,15 @@ runWarpWithLogger argsList =
                     . updateGlobalLogger "rest-news" . setLevel)
                 (debugM "rest-news")
                 (errorM "rest-news"))
-
             (\ loggerH ->
-                runWarp
-                    loggerH
-                    run
-                    argsList)
+                let {
+                    processedArgs = processArgs argsList;
+                } in case processedArgs of
+                    Left error' ->
+                        L.hError loggerH error'
+                            >> exitFailure
+                    Right (port, dbConnectionSettings, connectInfo) ->
+                        makeApplication loggerH dbConnectionSettings connectInfo >>= run port
+                )
 
         pure ()

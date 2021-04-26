@@ -4,7 +4,7 @@ module RestNews.Middleware.Sessions
     , withSessions
     ) where
 
-import Network.Wai (Middleware, Request)
+import Network.Wai (Application, Middleware, Request)
 import Prelude hiding (init)
 
 
@@ -21,5 +21,5 @@ data Handle = Handle {
 }
 
 
-withSessions :: Config -> (Handle -> IO ()) -> IO ()
+withSessions :: Config -> (Handle -> Application) -> Application
 withSessions config f = f $ Handle (cWithSession config) (cMaybeSessionMethods config) (cClearSession config)

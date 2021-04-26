@@ -305,7 +305,6 @@ spec = do
 
         restAPIH = 
             (Handle
-                (run 8081)
                 requestMethod
                 pathInfo
                 strictRequestBody)
@@ -318,23 +317,37 @@ spec = do
 
         dbH = DBC.Handle acquireStub
 
-        --withLogger' = L.withLogger 
-        --    (L.Config
-        --        DEBUG
-        --        (\ _ -> return ())
-        --        (\ _ -> return ())
-        --        (\ _ -> return ()))
-        --    (\ loggerH -> restAPI loggerH sessionsH dbH restAPIH)
+        withLogger' = L.withLogger 
+            (L.Config
+                DEBUG
+                (\ _ -> return ())
+                (\ _ -> return ())
+                (\ _ -> return ()))
 
-        restAPI' _ _ = pure ResponseReceived
+            --} in case processedArgs of
+            --    Left error' ->
+            --        L.hError loggerH error'
+            --            >> exitFailure
+            --    Right (port, dbConnectionSettings, connectInfo) ->
+        Right (_, dbConnectionSettings, connectInfo) = processArgs
+            [ "8081"
+            , "localhost"
+            , "5432"
+            , "rest-news-user"
+            , "rest"
+            , "rest-news-test"
+            ]
 
     describe "restAPI" $ do
         it "exit with failure if arguments no vault"
             $ do 
                 eitherExitCode <- try
-                    (fmap (const ()) $ testWithApplication
-                        (exitSuccess >> pure restAPI')
-                        (\ _ -> pure ResponseReceived)) :: IO (Either SomeException ())
+                    (fmap (const ()) $
+                        testWithApplication
+                            (withLogger' $
+                                (\loggerH -> makeApplication loggerH dbConnectionSettings connectInfo)
+                                )
+                            (\ _ -> pure ResponseReceived)) :: IO (Either SomeException ())
 
                 shouldBe
                     (show eitherExitCode)
