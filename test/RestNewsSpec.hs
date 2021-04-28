@@ -250,6 +250,51 @@ deleteComment params session = curl
 
 runStub _ _ = pure ()
 
+-- let withSessionStub _ _ _ = pure ResponseReceived
+withSessionStub req resp f = exitFailure >> pure ResponseReceived
+maybeSessionMethodsStub _ = Nothing
+clearSessionStub _ = pure ()
+
+waiH = 
+    (Handle
+        requestMethod
+        pathInfo
+        strictRequestBody)
+
+sessionsH =
+    (S.Handle
+        withSessionStub
+        maybeSessionMethodsStub
+        clearSessionStub)
+
+acquireStub = pure $ Left Nothing
+
+dbH = DBC.Handle acquireStub
+
+withLogger' = L.withLogger 
+    (L.Config
+        DEBUG
+        (\ _ -> return ())
+        (\ _ -> return ())
+        (\ _ -> return ()))
+
+Right (_, dbConnectionSettings, connectInfo) = processArgs
+    [ "8081"
+    , "localhost"
+    , "5432"
+    , "rest-news-user"
+    , "rest"
+    , "rest-news-test"
+    ]
+
+makeApplication' loggerH dbConnectionSettings connectInfo =  
+    (pure
+        --(\ _ _ -> exitFailure >> pure ResponseReceived))
+        . S.hWithSession
+            sessionsH
+            $ restAPI loggerH sessionsH dbH waiH)
+            -- $ (\ _ _ -> exitFailure >> pure ResponseReceived))
+
 spec :: Spec
 spec = do
     --describe "runWarp" $ do
@@ -297,57 +342,20 @@ spec = do
     --                (show (Left $ toException (ExitFailure 1) :: Either SomeException ()))
 
 
-    let withSessionStub _ _ _ = pure ResponseReceived
-        maybeSessionMethodsStub _ = Nothing
-        clearSessionStub _ = pure ()
-
-        acquireStub = pure $ Left Nothing
-
-        restAPIH = 
-            (Handle
-                requestMethod
-                pathInfo
-                strictRequestBody)
-        
-        sessionsH =
-            (S.Handle
-                withSessionStub
-                maybeSessionMethodsStub
-                clearSessionStub)
-
-        dbH = DBC.Handle acquireStub
-
-        withLogger' = L.withLogger 
-            (L.Config
-                DEBUG
-                (\ _ -> return ())
-                (\ _ -> return ())
-                (\ _ -> return ()))
-
-            --} in case processedArgs of
-            --    Left error' ->
-            --        L.hError loggerH error'
-            --            >> exitFailure
-            --    Right (port, dbConnectionSettings, connectInfo) ->
-        Right (_, dbConnectionSettings, connectInfo) = processArgs
-            [ "8081"
-            , "localhost"
-            , "5432"
-            , "rest-news-user"
-            , "rest"
-            , "rest-news-test"
-            ]
 
     describe "restAPI" $ do
         it "exit with failure if arguments no vault"
             $ do 
                 eitherExitCode <- try
+                    -- Right ResponseReceived -> Right ()
                     (fmap (const ()) $
                         testWithApplication
                             (withLogger' $
-                                (\loggerH -> makeApplication loggerH dbConnectionSettings connectInfo)
+                                -- (\loggerH -> exitSuccess >> makeApplication' loggerH dbConnectionSettings connectInfo)
+                                (\loggerH -> makeApplication' loggerH dbConnectionSettings connectInfo)
                                 )
-                            (\ _ -> pure ResponseReceived)) :: IO (Either SomeException ())
+                            (\ _ -> threadDelay 1000000 >> exitSuccess >> pure ResponseReceived)
+                        ) :: IO (Either SomeException ())
 
                 shouldBe
                     (show eitherExitCode)

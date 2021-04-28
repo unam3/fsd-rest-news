@@ -101,13 +101,14 @@ restAPI ::
     -> DBC.Handle
     -> Handle a
     -> Application
-restAPI loggerH sessionsH dbH restAPIH request respond =
+restAPI loggerH sessionsH dbH waiH request respond =
     bracket_
         (L.hDebug loggerH "Allocating scarce resource")
         (L.hDebug loggerH "Cleaning up")
         (do
             let maybeSessionMethods = S.hMaybeSessionMethods sessionsH request
 
+            exitFailure
             when
                 (isNothing maybeSessionMethods)
                 (L.hError loggerH "Vault session error"
@@ -127,10 +128,10 @@ restAPI loggerH sessionsH dbH restAPIH request respond =
             L.hDebug loggerH $ show ("session author_id" :: String, maybeAuthorId)
 
 
-            let method = hRequestMethod restAPIH request
-                pathTextChunks = hPathInfo restAPIH request
+            let method = hRequestMethod waiH request
+                pathTextChunks = hPathInfo waiH request
 
-            requestBody <- hStrictRequestBody restAPIH request
+            requestBody <- hStrictRequestBody waiH request
 
             L.hDebug loggerH $ show (method, pathTextChunks, requestBody)
 
@@ -252,11 +253,11 @@ makeApplication loggerH dbConnectionSettings connectInfo =
                                     pathInfo
                                     strictRequestBody
                                 )
-                                (\ restAPIH ->
+                                (\ waiH ->
                                     Static.router (
                                         S.hWithSession
                                             sessionsH
-                                            $ restAPI loggerH sessionsH dbH restAPIH
+                                            $ restAPI loggerH sessionsH dbH waiH
                                         )
                                 )
                             )
