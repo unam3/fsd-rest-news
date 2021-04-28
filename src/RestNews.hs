@@ -108,7 +108,6 @@ restAPI loggerH sessionsH dbH waiH request respond =
         (do
             let maybeSessionMethods = S.hMaybeSessionMethods sessionsH request
 
-            exitFailure
             when
                 (isNothing maybeSessionMethods)
                 (L.hError loggerH "Vault session error"

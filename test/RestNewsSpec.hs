@@ -65,12 +65,12 @@ curl method session dashDData url =
             [];
     } in ioResponse
 
-auth :: IO String
-auth = curl
+auth :: Int -> IO String
+auth port = curl
     "POST"
     []
     "{\"username\": \"username\", \"password\": \"12345\"}"
-    "http://0.0.0.0:8081/auth"
+    ("http://0.0.0.0:" ++ (show port) ++ "/auth")
 
 authMustFail :: IO String
 authMustFail = curl
@@ -250,8 +250,7 @@ deleteComment params session = curl
 
 runStub _ _ = pure ()
 
--- let withSessionStub _ _ _ = pure ResponseReceived
-withSessionStub req resp f = exitFailure >> pure ResponseReceived
+withSessionStub app request respond = app request respond
 maybeSessionMethodsStub _ = Nothing
 clearSessionStub _ = pure ()
 
@@ -289,11 +288,9 @@ Right (_, dbConnectionSettings, connectInfo) = processArgs
 
 makeApplication' loggerH dbConnectionSettings connectInfo =  
     (pure
-        --(\ _ _ -> exitFailure >> pure ResponseReceived))
         . S.hWithSession
             sessionsH
             $ restAPI loggerH sessionsH dbH waiH)
-            -- $ (\ _ _ -> exitFailure >> pure ResponseReceived))
 
 spec :: Spec
 spec = do
@@ -351,10 +348,9 @@ spec = do
                     (fmap (const ()) $
                         testWithApplication
                             (withLogger' $
-                                -- (\loggerH -> exitSuccess >> makeApplication' loggerH dbConnectionSettings connectInfo)
                                 (\loggerH -> makeApplication' loggerH dbConnectionSettings connectInfo)
                                 )
-                            (\ _ -> threadDelay 1000000 >> exitSuccess >> pure ResponseReceived)
+                            (\ port -> auth port >> pure ResponseReceived)
                         ) :: IO (Either SomeException ())
 
                 shouldBe
