@@ -294,50 +294,16 @@ makeApplication' loggerH dbConnectionSettings connectInfo =
 
 spec :: Spec
 spec = do
-    --describe "runWarp" $ do
-    --    it "exit with success if arguments are ok"
-    --        $ do 
-    --            eitherExitCode <- try 
-    --                (L.withLogger 
-    --                    (L.Config
-    --                        DEBUG
-    --                        (\ _ -> return ())
-    --                        (\ _ -> return ())
-    --                        (\ _ -> return ())
-    --                    )
-    --                    (\ loggerH ->
-    --                        runWarp
-    --                            loggerH
-    --                            runStub
-    --                            ["8081", "localhost", "5432", "rest-news-user", "rest", "rest-news-test"]
-    --                    )
-    --                ) :: IO (Either SomeException ())
-    --            shouldBe
-    --                (show eitherExitCode)
-    --                (show (Left $ toException (ExitFailure 1) :: Either SomeException ()))
-    --                --(show (Left $ toException ExitSuccess :: Either SomeException ()))
-
-    --    it "exit with failure if wrong number of arguments"
-    --        $ do 
-    --            eitherExitCode <- try 
-    --                (L.withLogger 
-    --                    (L.Config
-    --                        DEBUG
-    --                        (\ _ -> return ())
-    --                        (\ _ -> return ())
-    --                        (\ _ -> return ())
-    --                    )
-    --                    (\ loggerH ->
-    --                        runWarp
-    --                            loggerH
-    --                            runStub
-    --                            ["8081", "localhost", "5432", "rest-news-user", "rest"]
-    --                    )
-    --                ) :: IO (Either SomeException ())
-    --            shouldBe
-    --                (show eitherExitCode)
-    --                (show (Left $ toException (ExitFailure 1) :: Either SomeException ()))
-
+    describe "runWarpWithLogger" $ do
+        it "exit with failure if wrong number of arguments"
+            $ do 
+                eitherExitCode <- try 
+                    (runWarpWithLogger
+                        ["8081", "localhost", "5432", "rest-news-user", "rest"]
+                    ) :: IO (Either SomeException ())
+                shouldBe
+                    (show eitherExitCode)
+                    (show (Left $ toException (ExitFailure 1) :: Either SomeException ()))
 
 
     describe "restAPI" $ do
@@ -349,7 +315,7 @@ spec = do
                         testWithApplication
                             (withLogger' $
                                 (\loggerH -> makeApplication' loggerH dbConnectionSettings connectInfo)
-                                )
+                            )
                             (\ port -> auth port >> pure ResponseReceived)
                         ) :: IO (Either SomeException ())
 
