@@ -36,7 +36,7 @@ import Network.Wai (Application, Request, pathInfo, requestMethod, responseLBS, 
 import Network.Wai.Handler.Warp (Port, run)
 import Network.Wai.Session (SessionStore, withSession)
 import Prelude hiding (error)
-import Network.Wai.Session.PostgreSQL (clearSession, dbStore, defaultSettings, fromSimpleConnection, purger)
+import Network.Wai.Session.PostgreSQL (clearSession, dbStore, defaultSettings, fromSimpleConnection, purger, storeSettingsLog)
 import System.Exit (exitFailure, exitSuccess)
 import System.Log.Logger (Priority (DEBUG, ERROR), debugM, errorM, setLevel, traplogging, updateGlobalLogger)
 import Web.Cookie (defaultSetCookie)
@@ -229,12 +229,13 @@ processArgs _ = Left "Exactly 6 arguments needed: port to run rest-news, db host
 
 makeApplication :: L.Handle () -> Settings -> ConnectInfo -> IO Application
 makeApplication loggerH dbConnectionSettings connectInfo =  
-        do
+        let storeSettings = defaultSettings {storeSettingsLog = L.hDebug loggerH}
+        in do
             vaultKey <- Vault.newKey
             simpleConnection <- connectPostgreSQL (postgreSQLConnectionString connectInfo)
                 >>= fromSimpleConnection
-            store <- dbStore simpleConnection defaultSettings :: IO (SessionStore IO String String)
-            void (purger simpleConnection defaultSettings)
+            store <- dbStore simpleConnection storeSettings :: IO (SessionStore IO String String)
+            void (purger simpleConnection storeSettings)
 
             pure $ S.withSessions
                 (S.Config
