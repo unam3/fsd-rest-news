@@ -2,15 +2,13 @@
 
 module RestNewsSpec where
 
-import Data.Typeable (typeOf)
-import Control.Concurrent (threadDelay)
 import Control.Exception
-import Control.Monad (void)
-import Network.Wai (pathInfo, requestMethod, strictRequestBody)
+import Database.PostgreSQL.Simple (ConnectInfo)
+import Hasql.Connection (Connection, ConnectionError, Settings)
+import Network.Wai (Application, Middleware, Request, pathInfo, requestMethod, strictRequestBody)
 import Network.Wai.Internal (ResponseReceived(..))
-import Network.Wai.Handler.Warp (run, testWithApplication, withApplication)
-import qualified Network.HTTP.Types as H
-import System.Log.Logger (Priority (DEBUG, ERROR), debugM, errorM, setLevel, traplogging, updateGlobalLogger)
+import Network.Wai.Handler.Warp (Port, testWithApplication, withApplication)
+import System.Log.Logger (Priority (DEBUG))
 import System.Process (readProcess)
 import System.Exit
 import Test.Hspec
@@ -250,28 +248,39 @@ deleteComment params session port = curl
     ("http://0.0.0.0:" ++ (show port) ++ "/comments")
 
 
+runStub :: Port -> Application -> IO ()
 runStub _ _ = pure ()
 
+withSessionStub :: Middleware
 withSessionStub app request respond = app request respond
+
+maybeSessionMethodsStub :: Request -> Maybe (String -> IO (Maybe String), String -> String -> IO ())
 maybeSessionMethodsStub _ = Nothing
+
+clearSessionStub :: Request -> IO ()
 clearSessionStub _ = pure ()
 
+waiH :: WAI.Handle a
 waiH = 
     (WAI.Handle
         requestMethod
         pathInfo
         strictRequestBody)
 
+sessionsH :: S.Handle
 sessionsH =
     (S.Handle
         withSessionStub
         maybeSessionMethodsStub
         clearSessionStub)
 
+acquireStub :: IO (Either ConnectionError Connection)
 acquireStub = pure $ Left Nothing
 
+dbH :: DBC.Handle
 dbH = DBC.Handle acquireStub
 
+withLogger' :: (L.Handle () -> IO a) -> IO a
 withLogger' = L.withLogger 
     (L.Config
         DEBUG
@@ -279,6 +288,8 @@ withLogger' = L.withLogger
         (\ _ -> return ())
         (\ _ -> return ()))
 
+dbConnectionSettings :: Settings
+connectInfo :: ConnectInfo
 Right (_, dbConnectionSettings, connectInfo) = processArgs
     [ "8081"
     , "localhost"
@@ -288,12 +299,14 @@ Right (_, dbConnectionSettings, connectInfo) = processArgs
     , "rest-news-test"
     ]
 
-makeApplication' loggerH dbConnectionSettings connectInfo =  
+makeApplication' :: L.Handle () -> Settings -> ConnectInfo -> IO Application
+makeApplication' loggerH _ _ =  
     (pure
         . S.hWithSession
             sessionsH
             $ restAPI loggerH sessionsH dbH waiH)
 
+runApllicationWith :: (Port -> IO a) -> IO a
 runApllicationWith = withApplication
     (withLogger'
         (\loggerH -> makeApplication loggerH dbConnectionSettings connectInfo)
