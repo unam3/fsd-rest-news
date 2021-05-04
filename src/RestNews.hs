@@ -5,9 +5,6 @@ module RestNews
     , runWarpWithLogger
     , restAPI
     , processArgs
-    , Config(..)
-    , Handle(..)
-    , withWAI
     ) where
 
 import qualified RestNews.DBConnection as DBC
@@ -16,22 +13,20 @@ import qualified RestNews.Middleware.Sessions as S
 import RestNews.DB.RequestRunner (runSession)
 import qualified RestNews.Requests.PrerequisitesCheck as PrerequisitesCheck
 import qualified RestNews.Middleware.Static as Static
+import qualified RestNews.WAI as WAI
 
 import Control.Exception (bracket_)
 import Control.Monad (void, when)
-import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
 import Data.Either (fromRight)
 import Data.Int (Int32)
 import qualified Data.HashMap.Strict as HMS
 import Data.Maybe (fromJust, fromMaybe, isJust, isNothing)
 import Data.String (fromString)
-import Data.Text (Text)
 import qualified Data.Vault.Lazy as Vault
 import Database.PostgreSQL.Simple (ConnectInfo(..), connectPostgreSQL, postgreSQLConnectionString)
 import Hasql.Connection (Settings, acquire, settings)
 import qualified Network.HTTP.Types as H
-import Network.HTTP.Types.Method (Method)
 import Network.Wai (Application, Request, pathInfo, requestMethod, responseLBS, strictRequestBody, vault)
 import Network.Wai.Handler.Warp (Port, run)
 import Network.Wai.Session (SessionStore, withSession)
@@ -73,33 +68,11 @@ processCredentials debug sessionLookup clearSessionPartial request sessionInsert
         pure sessionResults
 
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
-data Config a = Config {
-    cRequestMethod :: Request -> Method,
-    cPathInfo :: Request -> [Text],
-    cStrictRequestBody :: Request -> IO LBS.ByteString
-}
-
--- how to name RestAPI? Server?
-data Handle a = Handle {
-    hRequestMethod :: Request -> Method,
-    hPathInfo :: Request -> [Text],
-    hStrictRequestBody :: Request -> IO LBS.ByteString
-}
-
-withWAI :: Config a -> (Handle a -> Application) -> Application
-withWAI config f =
-    f
-        $ Handle
-            (cRequestMethod config)
-            (cPathInfo config)
-            (cStrictRequestBody config)
-
-
 restAPI ::
     L.Handle a
     -> S.Handle
     -> DBC.Handle
-    -> Handle a
+    -> WAI.Handle a
     -> Application
 restAPI loggerH sessionsH dbH waiH request respond =
     bracket_
@@ -127,10 +100,10 @@ restAPI loggerH sessionsH dbH waiH request respond =
             _ <- L.hDebug loggerH $ show ("session author_id" :: String, maybeAuthorId)
 
 
-            let method = hRequestMethod waiH request
-                pathTextChunks = hPathInfo waiH request
+            let method = WAI.hRequestMethod waiH request
+                pathTextChunks = WAI.hPathInfo waiH request
 
-            requestBody <- hStrictRequestBody waiH request
+            requestBody <- WAI.hStrictRequestBody waiH request
 
             _ <- L.hDebug loggerH $ show (method, pathTextChunks, requestBody)
 
@@ -247,8 +220,8 @@ makeApplication loggerH dbConnectionSettings connectInfo =
                     DBC.withDBConnection
                         (DBC.Config $ acquire dbConnectionSettings)
                         (\ dbH ->
-                            (withWAI
-                                (Config
+                            (WAI.withWAI
+                                (WAI.Config
                                     requestMethod
                                     pathInfo
                                     strictRequestBody

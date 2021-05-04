@@ -19,6 +19,8 @@ import RestNews
 import qualified RestNews.DBConnection as DBC
 import qualified RestNews.Logger as L
 import qualified RestNews.Middleware.Sessions as S
+import qualified RestNews.WAI as WAI
+
 
 getSession :: Int -> IO String
 getSession port =
@@ -255,7 +257,7 @@ maybeSessionMethodsStub _ = Nothing
 clearSessionStub _ = pure ()
 
 waiH = 
-    (Handle
+    (WAI.Handle
         requestMethod
         pathInfo
         strictRequestBody)
