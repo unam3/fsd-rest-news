@@ -37,7 +37,7 @@ import Network.Wai.Handler.Warp (Port, run)
 import Network.Wai.Session (SessionStore, withSession)
 import Prelude hiding (error)
 import Network.Wai.Session.PostgreSQL (clearSession, dbStore, defaultSettings, fromSimpleConnection, purger, storeSettingsLog)
-import System.Exit (exitFailure, exitSuccess)
+import System.Exit (exitFailure)
 import System.Log.Logger (Priority (DEBUG, ERROR), debugM, errorM, setLevel, traplogging, updateGlobalLogger)
 import Web.Cookie (defaultSetCookie)
 
@@ -66,7 +66,7 @@ processCredentials debug sessionLookup clearSessionPartial request sessionInsert
                 (isJust session_user_id)
                 (clearSessionPartial request)
             )
-        debug (show ("put into sessions:" :: String, user_id, is_admin, author_id))
+        _ <- debug (show ("put into sessions:" :: String, user_id, is_admin, author_id))
         sessionInsert "is_admin" (show is_admin)
         sessionInsert "user_id" (show user_id)
         sessionInsert "author_id" (show author_id)
@@ -121,10 +121,10 @@ restAPI loggerH sessionsH dbH waiH request respond =
             maybeIsAdmin <- sessionLookup "is_admin"
             maybeAuthorId <- sessionLookup "author_id"
 
-            L.hDebug loggerH $ show request
-            L.hDebug loggerH $ show ("session user_id" :: String, maybeUserId)
-            L.hDebug loggerH $ show ("session is_admin" :: String, maybeIsAdmin)
-            L.hDebug loggerH $ show ("session author_id" :: String, maybeAuthorId)
+            _ <- L.hDebug loggerH $ show request
+            _ <- L.hDebug loggerH $ show ("session user_id" :: String, maybeUserId)
+            _ <- L.hDebug loggerH $ show ("session is_admin" :: String, maybeIsAdmin)
+            _ <- L.hDebug loggerH $ show ("session author_id" :: String, maybeAuthorId)
 
 
             let method = hRequestMethod waiH request
@@ -132,7 +132,7 @@ restAPI loggerH sessionsH dbH waiH request respond =
 
             requestBody <- hStrictRequestBody waiH request
 
-            L.hDebug loggerH $ show (method, pathTextChunks, requestBody)
+            _ <- L.hDebug loggerH $ show (method, pathTextChunks, requestBody)
 
             let sessionUserIdString = getIdString maybeUserId
                 sessionAuthorIdString = getIdString maybeAuthorId
@@ -183,7 +183,7 @@ restAPI loggerH sessionsH dbH waiH request respond =
                                     sessionAuthorId
                                     sessionName
 
-            L.hDebug
+            _ <- L.hDebug
                 loggerH
                 (case fst results of
                     Left leftErr -> show (snd results) ++ ", " ++ leftErr
