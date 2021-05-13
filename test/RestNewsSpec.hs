@@ -288,6 +288,7 @@ withLogger' = L.withLogger
         DEBUG
         (\ _ -> return ())
         (\ _ -> return ())
+        (\ _ -> return ())
         (\ _ -> return ()))
 
 dbConnectionSettings :: Settings

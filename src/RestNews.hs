@@ -33,7 +33,7 @@ import Network.Wai.Session (SessionStore, withSession)
 import Prelude hiding (error)
 import Network.Wai.Session.PostgreSQL (clearSession, dbStore, defaultSettings, fromSimpleConnection, purger, storeSettingsLog)
 import System.Exit (exitFailure)
-import System.Log.Logger (Priority (DEBUG, ERROR), debugM, errorM, setLevel, traplogging, updateGlobalLogger)
+import System.Log.Logger (Priority (INFO, ERROR), debugM, infoM, errorM, setLevel, traplogging, updateGlobalLogger)
 import Web.Cookie (defaultSetCookie)
 
 dbError :: Either String UTFLBS.ByteString
@@ -105,7 +105,7 @@ restAPI loggerH sessionsH dbH waiH request respond =
 
             requestBody <- WAI.hStrictRequestBody waiH request
 
-            _ <- L.hDebug loggerH $ show (method, pathTextChunks, requestBody)
+            _ <- L.hInfo loggerH $ show (method, pathTextChunks, requestBody)
 
             let sessionUserIdString = getIdString maybeUserId
                 sessionAuthorIdString = getIdString maybeAuthorId
@@ -241,13 +241,15 @@ runWarpWithLogger args =
     do
         L.withLogger
             (L.Config
-                DEBUG
+                -- use DEBUG here to enable debugging messages
+                INFO
                 (traplogging
                     "rest-news"
                     ERROR
                     "Unhandled exception occured"
                     . updateGlobalLogger "rest-news" . setLevel)
                 (debugM "rest-news")
+                (infoM "rest-news")
                 (errorM "rest-news"))
             (\ loggerH ->
                 case processArgs args of

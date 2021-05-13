@@ -74,3 +74,7 @@ stack test
     - articles/byCreationDate
     - articles/sortByAuthor
     - articles/sortByCategory
+
+## Debug
+
+To enable debug messages change logging level: add `DEBUG` to imports and change `INFO` to `DEBUG` in `src/RestNews.hs` `runWarpWithLogger` function.
