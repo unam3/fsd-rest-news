@@ -11,7 +11,7 @@ import qualified RestNews.DBConnection as DBC
 import qualified RestNews.Logger as L
 import qualified RestNews.Middleware.Sessions as S
 import RestNews.DB.RequestRunner (runSession)
-import qualified RestNews.Requests.PrerequisitesCheck as PrerequisitesCheck
+import qualified RestNews.Requests.PrerequisitesCheck as PC
 import qualified RestNews.Middleware.Static as Static
 import qualified RestNews.WAI as WAI
 
@@ -50,9 +50,8 @@ processCredentials :: Monad m => (String -> m a)
     -> (Either String (Int32, Bool, Int32), Maybe UTFLBS.ByteString)
     -> m (Either String (Int32, Bool, Int32), Maybe UTFLBS.ByteString);
 processCredentials debug sessionLookup clearSessionPartial request sessionInsert sessionResults =
-    let {
-        (user_id, is_admin, author_id) = fromRight (0, False, 0) $ fst sessionResults;
-    } in do
+    let (user_id, is_admin, author_id) = fromRight (0, False, 0) $ fst sessionResults
+    in do
         -- clearSession will fail if request has no associated session with cookies:
         -- https://github.com/hce/postgresql-session/blob/master/src/Network/Wai/Session/PostgreSQL.hs#L232
         (do
@@ -79,6 +78,8 @@ restAPI loggerH sessionsH dbH waiH request respond =
         (L.hDebug loggerH "Allocating scarce resource")
         (L.hDebug loggerH "Cleaning up")
         (do
+            _ <- L.hDebug loggerH $ show request
+
             let maybeSessionMethods = S.hMaybeSessionMethods sessionsH request
 
             when
@@ -94,7 +95,6 @@ restAPI loggerH sessionsH dbH waiH request respond =
             maybeIsAdmin <- sessionLookup "is_admin"
             maybeAuthorId <- sessionLookup "author_id"
 
-            _ <- L.hDebug loggerH $ show request
             _ <- L.hDebug loggerH $ show ("session user_id" :: String, maybeUserId)
             _ <- L.hDebug loggerH $ show ("session is_admin" :: String, maybeIsAdmin)
             _ <- L.hDebug loggerH $ show ("session author_id" :: String, maybeAuthorId)
@@ -110,18 +110,18 @@ restAPI loggerH sessionsH dbH waiH request respond =
             let sessionUserIdString = getIdString maybeUserId
                 sessionAuthorIdString = getIdString maybeAuthorId
 
-            errorOrSessionName <- let {
-                params = PrerequisitesCheck.Params {
-                    PrerequisitesCheck.lbsRequest = requestBody,
-                    PrerequisitesCheck.isAdmin = maybeIsAdmin == Just "True",
-                    PrerequisitesCheck.hasUserId = sessionUserIdString /= "0",
-                    PrerequisitesCheck.hasAuthorId = sessionAuthorIdString /= "0"
-                    };
-            } in pure (
-                case HMS.lookup (pathTextChunks, method) PrerequisitesCheck.endpointToEitherSessionName of
-                    Just checkRequest -> checkRequest params
-                    Nothing -> PrerequisitesCheck.noSuchEndpoint
-                )
+            errorOrSessionName <-
+                let params = PC.Params {
+                        PC.lbsRequest = requestBody,
+                        PC.isAdmin = maybeIsAdmin == Just "True",
+                        PC.hasUserId = sessionUserIdString /= "0",
+                        PC.hasAuthorId = sessionAuthorIdString /= "0"
+                    }
+                in pure (
+                    case HMS.lookup (pathTextChunks, method) PC.endpointToEitherSessionName of
+                        Just checkRequest -> checkRequest params
+                        Nothing -> PC.noSuchEndpoint
+                    )
 
 
             results <- case errorOrSessionName of
@@ -133,22 +133,21 @@ restAPI loggerH sessionsH dbH waiH request respond =
                         case eitherConnection of
                             Left connectionError -> 
                                 L.hError loggerH (show connectionError)
-                                >> pure (
-                                    dbError,
-                                    Just "DB connection error"
-                                )
+                                    >> pure (
+                                        dbError,
+                                        Just "DB connection error"
+                                    )
                             Right connection ->
-                                let {
-                                    processCredentialsPartial =
+                                let processCredentialsPartial =
                                         processCredentials
                                             (L.hDebug loggerH)
                                             sessionLookup
                                             (S.hClearSession sessionsH)
                                             request
-                                            sessionInsert;
-                                    sessionAuthorId = (read sessionAuthorIdString :: Int32);
-                                    sessionUserId = (read sessionUserIdString :: Int32);
-                                } in runSession
+                                            sessionInsert
+                                    sessionAuthorId = (read sessionAuthorIdString :: Int32)
+                                    sessionUserId = (read sessionUserIdString :: Int32)
+                                in runSession
                                     connection
                                     requestBody
                                     processCredentialsPartial
@@ -163,24 +162,23 @@ restAPI loggerH sessionsH dbH waiH request respond =
                     Right ulbs -> UTFLBS.toString ulbs
                 )
 
-            processedResults <- let {
-                no_output_for_the_user_in_case_of_unhandled_exception = "";
-            } in (case fst results of
-                Right ulbs -> pure ulbs
-                _ -> case snd results of
-                    Just errorForClient -> pure errorForClient
-                    _ -> L.hError loggerH "\n^^^ unhandled exception ^^^\n\n"
-                        >> pure no_output_for_the_user_in_case_of_unhandled_exception)
+            processedResults <-
+                let no_output_for_the_user_in_case_of_unhandled_exception = ""
+                in (case fst results of
+                    Right ulbs -> pure ulbs
+                    _ -> case snd results of
+                        Just errorForClient -> pure errorForClient
+                        _ -> L.hError loggerH "\n^^^ unhandled exception ^^^\n\n"
+                            >> pure no_output_for_the_user_in_case_of_unhandled_exception)
 
-            let {
-                endpointNeeded = Left "Endpoint needed";
+            let endpointNeeded = Left "Endpoint needed"
                 httpStatus
                     | errorOrSessionName == endpointNeeded
-                        || errorOrSessionName == PrerequisitesCheck.noSuchEndpoint = H.status404
-                    | errorOrSessionName == PrerequisitesCheck.wrongParamsOrValues = H.status400
+                        || errorOrSessionName == PC.noSuchEndpoint = H.status404
+                    | errorOrSessionName == PC.wrongParamsOrValues = H.status400
                     | fst results == dbError = H.status500
-                    | otherwise = H.status200;
-            } in respond $ responseLBS httpStatus [] processedResults)
+                    | otherwise = H.status200
+                in respond $ responseLBS httpStatus [] processedResults)
 
 
 processArgs :: [String] -> Either String (Port, Settings, ConnectInfo)
@@ -239,7 +237,7 @@ makeApplication loggerH dbConnectionSettings connectInfo =
             
 
 runWarpWithLogger :: [String] -> IO ()
-runWarpWithLogger argsList =
+runWarpWithLogger args =
     do
         L.withLogger
             (L.Config
@@ -252,14 +250,13 @@ runWarpWithLogger argsList =
                 (debugM "rest-news")
                 (errorM "rest-news"))
             (\ loggerH ->
-                let {
-                    processedArgs = processArgs argsList;
-                } in case processedArgs of
+                case processArgs args of
                     Left error' ->
                         L.hError loggerH error'
                             >> exitFailure
                     Right (port, dbConnectionSettings, connectInfo) ->
-                        makeApplication loggerH dbConnectionSettings connectInfo >>= run port
+                        makeApplication loggerH dbConnectionSettings connectInfo
+                            >>= run port
                 )
 
         pure ()
