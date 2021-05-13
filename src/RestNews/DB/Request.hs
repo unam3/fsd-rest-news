@@ -1,45 +1,45 @@
-{-# LANGUAGE QuasiQuotes        #-}
+{-# LANGUAGE QuasiQuotes #-}
 
-module RestNews.DB.Request (
-    createUser,
-    deleteUser,
-    getUser,
-    promoteUserToAuthor,
-    editAuthor,
-    getAuthor,
-    deleteAuthorRole,
-    createCategory,
-    updateCategory,
-    getCategory,
-    deleteCategory,
-    createTag,
-    editTag,
-    getTag,
-    deleteTag,
-    createComment,
-    deleteComment,
-    getArticleComments,
-    createArticleDraft,
-    publishArticleDraft,
-    editArticleDraft,
-    getArticleDraft,
-    deleteArticleDraft,
-    getArticlesByCategoryId,
-    getArticlesByTagId,
-    getArticlesByAnyTagId,
-    getArticlesByAllTagId,
-    getArticlesByTitlePart,
-    getArticlesByContentPart,
-    getArticlesByAuthorNamePart,
-    getArticlesSortedByPhotosNumber,
-    getArticlesSortedByCreationDate,
-    getArticlesSortedByAuthor,
-    getArticlesSortedByCategory,
-    getArticlesFilteredByCreationDate,
-    getArticlesCreatedBeforeDate,
-    getArticlesCreatedAfterDate,
-    getCredentials
-    ) where
+module RestNews.DB.Request
+  ( createUser
+  , deleteUser
+  , getUser
+  , promoteUserToAuthor
+  , editAuthor
+  , getAuthor
+  , deleteAuthorRole
+  , createCategory
+  , updateCategory
+  , getCategory
+  , deleteCategory
+  , createTag
+  , editTag
+  , getTag
+  , deleteTag
+  , createComment
+  , deleteComment
+  , getArticleComments
+  , createArticleDraft
+  , publishArticleDraft
+  , editArticleDraft
+  , getArticleDraft
+  , deleteArticleDraft
+  , getArticlesByCategoryId
+  , getArticlesByTagId
+  , getArticlesByAnyTagId
+  , getArticlesByAllTagId
+  , getArticlesByTitlePart
+  , getArticlesByContentPart
+  , getArticlesByAuthorNamePart
+  , getArticlesSortedByPhotosNumber
+  , getArticlesSortedByCreationDate
+  , getArticlesSortedByAuthor
+  , getArticlesSortedByCategory
+  , getArticlesFilteredByCreationDate
+  , getArticlesCreatedBeforeDate
+  , getArticlesCreatedAfterDate
+  , getCredentials
+  ) where
 
 import Data.Aeson (Value)
 import Data.Int (Int32)
@@ -51,7 +51,7 @@ import Hasql.Statement (Statement(..))
 
 createUser :: Statement (Text, Text, Text, Text, Text) Value
 createUser =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         insert
         into users (
             username,
@@ -81,7 +81,7 @@ createUser =
 
 deleteUser :: Statement Int32 Value
 deleteUser =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         delete
         from users
         where user_id = $1 :: int4
@@ -92,7 +92,7 @@ deleteUser =
 
 getUser :: Statement Int32 Value
 getUser =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         select 
             json_build_object(
                 'user_id', user_id,
@@ -108,7 +108,7 @@ getUser =
 
 getAuthor :: Statement Int32 Value
 getAuthor =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         select to_json(authors.*) :: json
         from authors
         where author_id = $1 :: int4
@@ -116,7 +116,7 @@ getAuthor =
 
 deleteAuthorRole :: Statement Int32 Value
 deleteAuthorRole =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         delete
         from authors
         where author_id = $1 :: int4
@@ -127,7 +127,7 @@ deleteAuthorRole =
 
 promoteUserToAuthor :: Statement (Int32, Text) Value
 promoteUserToAuthor =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         insert
         into authors (user_id, description)
             values (
@@ -143,7 +143,7 @@ promoteUserToAuthor =
 
 editAuthor :: Statement (Int32, Text) Value
 editAuthor =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         update authors
         set description = $2 :: Text
         where author_id = $1 :: int4
@@ -154,11 +154,10 @@ editAuthor =
             )::json
         |]
 
-
 -- resquest's parent_id may be omitted or set to "null"
 createCategory :: Statement (Text, Maybe Int32) Value
 createCategory =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         insert
         into categories (name, parent_id)
             values (
@@ -174,7 +173,7 @@ createCategory =
 
 updateCategory :: Statement (Int32, Text, Maybe Int32) Value
 updateCategory =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         update categories
         set name = $2 :: text, parent_id = $3 :: int4?
         where category_id = $1 :: int4
@@ -187,7 +186,7 @@ updateCategory =
 
 getCategory :: Statement Int32 Value
 getCategory =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         select to_json(categories.*)::json
         from categories
         where category_id = $1 :: int4
@@ -195,18 +194,16 @@ getCategory =
 
 deleteCategory :: Statement Int32 Value
 deleteCategory =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         delete
         from categories
         where category_id = $1 :: int4
         returning json_build_object('results', 'ook') :: json
         |]
 
-
-
 createTag :: Statement Text Value
 createTag =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         insert
         into tags (tag_name)
             values (
@@ -220,7 +217,7 @@ createTag =
 
 editTag :: Statement (Int32, Text) Value
 editTag =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         update tags
         set tag_name = $2 :: text
         where tag_id = $1 :: int4
@@ -232,7 +229,7 @@ editTag =
 
 deleteTag :: Statement Int32 Value
 deleteTag =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         delete
         from tags
         where tag_id = $1 :: int4
@@ -243,17 +240,15 @@ deleteTag =
 
 getTag :: Statement Int32 Value
 getTag =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         select to_json(tags.*)::json
         from tags
         where tag_id = $1 :: int4
         |]
 
-
-
 createComment :: Statement (Int32, Text, Int32) Value
 createComment =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         insert
         into articles_comments (article_id, comment_text, user_id)
             values (
@@ -271,7 +266,7 @@ createComment =
 
 deleteComment :: Statement (Int32, Int32) Value
 deleteComment =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         delete
         from articles_comments
         where comment_id = $1 :: int4
@@ -284,7 +279,7 @@ deleteComment =
 -- by sql error we can't distinguish between no comments and no such article, so we return empty array
 getArticleComments :: Statement (Int32, Maybe Int32) Value
 getArticleComments =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         select case when count(ordered) = 0
             then to_json(array[] :: int[])
             else json_agg(ordered.*)
@@ -312,9 +307,10 @@ with created_draft as (
 (select unnest(array[2,1]::int[], article_id) from created_draft) returning article_id; -- returns as many rows as tags
 
 -}
-createArticleDraft :: Statement (Int32, Int32, Text, Text, Vector Int32, Text, Vector Text) Value
+createArticleDraft ::
+     Statement (Int32, Int32, Text, Text, Vector Int32, Text, Vector Text) Value
 createArticleDraft =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
             select create_article_draft(
                 $1 :: int4,
                 $2 :: int4,
@@ -328,7 +324,7 @@ createArticleDraft =
 
 publishArticleDraft :: Statement (Int32, Int32) Value
 publishArticleDraft =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         update articles
         set is_published = true
         where
@@ -337,9 +333,17 @@ publishArticleDraft =
         returning json_build_object('results', 'ook') :: json
         |]
 
-editArticleDraft :: Statement (Int32, Int32, Int32, Text, Text, Text, Vector Text, Vector Int32) Value
+editArticleDraft ::
+     Statement ( Int32
+               , Int32
+               , Int32
+               , Text
+               , Text
+               , Text
+               , Vector Text
+               , Vector Int32) Value
 editArticleDraft =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         select edit_article_draft(
             $1 :: int4,
             $2 :: int4,
@@ -354,7 +358,7 @@ editArticleDraft =
 
 getArticleDraft :: Statement (Int32, Int32) Value
 getArticleDraft =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         select get_article(article_id) :: json
         from articles
         where article_id = $1 :: int4
@@ -363,7 +367,7 @@ getArticleDraft =
 
 deleteArticleDraft :: Statement (Int32, Int32) Value
 deleteArticleDraft =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         delete
         from articles
         where article_id = $1 :: int4
@@ -372,11 +376,10 @@ deleteArticleDraft =
         returning json_build_object('results', 'ook') :: json
         |]
 
-
 -- we can't easily distinguish nonexistent category_id and no articles with category_id
 getArticlesByCategoryId :: Statement (Int32, Maybe Int32) Value
 getArticlesByCategoryId =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         select
             case when count(select_results) = 0
             then to_json(array[] :: int[])
@@ -393,15 +396,13 @@ getArticlesByCategoryId =
         ) as select_results
         |]
 
-
 --select article_ids.* from (select json_agg(get_article(article_id)) from articles_tags where tag_id = 2) as article_ids;
-
 -- doesn't work
 --select (articles_by_tag_id.*) :: json from
 --    (select json_agg(get_article(article_id)) from articles_tags where tag_id = $1 :: int4) as articles_by_tag_id
 getArticlesByTagId :: Statement (Int32, Maybe Int32) Value
 getArticlesByTagId =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         select
             case when count(select_results) = 0
             then to_json(array[] :: int[])
@@ -423,7 +424,7 @@ getArticlesByTagId =
 -- select get_article(article_id) from articles_tags where article_id = any (array[4,1]::int[]) group by article_id;
 getArticlesByAnyTagId :: Statement (Vector Int32, Maybe Int32) Value
 getArticlesByAnyTagId =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         select
             case when count(select_results) = 0
             then to_json(array[] :: int[])
@@ -446,7 +447,7 @@ getArticlesByAnyTagId =
 -- select get_article(article_id) from (select article_id, array_agg(tag_id) as id_array from articles_tags group by article_id) as articles_tags_agg where id_array @> (array[2,1]::int[]);
 getArticlesByAllTagId :: Statement (Vector Int32, Maybe Int32) Value
 getArticlesByAllTagId =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         select
             case when count(select_results) = 0
             then to_json(array[] :: int[])
@@ -472,7 +473,7 @@ getArticlesByAllTagId =
 -- select json_agg(get_article(article_id)) as articles from (select article_id  from articles where article_title like '%ve%') as foo;
 getArticlesByTitlePart :: Statement (Text, Maybe Int32) Value
 getArticlesByTitlePart =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         select
             case when count(select_results) = 0
             then to_json(array[] :: int[])
@@ -492,7 +493,7 @@ getArticlesByTitlePart =
 
 getArticlesByContentPart :: Statement (Text, Maybe Int32) Value
 getArticlesByContentPart =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         select
             case when count(select_results) = 0
             then to_json(array[] :: int[])
@@ -520,7 +521,7 @@ where author = s_author_ids.author_id;
 -}
 getArticlesByAuthorNamePart :: Statement (Text, Maybe Int32) Value
 getArticlesByAuthorNamePart =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         select
             case when count(select_results) = 0
             then to_json(array[] :: int[])
@@ -561,7 +562,7 @@ select article_id from articles order by coalesce(array_length(additional_photos
 -}
 getArticlesSortedByPhotosNumber :: Statement Int32 Value
 getArticlesSortedByPhotosNumber =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         select
             case when count(select_results) = 0
             then to_json(array[] :: int[])
@@ -581,7 +582,7 @@ getArticlesSortedByPhotosNumber =
 
 getArticlesSortedByCreationDate :: Statement Int32 Value
 getArticlesSortedByCreationDate =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         select
             case when count(select_results) = 0
             then to_json(array[] :: int[])
@@ -600,7 +601,7 @@ getArticlesSortedByCreationDate =
 -- select article_id from users inner join authors on users.user_id = authors.user_id inner join articles on authors.author_id = articles.author where is_published = true order by surname asc;
 getArticlesSortedByAuthor :: Statement Int32 Value
 getArticlesSortedByAuthor =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         select
             case when count(select_results) = 0
             then to_json(array[] :: int[])
@@ -622,7 +623,7 @@ getArticlesSortedByAuthor =
 
 getArticlesSortedByCategory :: Statement Int32 Value
 getArticlesSortedByCategory =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         select
             case when count(select_results) = 0
             then to_json(array[] :: int[])
@@ -642,7 +643,7 @@ getArticlesSortedByCategory =
 
 getArticlesFilteredByCreationDate :: Statement (Text, Maybe Int32) Value
 getArticlesFilteredByCreationDate =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         select
             case when count(select_results) = 0
             then to_json(array[] :: int[])
@@ -661,7 +662,7 @@ getArticlesFilteredByCreationDate =
 
 getArticlesCreatedBeforeDate :: Statement (Text, Maybe Int32) Value
 getArticlesCreatedBeforeDate =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         select
             case when count(select_results) = 0
             then to_json(array[] :: int[])
@@ -680,7 +681,7 @@ getArticlesCreatedBeforeDate =
 
 getArticlesCreatedAfterDate :: Statement (Text, Maybe Int32) Value
 getArticlesCreatedAfterDate =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         select
             case when count(select_results) = 0
             then to_json(array[] :: int[])
@@ -713,7 +714,7 @@ from
 -}
 getCredentials :: Statement (Text, Text) (Int32, Bool, Int32)
 getCredentials =
-    [TH.singletonStatement|
+  [TH.singletonStatement|
         select
             users.user_id :: int4,
             users.is_admin :: bool,

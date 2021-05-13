@@ -1,8 +1,8 @@
-{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module RestNews.Middleware.Static
-    ( router
-    ) where
+  ( router
+  ) where
 
 import Network.HTTP.Types (RequestHeaders)
 import Network.Wai (Application, Request, pathInfo)
@@ -11,12 +11,13 @@ import Network.Wai.Middleware.Rewrite (PathsAndQueries, rewritePureWithQueries)
 
 isRequestToStatic :: Request -> Bool
 isRequestToStatic request =
-    let pathTextChunks = pathInfo request
-        isRequestPathNotEmpty = not $ null pathTextChunks
-    in isRequestPathNotEmpty && head pathTextChunks == "static"
+  let pathTextChunks = pathInfo request
+      isRequestPathNotEmpty = not $ null pathTextChunks
+   in isRequestPathNotEmpty && head pathTextChunks == "static"
 
 removeStaticFromURI :: PathsAndQueries -> RequestHeaders -> PathsAndQueries
-removeStaticFromURI ("static":otherPathPieces, queries) _ = (otherPathPieces, queries)
+removeStaticFromURI ("static":otherPathPieces, queries) _ =
+  (otherPathPieces, queries)
 removeStaticFromURI pathsAndQueries _ = pathsAndQueries
 
 rewrite :: Application -> Application
@@ -24,6 +25,6 @@ rewrite = rewritePureWithQueries removeStaticFromURI
 
 router :: Application -> Application
 router app request respond =
-    if isRequestToStatic request
-        then rewrite (staticApp (defaultWebAppSettings "static")) request respond
-        else app request respond
+  if isRequestToStatic request
+    then rewrite (staticApp (defaultWebAppSettings "static")) request respond
+    else app request respond
