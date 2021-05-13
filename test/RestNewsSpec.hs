@@ -3,6 +3,7 @@
 module RestNewsSpec where
 
 import Control.Exception
+import Control.Monad (void)
 import Database.PostgreSQL.Simple (ConnectInfo)
 import Hasql.Connection (Connection, ConnectionError, Settings)
 import Network.Wai (Application, Middleware, Request, pathInfo, requestMethod, strictRequestBody)
@@ -252,7 +253,8 @@ runStub :: Port -> Application -> IO ()
 runStub _ _ = pure ()
 
 withSessionStub :: Middleware
-withSessionStub app request respond = app request respond
+--withSessionStub app request respond = app request respond
+withSessionStub app = app
 
 maybeSessionMethodsStub :: Request -> Maybe (String -> IO (Maybe String), String -> String -> IO ())
 maybeSessionMethodsStub _ = Nothing
@@ -315,7 +317,7 @@ runApllicationWith = withApplication
 
 spec :: Spec
 spec = do
-    describe "runWarpWithLogger" $ do
+    describe "runWarpWithLogger" $
         it "exit with failure if wrong number of arguments"
             $ do 
                 eitherExitCode <- try 
@@ -327,12 +329,12 @@ spec = do
                     (show (Left $ toException (ExitFailure 1) :: Either SomeException ()))
 
 
-    describe "restAPI" $ do
+    describe "restAPI" $
         it "exit with failure if no vault"
             $ do 
                 eitherExitCode <- try
                     -- Right ResponseReceived -> Right ()
-                    (fmap (const ()) $
+                    (void $
                         testWithApplication
                             (withLogger' $
                                 (\loggerH -> makeApplication' loggerH dbConnectionSettings connectInfo)
