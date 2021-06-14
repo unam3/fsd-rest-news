@@ -1,8 +1,8 @@
-{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module RestNews.DB.RequestRunner
-    ( runSession
-    ) where
+  ( runSession
+  ) where
 
 import qualified RestNews.DB.ProcessRequest as PR
 
@@ -16,34 +16,31 @@ import Hasql.Connection (Connection)
 import qualified Hasql.Session as Session
 import qualified Util
 
-
 runSession ::
-    Connection
-    -> ByteString
-    -> ((Either String (Int32, Bool, Int32), Maybe ByteString)
-        -> IO (Either String (Int32, Bool, Int32), Maybe ByteString))
-    -> Int32
-    -> Int32
-    -> String
-    -> IO (Either String ByteString, Maybe ByteString)
-runSession
-    connection
-    requestBody
-    processCredentialsPartial
-    sessionUserId
-    sessionAuthorId
-    sessionName = let {
+     Connection
+  -> ByteString
+  -> ((Either String (Int32, Bool, Int32), Maybe ByteString) -> IO ( Either String ( Int32
+                                                                                   , Bool
+                                                                                   , Int32)
+                                                                   , Maybe ByteString))
+  -> Int32
+  -> Int32
+  -> String
+  -> IO (Either String ByteString, Maybe ByteString)
+runSession connection requestBody processCredentialsPartial sessionUserId sessionAuthorId sessionName
         -- (Util.∘∘) == (.).(.)
-        sessionRun = (Util.∘∘) liftIO  Session.run;
-        runSessionWithJSON session = session sessionRun connection . fromJust $ decode requestBody;
-    } in case sessionName of
-        "auth" -> runSessionWithJSON PR.getCredentials
-            >>= processCredentialsPartial
-            >>= pure . first (fmap $ const "cookies are baked")
-        "createUser" -> runSessionWithJSON PR.createUser;
+ =
+  let sessionRun = (Util.∘∘) liftIO Session.run
+      runSessionWithJSON session =
+        session sessionRun connection . fromJust $ decode requestBody
+   in case sessionName of
+        "auth" ->
+          runSessionWithJSON PR.getCredentials >>= processCredentialsPartial >>=
+          pure . first (fmap $ const "cookies are baked")
+        "createUser" -> runSessionWithJSON PR.createUser
         "getUser" -> PR.getUser sessionRun connection sessionUserId
         "deleteUser" -> runSessionWithJSON PR.deleteUser
-        "promoteUserToAuthor" -> runSessionWithJSON PR.promoteUserToAuthor;
+        "promoteUserToAuthor" -> runSessionWithJSON PR.promoteUserToAuthor
         "editAuthor" -> runSessionWithJSON PR.editAuthor
         "getAuthor" -> runSessionWithJSON PR.getAuthor
         "deleteAuthorRole" -> runSessionWithJSON PR.deleteAuthorRole
@@ -58,26 +55,38 @@ runSession
         "createComment" -> runSessionWithJSON PR.createComment sessionUserId
         "deleteComment" -> runSessionWithJSON PR.deleteComment sessionUserId
         "getArticleComments" -> runSessionWithJSON PR.getArticleComments
-        "createArticleDraft" -> runSessionWithJSON PR.createArticleDraft sessionAuthorId
-        "editArticleDraft" -> runSessionWithJSON PR.editArticleDraft sessionAuthorId
-        "publishArticleDraft" -> runSessionWithJSON PR.publishArticleDraft sessionAuthorId
-        "getArticleDraft" -> runSessionWithJSON PR.getArticleDraft sessionAuthorId
-        "deleteArticleDraft" -> runSessionWithJSON PR.deleteArticleDraft sessionAuthorId
-        "getArticlesByCategoryId" -> runSessionWithJSON PR.getArticlesByCategoryId
+        "createArticleDraft" ->
+          runSessionWithJSON PR.createArticleDraft sessionAuthorId
+        "editArticleDraft" ->
+          runSessionWithJSON PR.editArticleDraft sessionAuthorId
+        "publishArticleDraft" ->
+          runSessionWithJSON PR.publishArticleDraft sessionAuthorId
+        "getArticleDraft" ->
+          runSessionWithJSON PR.getArticleDraft sessionAuthorId
+        "deleteArticleDraft" ->
+          runSessionWithJSON PR.deleteArticleDraft sessionAuthorId
+        "getArticlesByCategoryId" ->
+          runSessionWithJSON PR.getArticlesByCategoryId
         "getArticlesByTagId" -> runSessionWithJSON PR.getArticlesByTagId
         "getArticlesByAnyTagId" -> runSessionWithJSON PR.getArticlesByAnyTagId
         "getArticlesByAllTagId" -> runSessionWithJSON PR.getArticlesByAllTagId
         "getArticlesByTitlePart" -> runSessionWithJSON PR.getArticlesByTitlePart
-        "getArticlesByContentPart" -> runSessionWithJSON PR.getArticlesByContentPart
-        "getArticlesByAuthorNamePart" -> runSessionWithJSON PR.getArticlesByAuthorNamePart
-        "getArticlesSortedByPhotosNumber" -> runSessionWithJSON PR.getArticlesSortedByPhotosNumber
-        "getArticlesSortedByCreationDate" -> runSessionWithJSON PR.getArticlesSortedByCreationDate
-        "getArticlesSortedByAuthor" -> runSessionWithJSON PR.getArticlesSortedByAuthor
-        "getArticlesSortedByCategory" -> runSessionWithJSON PR.getArticlesSortedByCategory
-        "getArticlesFilteredByCreationDate" -> runSessionWithJSON PR.getArticlesFilteredByCreationDate
-        "getArticlesCreatedBeforeDate" -> runSessionWithJSON PR.getArticlesCreatedBeforeDate
-        "getArticlesCreatedAfterDate" -> runSessionWithJSON PR.getArticlesCreatedAfterDate
-        nonMatched -> pure (
-            Left nonMatched,
-            Nothing
-            )
+        "getArticlesByContentPart" ->
+          runSessionWithJSON PR.getArticlesByContentPart
+        "getArticlesByAuthorNamePart" ->
+          runSessionWithJSON PR.getArticlesByAuthorNamePart
+        "getArticlesSortedByPhotosNumber" ->
+          runSessionWithJSON PR.getArticlesSortedByPhotosNumber
+        "getArticlesSortedByCreationDate" ->
+          runSessionWithJSON PR.getArticlesSortedByCreationDate
+        "getArticlesSortedByAuthor" ->
+          runSessionWithJSON PR.getArticlesSortedByAuthor
+        "getArticlesSortedByCategory" ->
+          runSessionWithJSON PR.getArticlesSortedByCategory
+        "getArticlesFilteredByCreationDate" ->
+          runSessionWithJSON PR.getArticlesFilteredByCreationDate
+        "getArticlesCreatedBeforeDate" ->
+          runSessionWithJSON PR.getArticlesCreatedBeforeDate
+        "getArticlesCreatedAfterDate" ->
+          runSessionWithJSON PR.getArticlesCreatedAfterDate
+        nonMatched -> pure (Left nonMatched, Nothing)
