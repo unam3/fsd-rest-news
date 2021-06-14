@@ -8,6 +8,8 @@ Install:
 ```apt install postgresql-12 libpq-dev```
 - [stack](https://docs.haskellstack.org/en/stable/README/#how-to-install)
 
+All configuration is done by `config.ini` file. Annotated example of which you may find in `_config.ini` file.
+
 Run from the terminal from project directory: 
 
 ```
@@ -23,11 +25,15 @@ psql rest-news-db -c "INSERT INTO users (username, password, name, surname, is_a
 
 ^D
 
+# to build rest-news
 stack build
 
-# arguments: port to run rest-news, db hostname, db port, db user, db password, db name
-stack exec rest-news-exe 8081 "localhost" 5432 "rest-news-user" "rest" "rest-news-db"
+# to run
+stack exec rest-news-exe
+
+# to stop: ^C (Control and "c" keys simultaneously)
 ```
+
 
 As a definitive guide to parameter values for requests one may use combination of `src/RestNews.hs`, `src/HasqlSessions.hs` and `src/AesonDefinitions.hs`.
 

@@ -4,9 +4,10 @@ module RestNews
     ( makeApplication
     , runWarpWithLogger
     , restAPI
-    , processArgs
+    , processConfig
     ) where
 
+import qualified RestNews.Config as C
 import qualified RestNews.DBConnection as DBC
 import qualified RestNews.Logger as L
 import qualified RestNews.Middleware.Sessions as S
@@ -181,21 +182,19 @@ restAPI loggerH sessionsH dbH waiH request respond =
                 in respond $ responseLBS httpStatus [] processedResults)
 
 
-processArgs :: [String] -> Either String (Port, Settings, ConnectInfo)
-processArgs [runAtPort, dbHost, dbPort, dbUser, dbPassword, dbName] =
-    Right (
-        read runAtPort,
-        settings (fromString dbHost) (read dbPort) (fromString dbUser) (fromString dbPassword) (fromString dbName),
+processConfig :: C.Config -> (Port, Settings, ConnectInfo)
+processConfig (C.Config runAtPort dbHost dbPort dbUser dbPassword dbName) =
+    (
+        runAtPort,
+        settings (fromString dbHost) (toEnum dbPort) (fromString dbUser) (fromString dbPassword) (fromString dbName),
         ConnectInfo {
             connectHost = dbHost,
-            connectPort = read dbPort,
+            connectPort = toEnum dbPort,
             connectUser = dbUser,
             connectPassword = dbPassword,
             connectDatabase = dbName
         }
     )
-        
-processArgs _ = Left "Exactly 6 arguments needed: port to run rest-news, db hostname, db port, db user, db password, db name"
 
 
 makeApplication :: L.Handle () -> Settings -> ConnectInfo -> IO Application
@@ -236,12 +235,13 @@ makeApplication loggerH dbConnectionSettings connectInfo =
                 )
             
 
-runWarpWithLogger :: [String] -> IO ()
-runWarpWithLogger args =
+runWarpWithLogger :: IO ()
+runWarpWithLogger =
     do
         L.withLogger
             (L.Config
-                -- use DEBUG here to enable debugging messages
+                -- use INFO, DEBUG or ERROR here
+                -- (add to System.Log.Logger import items if missed)
                 INFO
                 (traplogging
                     "rest-news"
@@ -252,13 +252,15 @@ runWarpWithLogger args =
                 (infoM "rest-news")
                 (errorM "rest-news"))
             (\ loggerH ->
-                case processArgs args of
-                    Left error' ->
-                        L.hError loggerH error'
-                            >> exitFailure
-                    Right (port, dbConnectionSettings, connectInfo) ->
-                        makeApplication loggerH dbConnectionSettings connectInfo
-                            >>= run port
+                C.parseConfig
+                    >>= \ eitherConfig -> case eitherConfig of
+                        Left errorMessage ->
+                            L.hError loggerH errorMessage
+                                >> exitFailure
+                        Right config ->
+                            let (port, dbConnectionSettings, connectInfo) = processConfig config
+                            in makeApplication loggerH dbConnectionSettings connectInfo
+                                >>= run port
                 )
 
         pure ()
