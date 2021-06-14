@@ -15,6 +15,7 @@ import System.Exit
 import Test.Hspec
 
 import RestNews
+import qualified RestNews.Config as C
 import qualified RestNews.DBConnection as DBC
 import qualified RestNews.Logger as L
 import qualified RestNews.Middleware.Sessions as S
@@ -293,14 +294,15 @@ withLogger' = L.withLogger
 
 dbConnectionSettings :: Settings
 connectInfo :: ConnectInfo
-Right (_, dbConnectionSettings, connectInfo) = processArgs
-    [ "8081"
-    , "localhost"
-    , "5432"
-    , "rest-news-user"
-    , "rest"
-    , "rest-news-test"
-    ]
+(_, dbConnectionSettings, connectInfo) = processConfig $
+    C.Config {
+        C._runAtPort = 8081,
+        C._dbHost = "localhost",
+        C._dbPort = 5432,
+        C._dbUser = "rest-news-user",
+        C._dbPassword = "rest",
+        C._dbName = "rest-news-test"
+    }
 
 makeApplication' :: L.Handle () -> Settings -> ConnectInfo -> IO Application
 makeApplication' loggerH _ _ =  
@@ -318,18 +320,6 @@ runApllicationWith = withApplication
 
 spec :: Spec
 spec = do
-    describe "runWarpWithLogger" $
-        it "exit with failure if wrong number of arguments"
-            $ do 
-                eitherExitCode <- try 
-                    (runWarpWithLogger
-                        ["8081", "localhost", "5432", "rest-news-user", "rest"]
-                    ) :: IO (Either SomeException ())
-                shouldBe
-                    (show eitherExitCode)
-                    (show (Left $ toException (ExitFailure 1) :: Either SomeException ()))
-
-
     describe "restAPI" $
         it "exit with failure if no vault"
             $ do 
