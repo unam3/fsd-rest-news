@@ -1,6 +1,6 @@
 # rest-news
 
-## Installation and Usage
+## Installation and usage
 
 Install:
 
@@ -84,6 +84,13 @@ stack test
     - articles/sortByAuthor
     - articles/sortByCategory
 
+
 ## Debug
 
 To enable debug messages change logging level: add `DEBUG` to imports and change `INFO` to `DEBUG` in `src/RestNews.hs` `runWarpWithLogger` function.
+
+
+## Project structure
+
+One may find it out in old and simple fashion by `git ls-files | grep hs` command and browsing listed source files. Some usage of [the Handle Pattern](https://jaspervdj.be/posts/2018-03-08-handle-pattern.html) may be found.
+
