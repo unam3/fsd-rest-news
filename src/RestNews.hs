@@ -249,7 +249,7 @@ runWarpWithLogger = do
        (infoM "rest-news")
        (errorM "rest-news"))
     (\loggerH ->
-       C.parseConfig >>= \case
+       C.parseConfig "config.ini" >>= \case
          Left errorMessage -> L.hError loggerH errorMessage >> exitFailure
          Right config ->
            let (port, dbConnectionSettings, connectInfo) = processConfig config
