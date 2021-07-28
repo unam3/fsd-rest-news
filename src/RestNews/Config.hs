@@ -31,4 +31,4 @@ configParser =
     return $ Config runAtPort dbHost dbPort dbUser dbPassword dbName
 
 parseConfig :: IO (Either String Config)
-parseConfig = T.readFile "config.ini" >>= pure . (`parseIniFile` configParser)
+parseConfig = (`parseIniFile` configParser) <$> T.readFile "config.ini"

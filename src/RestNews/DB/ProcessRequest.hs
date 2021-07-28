@@ -45,7 +45,7 @@ module RestNews.DB.ProcessRequest
 
 import Control.Monad.IO.Class (MonadIO)
 import Data.Aeson (Value, encode)
-import Data.Bifunctor (bimap)
+import Data.Bifunctor (bimap, first)
 import Data.ByteString.Internal (unpackChars)
 import Data.ByteString.Lazy.UTF8 (ByteString)
 import Data.Int (Int32)
@@ -424,7 +424,7 @@ getArticleComments sessionRun connection articleCommentsRequest =
            ( valueToUTFLBS sessionResults
            , case getError sessionResults of
                Just ("2201X", Just msg) ->
-                 if isPrefixOf "OFFSET" msg
+                 if "OFFSET" `isPrefixOf` msg
                    then Just
                           "{\"error\": \"\\\"offset\\\" must not be negative\"}"
                    else Nothing
@@ -585,7 +585,7 @@ getArticlesByCategoryId sessionRun connection articlesByCategoryIdRequest =
            ( valueToUTFLBS sessionResults
            , case getError sessionResults of
                Just ("2201X", Just msg) ->
-                 if isPrefixOf "OFFSET" msg
+                 if "OFFSET" `isPrefixOf` msg
                    then Just
                           "{\"error\": \"\\\"offset\\\" must not be negative\"}"
                    else Nothing
@@ -609,7 +609,7 @@ getArticlesByTagId sessionRun connection tagIdRequestWithOffset =
            ( valueToUTFLBS sessionResults
            , case getError sessionResults of
                Just ("2201X", Just msg) ->
-                 if isPrefixOf "OFFSET" msg
+                 if "OFFSET" `isPrefixOf` msg
                    then Just
                           "{\"error\": \"\\\"offset\\\" must not be negative\"}"
                    else Nothing
@@ -633,7 +633,7 @@ getArticlesByAnyTagId sessionRun connection tagIdsRequest =
            ( valueToUTFLBS sessionResults
            , case getError sessionResults of
                Just ("2201X", Just msg) ->
-                 if isPrefixOf "OFFSET" msg
+                 if "OFFSET" `isPrefixOf` msg
                    then Just
                           "{\"error\": \"\\\"offset\\\" must not be negative\"}"
                    else Nothing
@@ -657,7 +657,7 @@ getArticlesByAllTagId sessionRun connection tagIdsRequest =
            ( valueToUTFLBS sessionResults
            , case getError sessionResults of
                Just ("2201X", Just msg) ->
-                 if isPrefixOf "OFFSET" msg
+                 if "OFFSET" `isPrefixOf` msg
                    then Just
                           "{\"error\": \"\\\"offset\\\" must not be negative\"}"
                    else Nothing
@@ -681,7 +681,7 @@ getArticlesByTitlePart sessionRun connection substringRequest =
            ( valueToUTFLBS sessionResults
            , case getError sessionResults of
                Just ("2201X", Just msg) ->
-                 if isPrefixOf "OFFSET" msg
+                 if "OFFSET" `isPrefixOf` msg
                    then Just
                           "{\"error\": \"\\\"offset\\\" must not be negative\"}"
                    else Nothing
@@ -705,7 +705,7 @@ getArticlesByContentPart sessionRun connection substringRequest =
            ( valueToUTFLBS sessionResults
            , case getError sessionResults of
                Just ("2201X", Just msg) ->
-                 if isPrefixOf "OFFSET" msg
+                 if "OFFSET" `isPrefixOf` msg
                    then Just
                           "{\"error\": \"\\\"offset\\\" must not be negative\"}"
                    else Nothing
@@ -730,7 +730,7 @@ getArticlesByAuthorNamePart sessionRun connection substringRequest =
            ( valueToUTFLBS sessionResults
            , case getError sessionResults of
                Just ("2201X", Just msg) ->
-                 if isPrefixOf "OFFSET" msg
+                 if "OFFSET" `isPrefixOf` msg
                    then Just
                           "{\"error\": \"\\\"offset\\\" must not be negative\"}"
                    else Nothing
@@ -743,7 +743,7 @@ getArticlesSortedByPhotosNumber ::
   -> OffsetRequest
   -> m (Either String ByteString, Maybe ByteString)
 getArticlesSortedByPhotosNumber sessionRun connection request =
-  let params = (offset (request :: OffsetRequest))
+  let params = offset (request :: OffsetRequest)
    in do sessionResults <-
            sessionRun
              (Session.statement params DBR.getArticlesSortedByPhotosNumber)
@@ -752,7 +752,7 @@ getArticlesSortedByPhotosNumber sessionRun connection request =
            ( valueToUTFLBS sessionResults
            , case getError sessionResults of
                Just ("2201X", Just msg) ->
-                 if isPrefixOf "OFFSET" msg
+                 if "OFFSET" `isPrefixOf` msg
                    then Just
                           "{\"error\": \"\\\"offset\\\" must not be negative\"}"
                    else Nothing
@@ -765,7 +765,7 @@ getArticlesSortedByCreationDate ::
   -> OffsetRequest
   -> m (Either String ByteString, Maybe ByteString)
 getArticlesSortedByCreationDate sessionRun connection request =
-  let params = (offset (request :: OffsetRequest))
+  let params = offset (request :: OffsetRequest)
    in do sessionResults <-
            sessionRun
              (Session.statement params DBR.getArticlesSortedByCreationDate)
@@ -774,7 +774,7 @@ getArticlesSortedByCreationDate sessionRun connection request =
            ( valueToUTFLBS sessionResults
            , case getError sessionResults of
                Just ("2201X", Just msg) ->
-                 if isPrefixOf "OFFSET" msg
+                 if "OFFSET" `isPrefixOf` msg
                    then Just
                           "{\"error\": \"\\\"offset\\\" must not be negative\"}"
                    else Nothing
@@ -787,7 +787,7 @@ getArticlesSortedByAuthor ::
   -> OffsetRequest
   -> m (Either String ByteString, Maybe ByteString)
 getArticlesSortedByAuthor sessionRun connection request =
-  let params = (offset (request :: OffsetRequest))
+  let params = offset (request :: OffsetRequest)
    in do sessionResults <-
            sessionRun
              (Session.statement params DBR.getArticlesSortedByAuthor)
@@ -796,7 +796,7 @@ getArticlesSortedByAuthor sessionRun connection request =
            ( valueToUTFLBS sessionResults
            , case getError sessionResults of
                Just ("2201X", Just msg) ->
-                 if isPrefixOf "OFFSET" msg
+                 if "OFFSET" `isPrefixOf` msg
                    then Just
                           "{\"error\": \"\\\"offset\\\" must not be negative\"}"
                    else Nothing
@@ -809,7 +809,7 @@ getArticlesSortedByCategory ::
   -> OffsetRequest
   -> m (Either String ByteString, Maybe ByteString)
 getArticlesSortedByCategory sessionRun connection request =
-  let params = (offset (request :: OffsetRequest))
+  let params = offset (request :: OffsetRequest)
    in do sessionResults <-
            sessionRun
              (Session.statement params DBR.getArticlesSortedByCategory)
@@ -818,7 +818,7 @@ getArticlesSortedByCategory sessionRun connection request =
            ( valueToUTFLBS sessionResults
            , case getError sessionResults of
                Just ("2201X", Just msg) ->
-                 if isPrefixOf "OFFSET" msg
+                 if "OFFSET" `isPrefixOf` msg
                    then Just
                           "{\"error\": \"\\\"offset\\\" must not be negative\"}"
                    else Nothing
@@ -843,7 +843,7 @@ getArticlesFilteredBy statement sessionRun connection articlesByCreationDateRequ
            ( valueToUTFLBS sessionResults
            , case getError sessionResults of
                Just ("2201X", Just msg) ->
-                 if isPrefixOf "OFFSET" msg
+                 if "OFFSET" `isPrefixOf` msg
                    then Just
                           "{\"error\": \"\\\"offset\\\" must not be negative\"}"
                    else Nothing
@@ -891,7 +891,7 @@ getCredentials sessionRun connection authRequest =
    in do sessionResults <-
            sessionRun (Session.statement params DBR.getCredentials) connection
          pure
-           ( bimap show id sessionResults
+           ( first show sessionResults
            , case getErrorCode sessionResults of
                Just "0" -> Just "wrong username/password"
                _ -> Nothing)

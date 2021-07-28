@@ -30,27 +30,22 @@ import qualified RestNews.WAI as WAI
 
 getSession :: Int -> IO String
 getSession port =
-  let ioResponse =
-        readProcess
-          "curl"
-          [ "-s"
-          , "-i"
-          , "-X"
-          , "POST"
-          , "-d"
-          , "{\"username\": \"username\", \"password\": \"12345\"}"
-          , ("http://0.0.0.0:" ++ (show port) ++ "/auth")
-          ]
-          []
-      session =
-        ioResponse >>=
-        pure .
-        init .
-        drop 20
+  init .
+  drop 20
             -- "Set-Cookie: SESSION=736eaf44239adb2e1e0f1cf52db8f3e4db4362fed5dc9ba\r"
-         .
-        (!! 4) . lines
-   in session
+   .
+  (!! 4) . lines <$>
+  readProcess
+    "curl"
+    [ "-s"
+    , "-i"
+    , "-X"
+    , "POST"
+    , "-d"
+    , "{\"username\": \"username\", \"password\": \"12345\"}"
+    , "http://0.0.0.0:" ++ show port ++ "/auth"
+    ]
+    []
 
 curl :: String -> String -> String -> String -> IO String
 curl method session dashDData url =
@@ -72,7 +67,7 @@ auth port =
     "POST"
     []
     "{\"username\": \"username\", \"password\": \"12345\"}"
-    ("http://0.0.0.0:" ++ (show port) ++ "/auth")
+    ("http://0.0.0.0:" ++ show port ++ "/auth")
 
 authMustFail :: Int -> IO String
 authMustFail port =
@@ -80,7 +75,7 @@ authMustFail port =
     "POST"
     []
     "{\"username\": \"non-existent-username\", \"password\": \"12345\"}"
-    ("http://0.0.0.0:" ++ (show port) ++ "/auth")
+    ("http://0.0.0.0:" ++ show port ++ "/auth")
 
 createUser :: Int -> IO String
 createUser port =
@@ -88,11 +83,11 @@ createUser port =
     "POST"
     []
     "{\"username\": \"createUserTest2\", \"password\": \"check, indeed\", \"name\": \"name\", \"surname\": \"surname\", \"avatar\": \"asd\"}"
-    ("http://0.0.0.0:" ++ (show port) ++ "/users")
+    ("http://0.0.0.0:" ++ show port ++ "/users")
 
 getUser :: String -> Int -> IO String
 getUser session port =
-  curl "GET" session [] ("http://0.0.0.0:" ++ (show port) ++ "/users")
+  curl "GET" session [] ("http://0.0.0.0:" ++ show port ++ "/users")
 
 replaceComasWithNewlines :: String -> String
 replaceComasWithNewlines =
@@ -104,95 +99,87 @@ replaceComasWithNewlines =
 
 promoteUserToAuthor :: String -> String -> Int -> IO String
 promoteUserToAuthor params session port =
-  curl "POST" session params ("http://0.0.0.0:" ++ (show port) ++ "/authors")
+  curl "POST" session params ("http://0.0.0.0:" ++ show port ++ "/authors")
 
 getAuthor :: String -> String -> Int -> IO String
 getAuthor params session port =
-  curl "GET" session params ("http://0.0.0.0:" ++ (show port) ++ "/authors")
+  curl "GET" session params ("http://0.0.0.0:" ++ show port ++ "/authors")
 
 editAuthor :: String -> String -> Int -> IO String
 editAuthor params session port =
-  curl "PATCH" session params ("http://0.0.0.0:" ++ (show port) ++ "/authors")
+  curl "PATCH" session params ("http://0.0.0.0:" ++ show port ++ "/authors")
 
 deleteAuthorRole :: String -> String -> Int -> IO String
 deleteAuthorRole params session port =
-  curl "DELETE" session params ("http://0.0.0.0:" ++ (show port) ++ "/authors")
+  curl "DELETE" session params ("http://0.0.0.0:" ++ show port ++ "/authors")
 
 deleteUser :: String -> String -> Int -> IO String
 deleteUser params session port =
-  curl "DELETE" session params ("http://0.0.0.0:" ++ (show port) ++ "/users")
+  curl "DELETE" session params ("http://0.0.0.0:" ++ show port ++ "/users")
 
 createCategory :: String -> String -> Int -> IO String
 createCategory params session port =
-  curl "POST" session params ("http://0.0.0.0:" ++ (show port) ++ "/categories")
+  curl "POST" session params ("http://0.0.0.0:" ++ show port ++ "/categories")
 
 getCategory :: String -> Int -> IO String
 getCategory params port =
-  curl "GET" [] params ("http://0.0.0.0:" ++ (show port) ++ "/categories")
+  curl "GET" [] params ("http://0.0.0.0:" ++ show port ++ "/categories")
 
 updateCategory :: String -> String -> Int -> IO String
 updateCategory params session port =
-  curl
-    "PATCH"
-    session
-    params
-    ("http://0.0.0.0:" ++ (show port) ++ "/categories")
+  curl "PATCH" session params ("http://0.0.0.0:" ++ show port ++ "/categories")
 
 deleteCategory :: String -> String -> Int -> IO String
 deleteCategory params session port =
-  curl
-    "DELETE"
-    session
-    params
-    ("http://0.0.0.0:" ++ (show port) ++ "/categories")
+  curl "DELETE" session params ("http://0.0.0.0:" ++ show port ++ "/categories")
 
 createTag :: String -> String -> Int -> IO String
 createTag params session port =
-  curl "POST" session params ("http://0.0.0.0:" ++ (show port) ++ "/tags")
+  curl "POST" session params ("http://0.0.0.0:" ++ show port ++ "/tags")
 
 editTag :: String -> String -> Int -> IO String
 editTag params session port =
-  curl "PATCH" session params ("http://0.0.0.0:" ++ (show port) ++ "/tags")
+  curl "PATCH" session params ("http://0.0.0.0:" ++ show port ++ "/tags")
 
 getTag :: String -> Int -> IO String
 getTag params port =
-  curl "GET" [] params ("http://0.0.0.0:" ++ (show port) ++ "/tags")
+  curl "GET" [] params ("http://0.0.0.0:" ++ show port ++ "/tags")
 
 deleteTag :: String -> String -> Int -> IO String
 deleteTag params session port =
-  curl "DELETE" session params ("http://0.0.0.0:" ++ (show port) ++ "/tags")
+  curl "DELETE" session params ("http://0.0.0.0:" ++ show port ++ "/tags")
 
 createArticleDraft :: String -> String -> Int -> IO String
 createArticleDraft params session port =
-  curl "POST" session params ("http://0.0.0.0:" ++ (show port) ++ "/articles")
+  curl "POST" session params ("http://0.0.0.0:" ++ show port ++ "/articles")
 
 editArticleDraft :: String -> String -> Int -> IO String
 editArticleDraft params session port =
-  curl "PATCH" session params ("http://0.0.0.0:" ++ (show port) ++ "/articles")
+  curl "PATCH" session params ("http://0.0.0.0:" ++ show port ++ "/articles")
 
 getArticleDraft :: String -> String -> Int -> IO String
 getArticleDraft params session port =
-  curl "GET" session params ("http://0.0.0.0:" ++ (show port) ++ "/articles")
+  curl "GET" session params ("http://0.0.0.0:" ++ show port ++ "/articles")
 
 publishArticleDraft :: String -> String -> Int -> IO String
 publishArticleDraft params session port =
-  curl "POST" session params ("http://0.0.0.0:" ++ (show port) ++ "/articles")
+  curl "POST" session params ("http://0.0.0.0:" ++ show port ++ "/articles")
 
 deleteArticleDraft :: String -> String -> Int -> IO String
 deleteArticleDraft params session port =
-  curl "DELETE" session params ("http://0.0.0.0:" ++ (show port) ++ "/articles")
+  curl "DELETE" session params ("http://0.0.0.0:" ++ show port ++ "/articles")
 
 createComment :: String -> String -> Int -> IO String
 createComment params session port =
-  curl "POST" session params ("http://0.0.0.0:" ++ (show port) ++ "/comments")
+  curl "POST" session params ("http://0.0.0.0:" ++ show port ++ "/comments")
 
 getArticleComments :: String -> Int -> IO String
 getArticleComments params port =
-  curl "GET" [] params ("http://0.0.0.0:" ++ (show port) ++ "/comments")
+  curl "GET" [] params ("http://0.0.0.0:" ++ show port ++ "/comments")
 
 deleteComment :: String -> String -> Int -> IO String
 deleteComment params session port =
-  curl "DELETE" session params ("http://0.0.0.0:" ++ (show port) ++ "/comments")
+  curl "DELETE" session params ("http://0.0.0.0:" ++ show port ++ "/comments")
 
 runStub :: Port -> Application -> IO ()
 runStub _ _ = pure ()
@@ -209,10 +196,10 @@ clearSessionStub :: Request -> IO ()
 clearSessionStub _ = pure ()
 
 waiH :: WAI.Handle a
-waiH = (WAI.Handle requestMethod pathInfo strictRequestBody)
+waiH = WAI.Handle requestMethod pathInfo strictRequestBody
 
 sessionsH :: S.Handle
-sessionsH = (S.Handle withSessionStub maybeSessionMethodsStub clearSessionStub)
+sessionsH = S.Handle withSessionStub maybeSessionMethodsStub clearSessionStub
 
 acquireStub :: IO (Either ConnectionError Connection)
 acquireStub = pure $ Left Nothing
@@ -245,7 +232,7 @@ connectInfo :: ConnectInfo
 
 makeApplication' :: L.Handle () -> Settings -> ConnectInfo -> IO Application
 makeApplication' loggerH _ _ =
-  (pure . S.hWithSession sessionsH $ restAPI loggerH sessionsH dbH waiH)
+  pure . S.hWithSession sessionsH $ restAPI loggerH sessionsH dbH waiH
 
 runApllicationWith :: (Port -> IO a) -> IO a
 runApllicationWith =
@@ -262,9 +249,9 @@ spec = do
                     -- Right ResponseReceived -> Right ()
           (void $
            testWithApplication
-             (withLogger' $
-              (\loggerH ->
-                 makeApplication' loggerH dbConnectionSettings connectInfo))
+             (withLogger'
+                (\loggerH ->
+                   makeApplication' loggerH dbConnectionSettings connectInfo))
              (\port -> auth port >> pure ResponseReceived)) :: IO (Either SomeException ())
       shouldBe
         (show eitherExitCode)
@@ -502,7 +489,7 @@ spec = do
       runApllicationWith (createTag "{\"tag_name\": \"test tag\"}" session) >>=
       (`shouldBe` "{\"error\": \"tag with such name already exists\"}")
   before_
-    ((runApllicationWith $ createTag "{\"tag_name\": \"test tag1\"}" session) >>
+    (runApllicationWith (createTag "{\"tag_name\": \"test tag1\"}" session) >>
      pure ()) $
     describe "editTag" $ do
       it "edit" $
@@ -532,11 +519,11 @@ spec = do
         init . drop (length ("\"tag_id\":" :: String)) . last . lines $
         replaceComasWithNewlines createTagResult1
   before_
-    ((runApllicationWith $
-      createArticleDraft
-        ("{\"article_title\": \"they dont beleive their eyes…\", \"category_id\": 1, \"article_content\": \"article is long enough\", \"main_photo\": \"http://pl.uh/main\", \"additional_photos\": [\"1\", \"2\", \"3\"], \"tags\": [" ++
-         tagId ++ "]}")
-        session) >>
+    (runApllicationWith
+       (createArticleDraft
+          ("{\"article_title\": \"they dont beleive their eyes…\", \"category_id\": 1, \"article_content\": \"article is long enough\", \"main_photo\": \"http://pl.uh/main\", \"additional_photos\": [\"1\", \"2\", \"3\"], \"tags\": [" ++
+           tagId ++ "]}")
+          session) >>
      pure ()) $
     describe "deleteTag" $ do
       it "delete" $

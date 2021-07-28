@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE LambdaCase #-}
 
 module RestNews
   ( makeApplication
@@ -228,12 +229,12 @@ makeApplication loggerH dbConnectionSettings connectInfo =
                 DBC.withDBConnection
                   (DBC.Config $ acquire dbConnectionSettings)
                   (\dbH ->
-                     (WAI.withWAI
-                        (WAI.Config requestMethod pathInfo strictRequestBody)
-                        (\waiH ->
-                           Static.router
-                             (S.hWithSession sessionsH $
-                              restAPI loggerH sessionsH dbH waiH)))))
+                     WAI.withWAI
+                       (WAI.Config requestMethod pathInfo strictRequestBody)
+                       (\waiH ->
+                          Static.router
+                            (S.hWithSession sessionsH $
+                             restAPI loggerH sessionsH dbH waiH))))
 
 runWarpWithLogger :: IO ()
 runWarpWithLogger = do
@@ -248,12 +249,10 @@ runWarpWithLogger = do
        (infoM "rest-news")
        (errorM "rest-news"))
     (\loggerH ->
-       C.parseConfig >>= \eitherConfig ->
-         case eitherConfig of
-           Left errorMessage -> L.hError loggerH errorMessage >> exitFailure
-           Right config ->
-             let (port, dbConnectionSettings, connectInfo) =
-                   processConfig config
-              in makeApplication loggerH dbConnectionSettings connectInfo >>=
-                 run port)
+       C.parseConfig >>= \case
+         Left errorMessage -> L.hError loggerH errorMessage >> exitFailure
+         Right config ->
+           let (port, dbConnectionSettings, connectInfo) = processConfig config
+            in makeApplication loggerH dbConnectionSettings connectInfo >>=
+               run port)
   pure ()

@@ -10,6 +10,7 @@ import Control.Monad.IO.Class (liftIO)
 import Data.Aeson (decode)
 import Data.Bifunctor (first)
 import Data.ByteString.Lazy.UTF8 (ByteString)
+import Data.Functor ((<&>))
 import Data.Int (Int32)
 import Data.Maybe (fromJust)
 import Hasql.Connection (Connection)
@@ -35,8 +36,8 @@ runSession connection requestBody processCredentialsPartial sessionUserId sessio
         session sessionRun connection . fromJust $ decode requestBody
    in case sessionName of
         "auth" ->
-          runSessionWithJSON PR.getCredentials >>= processCredentialsPartial >>=
-          pure . first (fmap $ const "cookies are baked")
+          (runSessionWithJSON PR.getCredentials >>= processCredentialsPartial) <&>
+          first (fmap $ const "cookies are baked")
         "createUser" -> runSessionWithJSON PR.createUser
         "getUser" -> PR.getUser sessionRun connection sessionUserId
         "deleteUser" -> runSessionWithJSON PR.deleteUser
