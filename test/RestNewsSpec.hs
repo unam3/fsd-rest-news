@@ -288,17 +288,12 @@ withLogger' = L.withLogger
         (\ _ -> return ())
         (\ _ -> return ()))
 
-dbConnectionSettings :: Settings
-connectInfo :: ConnectInfo
-(_, dbConnectionSettings, connectInfo) = processConfig $
-    C.Config {
-        C._runAtPort = 8081,
-        C._dbHost = "localhost",
-        C._dbPort = 5432,
-        C._dbUser = "rest-news-user",
-        C._dbPassword = "rest",
-        C._dbName = "rest-news-test"
-    }
+processedConfig :: IO (Port, Settings, ConnectInfo)
+processedConfig =
+    do
+    Right config <- C.parseConfig "tests-config.ini" 
+    pure $ processConfig config
+
 
 makeApplication' :: L.Handle () -> Settings -> ConnectInfo -> IO Application
 makeApplication' loggerH _ _ =  
@@ -308,10 +303,12 @@ makeApplication' loggerH _ _ =
             $ restAPI loggerH sessionsH dbH waiH
 
 runApllicationWith :: (Port -> IO a) -> IO a
-runApllicationWith = withApplication
-    (withLogger'
-        (\loggerH -> makeApplication loggerH dbConnectionSettings connectInfo)
-    )
+runApllicationWith f =
+    do
+    (_, dbConnectionSettings, connectInfo) <- processedConfig
+    withApplication
+        (withLogger' (\loggerH -> makeApplication loggerH dbConnectionSettings connectInfo))
+        f
 
 
 spec :: Spec
@@ -319,6 +316,7 @@ spec = do
     describe "restAPI" $
         it "exit with failure if no vault"
             $ do 
+                (_, dbConnectionSettings, connectInfo) <- processedConfig
                 eitherExitCode <- try
                     -- Right ResponseReceived -> Right ()
                     (void $

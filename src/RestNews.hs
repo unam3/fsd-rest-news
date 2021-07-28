@@ -251,7 +251,7 @@ runWarpWithLogger =
                 (infoM "rest-news")
                 (errorM "rest-news"))
             (\ loggerH ->
-                C.parseConfig
+                C.parseConfig "config.ini"
                     >>= \ eitherConfig -> case eitherConfig of
                         Left errorMessage ->
                             L.hError loggerH errorMessage

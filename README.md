@@ -53,20 +53,23 @@ cd sh-curl
 ## Tests
 
 
-To run tests you need to (1) create test db and do migrations, (2) **create proper db-structure before each tests run** and (3) run stack tests:
+To run tests you need to (1) create test db and do migrations, (2) copy tests config file,  (3) **create proper db-structure before each tests run** and (4) run stack tests:
 
 ```
-# 1
+#1
 su
 su postgres
 createdb rest-news-test
 psql rest-news-test -c "CREATE EXTENSION pgcrypto;"
 
-# 2
+#2
+cp _tests-config.ini tests-config.ini
+
+#3
 psql -h 0.0.0.0 -W -f schema.psql rest-news-test rest-news-user
 psql -h 0.0.0.0 -W -f tests-fixtures.psql rest-news-test rest-news-user
 
-#3
+#4
 stack test
 ```
 
