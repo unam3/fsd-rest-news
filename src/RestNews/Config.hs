@@ -32,6 +32,5 @@ configParser =
 
 
 parseConfig :: IO (Either String Config)
-parseConfig = T.readFile "config.ini"
-    >>= pure . (`parseIniFile`  configParser)
+parseConfig = (`parseIniFile` configParser) <$> T.readFile "config.ini"
 

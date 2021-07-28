@@ -217,7 +217,7 @@ makeApplication loggerH dbConnectionSettings connectInfo =
                     DBC.withDBConnection
                         (DBC.Config $ acquire dbConnectionSettings)
                         (\ dbH ->
-                            (WAI.withWAI
+                            WAI.withWAI
                                 (WAI.Config
                                     requestMethod
                                     pathInfo
@@ -230,7 +230,6 @@ makeApplication loggerH dbConnectionSettings connectInfo =
                                             $ restAPI loggerH sessionsH dbH waiH
                                         )
                                 )
-                            )
                         )
                 )
             
