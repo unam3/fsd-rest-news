@@ -12,8 +12,9 @@ import Network.Wai.Middleware.Rewrite (PathsAndQueries, rewritePureWithQueries)
 isRequestToStatic :: Request -> Bool
 isRequestToStatic request =
     let pathTextChunks = pathInfo request
-        isRequestPathNotEmpty = not $ null pathTextChunks
-    in isRequestPathNotEmpty && head pathTextChunks == "static"
+    in case pathTextChunks of
+        ("static" : _) -> True
+        _ -> False
 
 removeStaticFromURI :: PathsAndQueries -> RequestHeaders -> PathsAndQueries
 removeStaticFromURI ("static":otherPathPieces, queries) _ = (otherPathPieces, queries)

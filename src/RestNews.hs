@@ -16,13 +16,13 @@ import qualified RestNews.Requests.PrerequisitesCheck as PC
 import qualified RestNews.Middleware.Static as Static
 import qualified RestNews.WAI as WAI
 
-import Control.Exception (bracket_)
+import Control.Exception (Exception, bracket_, throw)
 import Control.Monad (void, when)
 import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
 import Data.Either (fromRight)
 import Data.Int (Int32)
 import qualified Data.HashMap.Strict as HMS
-import Data.Maybe (fromJust, fromMaybe, isJust, isNothing)
+import Data.Maybe (fromMaybe, isJust, isNothing)
 import Data.String (fromString)
 import qualified Data.Vault.Lazy as Vault
 import Database.PostgreSQL.Simple (ConnectInfo(..), connectPostgreSQL, postgreSQLConnectionString)
@@ -67,6 +67,10 @@ processCredentials debug sessionLookup clearSessionPartial request sessionInsert
         sessionInsert "author_id" (show author_id)
         pure sessionResults
 
+data SessionErrorThatNeverOccured = SessionErrorThatNeverOccured deriving Show
+
+instance Exception SessionErrorThatNeverOccured
+
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
 restAPI ::
     L.Handle a
@@ -90,7 +94,7 @@ restAPI loggerH sessionsH dbH waiH request respond =
                     -- warp will return 500
                     >> exitFailure)
 
-            let (sessionLookup, sessionInsert) = fromJust maybeSessionMethods
+            let (sessionLookup, sessionInsert) = fromMaybe (throw SessionErrorThatNeverOccured) maybeSessionMethods
 
             maybeUserId <- sessionLookup "user_id"
             maybeIsAdmin <- sessionLookup "is_admin"

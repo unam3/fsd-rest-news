@@ -4,6 +4,8 @@ module RestNewsSpec where
 
 import Control.Exception
 import Control.Monad (void)
+import Data.List (stripPrefix, uncons)
+import Data.Maybe (fromMaybe)
 import Database.PostgreSQL.Simple (ConnectInfo)
 import Hasql.Connection (Connection, ConnectionError, Settings)
 import Network.Wai (Application, Middleware, Request, pathInfo, requestMethod, strictRequestBody)
@@ -24,7 +26,7 @@ import qualified RestNews.WAI as WAI
 
 getSession :: Int -> IO String
 getSession port =
-    init
+    takeWhile (/= '\r')
     . drop 20
     -- "Set-Cookie: SESSION=736eaf44239adb2e1e0f1cf52db8f3e4db4362fed5dc9ba\r"
     . (!! 4)
@@ -395,7 +397,10 @@ spec = do
                      >>= (`shouldBe` "{\"error\": \"such user does not exist\"}")
 
 
-    let authorIdJSONSection = head . lines $ replaceComasWithNewlines promoteUserToAuthorResult;
+    let authorIdJSONSection = maybe
+            (error "let authorIdJSONSection error")
+            fst
+            (uncons . lines $ replaceComasWithNewlines promoteUserToAuthorResult)
 
     describe "getAuthor" $ do
         it "successfully get author"
@@ -450,7 +455,10 @@ spec = do
             $ createCategory "{\"name\": \"pluh\", \"parent_id\": null}" session
         )
 
-    let categoryIdJSONSection = head . lines $ replaceComasWithNewlines createCategoryResult;
+    let categoryIdJSONSection = maybe
+            (error "let categoryIdJSONSection error")
+            fst
+            (uncons . lines $ replaceComasWithNewlines createCategoryResult)
 
     describe "createCategory" $ do
         it "creates category"
@@ -624,7 +632,10 @@ spec = do
             $ createTag "{\"tag_name\": \"test tag\"}" session
         )
 
-    let tagIdJSONSection = last . lines $ replaceComasWithNewlines createTagResult;
+    let tagIdJSONSection = fromMaybe
+            (error "let tagIdJSONSection error")
+            --["{\"tag_name\":\"test tag\"","\"tag_id\":22}"]
+            (stripPrefix "{\"tag_name\":\"test tag\"" $ replaceComasWithNewlines createTagResult)
 
     describe "createTag" $ do
         it "creates tag"
@@ -675,7 +686,10 @@ spec = do
             $ createTag "{\"tag_name\": \"test tag pluh\"}" session
         )
 
-    let tagId = init . drop (length ("\"tag_id\":" :: String)) . last . lines $ replaceComasWithNewlines createTagResult1;
+    let tagId =  maybe
+            (error "let tagId error: " ++ createTagResult1)
+            (takeWhile (/= '}'))
+            (stripPrefix "{\"tag_name\":\"test tag pluh\",\"tag_id\":" createTagResult1)
 
     before_
         (runApllicationWith
