@@ -51,6 +51,7 @@ dependencies:
 ghc-options:
 - -Wall
 - -Wincomplete-uni-patterns
+#- -fwarn-monomorphism-restriction
 - -threaded
 
 library:

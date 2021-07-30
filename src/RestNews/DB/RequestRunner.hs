@@ -12,7 +12,6 @@ import Data.Bifunctor (first)
 import Data.ByteString.Lazy.UTF8 (ByteString)
 import Data.Functor ((<&>))
 import Data.Int (Int32)
-import Data.Maybe (fromJust)
 import Hasql.Connection (Connection)
 import qualified Hasql.Session as Session
 import qualified Util
@@ -32,8 +31,15 @@ runSession connection requestBody processCredentialsPartial sessionUserId sessio
         -- (Util.∘∘) == (.).(.)
  =
   let sessionRun = (Util.∘∘) liftIO Session.run
+      cantDecode = pure (Left "Can't decode request body", Nothing)
       runSessionWithJSON session =
-        session sessionRun connection . fromJust $ decode requestBody
+        maybe cantDecode (session sessionRun connection) (decode requestBody)
+      runSessionWithJSONAndArg session arg =
+        let partiallyAppliedSession = session sessionRun connection
+         in maybe
+              cantDecode
+              (`partiallyAppliedSession` arg)
+              (decode requestBody)
    in case sessionName of
         "auth" ->
           (runSessionWithJSON PR.getCredentials >>= processCredentialsPartial) <&>
@@ -53,19 +59,21 @@ runSession connection requestBody processCredentialsPartial sessionUserId sessio
         "editTag" -> runSessionWithJSON PR.editTag
         "getTag" -> runSessionWithJSON PR.getTag
         "deleteTag" -> runSessionWithJSON PR.deleteTag
-        "createComment" -> runSessionWithJSON PR.createComment sessionUserId
-        "deleteComment" -> runSessionWithJSON PR.deleteComment sessionUserId
+        "createComment" ->
+          runSessionWithJSONAndArg PR.createComment sessionUserId
+        "deleteComment" ->
+          runSessionWithJSONAndArg PR.deleteComment sessionUserId
         "getArticleComments" -> runSessionWithJSON PR.getArticleComments
         "createArticleDraft" ->
-          runSessionWithJSON PR.createArticleDraft sessionAuthorId
+          runSessionWithJSONAndArg PR.createArticleDraft sessionAuthorId
         "editArticleDraft" ->
-          runSessionWithJSON PR.editArticleDraft sessionAuthorId
+          runSessionWithJSONAndArg PR.editArticleDraft sessionAuthorId
         "publishArticleDraft" ->
-          runSessionWithJSON PR.publishArticleDraft sessionAuthorId
+          runSessionWithJSONAndArg PR.publishArticleDraft sessionAuthorId
         "getArticleDraft" ->
-          runSessionWithJSON PR.getArticleDraft sessionAuthorId
+          runSessionWithJSONAndArg PR.getArticleDraft sessionAuthorId
         "deleteArticleDraft" ->
-          runSessionWithJSON PR.deleteArticleDraft sessionAuthorId
+          runSessionWithJSONAndArg PR.deleteArticleDraft sessionAuthorId
         "getArticlesByCategoryId" ->
           runSessionWithJSON PR.getArticlesByCategoryId
         "getArticlesByTagId" -> runSessionWithJSON PR.getArticlesByTagId

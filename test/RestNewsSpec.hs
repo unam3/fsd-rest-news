@@ -4,6 +4,9 @@ module RestNewsSpec where
 
 import Control.Exception
 import Control.Monad (void)
+import Data.Functor ((<&>))
+import Data.List (find, isPrefixOf, stripPrefix, uncons)
+import Data.Maybe (fromMaybe)
 import Database.PostgreSQL.Simple (ConnectInfo)
 import Hasql.Connection (Connection, ConnectionError, Settings)
 import Network.Wai
@@ -28,24 +31,34 @@ import qualified RestNews.Logger as L
 import qualified RestNews.Middleware.Sessions as S
 import qualified RestNews.WAI as WAI
 
+getStringStartingWith :: String -> String -> Maybe String
+getStringStartingWith stringToFind stringWithNewLines =
+  find (isPrefixOf stringToFind) $ lines stringWithNewLines
+
+getCookieSession :: String -> Maybe String
+getCookieSession response =
+  (getStringStartingWith "Set-Cookie:" response >>=
+   stripPrefix "Set-Cookie: SESSION=") <&>
+  takeWhile (/= '\r')
+
 getSession :: Int -> IO String
-getSession port =
-  init .
-  drop 20
-            -- "Set-Cookie: SESSION=736eaf44239adb2e1e0f1cf52db8f3e4db4362fed5dc9ba\r"
-   .
-  (!! 4) . lines <$>
-  readProcess
-    "curl"
-    [ "-s"
-    , "-i"
-    , "-X"
-    , "POST"
-    , "-d"
-    , "{\"username\": \"username\", \"password\": \"12345\"}"
-    , "http://0.0.0.0:" ++ show port ++ "/auth"
-    ]
-    []
+getSession port = do
+  mbSession <-
+    getCookieSession <$>
+    readProcess
+      "curl"
+      [ "-s"
+      , "-i"
+      , "-X"
+      , "POST"
+      , "-d"
+      , "{\"username\": \"username\", \"password\": \"12345\"}"
+      , "http://0.0.0.0:" ++ show port ++ "/auth"
+      ]
+      []
+  case mbSession of
+    Nothing -> error "response has no cookie session"
+    Just session -> pure session
 
 curl :: String -> String -> String -> String -> IO String
 curl method session dashDData url =
@@ -276,8 +289,13 @@ spec = do
   describe "getUser" $
     it "get user information" $
     runApllicationWith (getUser session) >>= (`shouldStartWith` "{\"name")
-  let userIdJSONSection =
-        (!! 4) . lines $ replaceComasWithNewlines createUserResult
+  let maybeUserIdJSONSection =
+        getStringStartingWith "\"user_id\"" $
+        replaceComasWithNewlines createUserResult
+      userIdJSONSection =
+        case maybeUserIdJSONSection of
+          Nothing -> error "response has no user_id"
+          Just section -> section
       userIdJSON = concat ["{", userIdJSONSection, "}"]
   promoteUserToAuthorResult <-
     runIO
@@ -302,7 +320,10 @@ spec = do
            session) >>=
       (`shouldBe` "{\"error\": \"such user does not exist\"}")
   let authorIdJSONSection =
-        head . lines $ replaceComasWithNewlines promoteUserToAuthorResult
+        maybe
+          (error "let authorIdJSONSection error")
+          fst
+          (uncons . lines $ replaceComasWithNewlines promoteUserToAuthorResult)
   describe "getAuthor" $ do
     it "successfully get author" $
       runApllicationWith (getAuthor (authorIdJSONSection ++ "}") session) >>=
@@ -341,7 +362,10 @@ spec = do
       (runApllicationWith $
        createCategory "{\"name\": \"pluh\", \"parent_id\": null}" session)
   let categoryIdJSONSection =
-        head . lines $ replaceComasWithNewlines createCategoryResult
+        maybe
+          (error "let categoryIdJSONSection error")
+          fst
+          (uncons . lines $ replaceComasWithNewlines createCategoryResult)
   describe "createCategory" $ do
     it "creates category" $
       shouldStartWith createCategoryResult "{\"category_id\":"
@@ -393,8 +417,13 @@ spec = do
        createArticleDraft
          "{\"article_title\": \"they dont beleive their eyes…\", \"category_id\": 1, \"article_content\": \"article is long enough\", \"tags\": [], \"main_photo\": \"http://pl.uh/main\", \"additional_photos\": [\"1\", \"2\", \"3\"]}"
          session)
-  let articleIdJSONSection =
-        (!! 6) . lines $ replaceComasWithNewlines createArticleDraftResult
+  let maybeArticleIdJSONSection =
+        getStringStartingWith "\"article_id\"" $
+        replaceComasWithNewlines createArticleDraftResult
+      articleIdJSONSection =
+        case maybeArticleIdJSONSection of
+          Nothing -> error "response has no article_id"
+          Just section -> section
   describe "createArticleDraft" $ do
     it "creates article draft" $
       shouldStartWith createArticleDraftResult "{\"article_content\""
@@ -460,8 +489,13 @@ spec = do
        createArticleDraft
          "{\"article_title\": \"they dont beleive their eyes…\", \"category_id\": 1, \"article_content\": \"article is long enough\", \"tags\": [], \"main_photo\": \"http://pl.uh/main\", \"additional_photos\": [\"1\", \"2\", \"3\"]}"
          session)
-  let articleIdJSONSection1 =
-        (!! 6) . lines $ replaceComasWithNewlines createArticleDraftResult1
+  let maybeArticleIdJSONSection1 =
+        getStringStartingWith "\"article_id\"" $
+        replaceComasWithNewlines createArticleDraftResult1
+      articleIdJSONSection1 =
+        case maybeArticleIdJSONSection1 of
+          Nothing -> error "response has no article_id"
+          Just section -> section
   describe "deleteArticleDraft" $ do
     it "delete article draft" $
       runApllicationWith
@@ -477,7 +511,12 @@ spec = do
   createTagResult <-
     runIO
       (runApllicationWith $ createTag "{\"tag_name\": \"test tag\"}" session)
-  let tagIdJSONSection = last . lines $ replaceComasWithNewlines createTagResult
+  let tagIdJSONSection =
+        fromMaybe
+          (error "let tagIdJSONSection error")
+            --["{\"tag_name\":\"test tag\"","\"tag_id\":22}"]
+          (stripPrefix "{\"tag_name\":\"test tag\"" $
+           replaceComasWithNewlines createTagResult)
   describe "createTag" $ do
     it "creates tag" $ shouldStartWith createTagResult "{\"tag_name\":"
     it "returns error if tag already exists" $
@@ -511,8 +550,12 @@ spec = do
       (runApllicationWith $
        createTag "{\"tag_name\": \"test tag pluh\"}" session)
   let tagId =
-        init . drop (length ("\"tag_id\":" :: String)) . last . lines $
-        replaceComasWithNewlines createTagResult1
+        maybe
+          (error "let tagId error: " ++ createTagResult1)
+          (takeWhile (/= '}'))
+          (stripPrefix
+             "{\"tag_name\":\"test tag pluh\",\"tag_id\":"
+             createTagResult1)
   before_
     (runApllicationWith
        (createArticleDraft
@@ -537,8 +580,13 @@ spec = do
          "{\"article_id\": 1, \"comment_text\": \"bluasd!\"}"
          session)
     -- {"comment_id":12,"user_id":1,"article_id":1,"comment_text":"bluasd!"}
-  let commentIdJSONSection =
-        (!! 0) . lines $ replaceComasWithNewlines createCommentResult
+  let maybeCommentIdJSONSection =
+        getStringStartingWith "{\"comment_id\"" $
+        replaceComasWithNewlines createCommentResult
+      commentIdJSONSection =
+        case maybeCommentIdJSONSection of
+          Nothing -> error "response has no comment_id"
+          Just section -> section
   describe "createComment" $ do
     it "creates article comment" $
       shouldStartWith createCommentResult "{\"comment_id\""
