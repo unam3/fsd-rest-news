@@ -4,7 +4,7 @@ module RestNewsSpec where
 
 import Control.Exception
 import Control.Monad (void)
-import Data.List (stripPrefix, uncons)
+import Data.List (find, isPrefixOf, stripPrefix, uncons)
 import Data.Maybe (fromMaybe)
 import Database.PostgreSQL.Simple (ConnectInfo)
 import Hasql.Connection (Connection, ConnectionError, Settings)
@@ -24,23 +24,31 @@ import qualified RestNews.Middleware.Sessions as S
 import qualified RestNews.WAI as WAI
 
 
+getStringStartingWith :: String -> String -> Maybe String
+getStringStartingWith stringToFind stringWithNewLines =  find (isPrefixOf stringToFind) $ lines stringWithNewLines
+
+getCookieSession :: String -> Maybe String
+getCookieSession response = getStringStartingWith "Set-Cookie:" response
+    >>= stripPrefix "Set-Cookie: SESSION="
+        >>= pure . takeWhile (/= '\r')
+
 getSession :: Int -> IO String
 getSession port =
-    takeWhile (/= '\r')
-    . drop 20
-    -- "Set-Cookie: SESSION=736eaf44239adb2e1e0f1cf52db8f3e4db4362fed5dc9ba\r"
-    . (!! 4)
-    . lines
-    <$> readProcess
-        "curl"
-        [
-            "-s",
-            "-i",
-            "-X", "POST",
-            "-d", "{\"username\": \"username\", \"password\": \"12345\"}",
-            "http://0.0.0.0:" ++ show port ++ "/auth"
-            ]
-        []
+    do
+    mbSession <- getCookieSession
+            <$> readProcess
+                "curl"
+                [
+                    "-s",
+                    "-i",
+                    "-X", "POST",
+                    "-d", "{\"username\": \"username\", \"password\": \"12345\"}",
+                    "http://0.0.0.0:" ++ show port ++ "/auth"
+                    ]
+                []
+    case mbSession of
+        Nothing -> error "response has no cookie session"
+        Just session -> pure session
 
 curl :: String -> String -> String -> String -> IO String
 curl method session dashDData url =
@@ -371,7 +379,11 @@ spec = do
             >>= (`shouldStartWith` "{\"name")
 
 
-    let userIdJSONSection = (!! 4) . lines $ replaceComasWithNewlines createUserResult;
+    let maybeUserIdJSONSection = getStringStartingWith "\"user_id\"" $ replaceComasWithNewlines createUserResult
+
+        userIdJSONSection = case maybeUserIdJSONSection of
+            Nothing -> error "response has no user_id"
+            Just section -> section
 
         userIdJSON = concat ["{", userIdJSONSection, "}"]
 
@@ -526,7 +538,12 @@ spec = do
                     session
             )
 
-    let articleIdJSONSection = (!! 6) . lines $ replaceComasWithNewlines createArticleDraftResult;
+    let maybeArticleIdJSONSection = getStringStartingWith "\"article_id\""
+            $ replaceComasWithNewlines createArticleDraftResult
+
+        articleIdJSONSection = case maybeArticleIdJSONSection of
+            Nothing -> error "response has no article_id"
+            Just section -> section
 
     describe "createArticleDraft" $ do
         it "creates article draft"
@@ -608,7 +625,12 @@ spec = do
                 session
             )
 
-    let articleIdJSONSection1 = (!! 6) . lines $ replaceComasWithNewlines createArticleDraftResult1;
+    let maybeArticleIdJSONSection1 = getStringStartingWith "\"article_id\""
+            $ replaceComasWithNewlines createArticleDraftResult1
+
+        articleIdJSONSection1 = case maybeArticleIdJSONSection1 of
+            Nothing -> error "response has no article_id"
+            Just section -> section
 
     describe "deleteArticleDraft" $ do
         it "delete article draft"
@@ -722,7 +744,13 @@ spec = do
             $ createComment "{\"article_id\": 1, \"comment_text\": \"bluasd!\"}" session)
 
     -- {"comment_id":12,"user_id":1,"article_id":1,"comment_text":"bluasd!"}
-    let commentIdJSONSection = (!! 0) . lines $ replaceComasWithNewlines createCommentResult;
+    let maybeCommentIdJSONSection = getStringStartingWith "{\"comment_id\""
+            $ replaceComasWithNewlines createCommentResult
+
+        commentIdJSONSection = case maybeCommentIdJSONSection of
+            Nothing -> error "response has no comment_id"
+            Just section -> section
+
 
     describe "createComment" $ do
         it "creates article comment"
