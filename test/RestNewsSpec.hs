@@ -713,30 +713,46 @@ spec = do
             (takeWhile (/= '}'))
             (stripPrefix "{\"tag_name\":\"test tag pluh\",\"tag_id\":" createTagResult1)
 
-    before_
-        (runApllicationWith
+
+    beforeAll
+        -- IO String
+        (print "B E F O R E A L L" >> runApllicationWith
             (createArticleDraft
                 ("{\"article_title\": \"they dont beleive their eyes…\", \"category_id\": 1, \"article_content\": \"article is long enough\", \"main_photo\": \"http://pl.uh/main\", \"additional_photos\": [\"1\", \"2\", \"3\"], \"tags\": ["
                     ++ tagId
                     ++ "]}")
-                session)
-                >> pure ())
+                session))
 
-        $ describe "deleteTag" $ do
-            it "delete"
-                $ runApllicationWith
-                    (deleteTag ("{" ++ tagIdJSONSection) session)
-                        >>= (`shouldBe` "{\"results\":\"ook\"}")
+            . afterAll (\createdArticleDraftResponse -> (
+                print ("A F T E R A L L" ++ createdArticleDraftResponse)
+                    >> do
+                        let maybeCreatedArticleDraftIdSection = (takeWhile (/= '\r') <$> (getStringStartingWith "\"article_id" $ replaceComasWithNewlines createdArticleDraftResponse))
+                        case maybeCreatedArticleDraftIdSection of
+                            Nothing -> error "response has no comment_id"
+                            Just section ->
+                                (runApllicationWith $ deleteArticleDraft ("{" ++ section ++ "}") session)
+                                    >>= print
+                                    >> (runApllicationWith $ deleteTag ("{\"tag_id\": " ++ tagId ++ "}") session)
+                                    >>= print
+                    >> pure ()
+                )
+            )
 
-            it "returns error if tag does not exists"
-                $ runApllicationWith
-                    (deleteTag "{\"tag_id\": 12345}" session)
-                        >>= (`shouldBe` "{\"error\": \"no such tag\"}")
+            $ describe "deleteTag" $ do
+                it "delete"
+                    $ \pluh -> print pluh >> runApllicationWith
+                        (deleteTag ("{" ++ tagIdJSONSection) session)
+                            >>= (`shouldBe` "{\"results\":\"ook\"}")
 
-            it "returns error if tag is referenced by an article"
-                $ runApllicationWith
-                    (deleteTag ("{\"tag_id\": " ++ tagId ++ "}") session)
-                        >>= (`shouldBe` "{\"error\": \"tag is referenced by an article\"}")
+                it "returns error if tag does not exists"
+                    $ \pluh -> runApllicationWith
+                        (deleteTag "{\"tag_id\": 12345}" session)
+                            >>= (`shouldBe` "{\"error\": \"no such tag\"}")
+
+                it "returns error if tag is referenced by an article"
+                    $ \pluh -> runApllicationWith
+                        (deleteTag ("{\"tag_id\": " ++ tagId ++ "}") session)
+                            >>= (`shouldBe` "{\"error\": \"tag is referenced by an article\"}")
 
         
     createCommentResult <- runIO

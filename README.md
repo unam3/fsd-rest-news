@@ -53,7 +53,7 @@ cd sh-curl
 ## Tests
 
 
-To run tests you need to (1) create test db and do migrations, (2) copy tests config file,  (3) **create proper db-structure before each tests run** and (4) run stack tests:
+To run tests you need to (1) create test db and do migrations, (2) copy tests config file,  (3) **create proper db-structure before each failed tests run** and (4) run stack tests:
 
 ```
 #1
