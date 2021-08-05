@@ -556,21 +556,35 @@ spec = do
           (stripPrefix
              "{\"tag_name\":\"test tag pluh\",\"tag_id\":"
              createTagResult1)
-  before_
+  beforeAll
     (runApllicationWith
        (createArticleDraft
           ("{\"article_title\": \"they dont beleive their eyes…\", \"category_id\": 1, \"article_content\": \"article is long enough\", \"main_photo\": \"http://pl.uh/main\", \"additional_photos\": [\"1\", \"2\", \"3\"], \"tags\": [" ++
            tagId ++ "]}")
-          session) >>
-     pure ()) $
+          session)) .
+    afterAll
+      (\createdArticleDraftResponse ->
+         (do let maybeCreatedArticleDraftIdSection =
+                   takeWhile (/= '\r') <$>
+                   getStringStartingWith
+                     "\"article_id"
+                     (replaceComasWithNewlines createdArticleDraftResponse)
+             void $
+               case maybeCreatedArticleDraftIdSection of
+                 Nothing -> error "response has no comment_id"
+                 Just section ->
+                   runApllicationWith $
+                   deleteArticleDraft ("{" ++ section ++ "}") session
+             void . runApllicationWith $
+               deleteTag ("{\"tag_id\": " ++ tagId ++ "}") session)) $
     describe "deleteTag" $ do
-      it "delete" $
+      it "delete" $ \_ ->
         runApllicationWith (deleteTag ("{" ++ tagIdJSONSection) session) >>=
         (`shouldBe` "{\"results\":\"ook\"}")
-      it "returns error if tag does not exists" $
+      it "returns error if tag does not exists" $ \_ ->
         runApllicationWith (deleteTag "{\"tag_id\": 12345}" session) >>=
         (`shouldBe` "{\"error\": \"no such tag\"}")
-      it "returns error if tag is referenced by an article" $
+      it "returns error if tag is referenced by an article" $ \_ ->
         runApllicationWith (deleteTag ("{\"tag_id\": " ++ tagId ++ "}") session) >>=
         (`shouldBe` "{\"error\": \"tag is referenced by an article\"}")
   createCommentResult <-
