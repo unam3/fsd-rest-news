@@ -2,7 +2,7 @@
 
 module RestNewsSpec where
 
-import Control.Exception
+import Control.Exception (SomeException, toException, try)
 import Control.Monad (void)
 import Data.Functor ((<&>))
 import Data.List (find, isPrefixOf, stripPrefix, uncons)
@@ -19,10 +19,19 @@ import Network.Wai
   )
 import Network.Wai.Handler.Warp (Port, testWithApplication, withApplication)
 import Network.Wai.Internal (ResponseReceived(..))
-import System.Exit
+import System.Exit (ExitCode(ExitFailure))
 import System.Log.Logger (Priority(DEBUG))
 import System.Process (readProcess)
 import Test.Hspec
+  ( Spec
+  , afterAll
+  , beforeAll
+  , describe
+  , it
+  , runIO
+  , shouldBe
+  , shouldStartWith
+  )
 
 import RestNews
 import qualified RestNews.Config as C
@@ -522,9 +531,9 @@ spec = do
     it "returns error if tag already exists" $
       runApllicationWith (createTag "{\"tag_name\": \"test tag\"}" session) >>=
       (`shouldBe` "{\"error\": \"tag with such name already exists\"}")
-  before_
-    (runApllicationWith (createTag "{\"tag_name\": \"test tag1\"}" session) >>
-     pure ()) $
+  beforeAll
+    (void . runApllicationWith $
+     createTag "{\"tag_name\": \"test tag1\"}" session) $
     describe "editTag" $ do
       it "edit" $
         runApllicationWith
