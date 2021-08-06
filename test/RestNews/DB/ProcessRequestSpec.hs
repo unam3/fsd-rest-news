@@ -6,7 +6,7 @@ import RestNews.DB.ProcessRequest (getError)
 
 import Data.ByteString.Internal (unpackChars)
 import Hasql.Session
-import Test.Hspec
+import Test.Hspec (Spec, describe, it, shouldBe)
 
 
 e2201X :: Either QueryError resultsType
