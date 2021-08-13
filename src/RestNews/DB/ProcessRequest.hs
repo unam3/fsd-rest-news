@@ -2,7 +2,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module RestNews.DB.ProcessRequest
-  ( getError
+  ( SessionError(..)
+  , getError
   , createUser
   , deleteUser
   , getUser
@@ -64,23 +65,32 @@ import RestNews.Requests.JSON
 valueToUTFLBS :: Either Session.QueryError Value -> Either String ByteString
 valueToUTFLBS = bimap show encode
 
+data SessionError
+  = PSQL_STRING_DATA_RIGHT_TRUNCATION
+  | PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE
+  | PSQL_FOREIGN_KEY_VIOLATION
+  | PSQL_UNIQUE_VIOLATION
+  | UnexpectedAmountOfRowsOrUnexpectedNull
+  deriving (Show, Eq)
+
+-- https://www.postgresql.org/docs/12/errcodes-appendix.html
 getError ::
-     Either Session.QueryError resultsType -> Maybe (String, Maybe String)
+     Either Session.QueryError resultsType -> Maybe (SessionError, Maybe String)
 getError (Left (Session.QueryError _ _ (Session.ResultError (Session.ServerError "22001" _ details _)))) =
-  Just ("22001", fmap unpackChars details)
+  Just (PSQL_STRING_DATA_RIGHT_TRUNCATION, fmap unpackChars details)
 getError (Left (Session.QueryError _ _ (Session.ResultError (Session.ServerError "2201X" msg _ _)))) =
-  Just ("2201X", Just $ unpackChars msg)
+  Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just $ unpackChars msg)
 getError (Left (Session.QueryError _ _ (Session.ResultError (Session.ServerError "23503" _ details _)))) =
-  Just ("23503", fmap unpackChars details)
+  Just (PSQL_FOREIGN_KEY_VIOLATION, fmap unpackChars details)
 getError (Left (Session.QueryError _ _ (Session.ResultError (Session.ServerError "23505" _ details _)))) =
-  Just ("23505", fmap unpackChars details)
+  Just (PSQL_UNIQUE_VIOLATION, fmap unpackChars details)
 getError (Left (Session.QueryError _ _ (Session.ResultError (Session.UnexpectedAmountOfRows 0)))) =
-  Just ("0", Nothing)
+  Just (UnexpectedAmountOfRowsOrUnexpectedNull, Nothing)
 getError (Left (Session.QueryError _ _ (Session.ResultError (Session.RowError 0 Session.UnexpectedNull)))) =
-  Just ("0", Nothing)
+  Just (UnexpectedAmountOfRowsOrUnexpectedNull, Nothing)
 getError _ = Nothing
 
-getErrorCode :: Either Session.QueryError resultsType -> Maybe String
+getErrorCode :: Either Session.QueryError resultsType -> Maybe SessionError
 getErrorCode = fmap fst . getError
 
 createUser ::
@@ -101,10 +111,10 @@ createUser sessionRun connection createUserRequest = do
   pure
     ( valueToUTFLBS sessionResults
     , case getErrorCode sessionResults of
-        Just "22001" ->
+        Just PSQL_STRING_DATA_RIGHT_TRUNCATION ->
           Just
             "{\"error\": \"name and surname field length must be 80 characters at most\"}"
-        Just "23505" ->
+        Just PSQL_UNIQUE_VIOLATION ->
           Just "{\"error\": \"user with this username already exists\"}"
         _ -> Nothing)
 
@@ -121,7 +131,8 @@ deleteUser sessionRun connection deleteUserRequest = do
   pure
     ( valueToUTFLBS sessionResults
     , case getErrorCode sessionResults of
-        Just "0" -> Just "{\"error\": \"such user does not exist\"}"
+        Just UnexpectedAmountOfRowsOrUnexpectedNull ->
+          Just "{\"error\": \"such user does not exist\"}"
         _ -> Nothing)
 
 getUser ::
@@ -135,7 +146,8 @@ getUser sessionRun connection userId = do
   pure
     ( valueToUTFLBS sessionResults
     , case getErrorCode sessionResults of
-        Just "0" -> Just "{\"error\": \"such user does not exist\"}"
+        Just UnexpectedAmountOfRowsOrUnexpectedNull ->
+          Just "{\"error\": \"such user does not exist\"}"
         _ -> Nothing)
 
 promoteUserToAuthor ::
@@ -153,8 +165,10 @@ promoteUserToAuthor sessionRun connection promoteUserToAuthorRequest = do
   pure
     ( valueToUTFLBS sessionResults
     , case getErrorCode sessionResults of
-        Just "23503" -> Just "{\"error\": \"such user does not exist\"}"
-        Just "23505" -> Just "{\"error\": \"such user is already an author\"}"
+        Just PSQL_FOREIGN_KEY_VIOLATION ->
+          Just "{\"error\": \"such user does not exist\"}"
+        Just PSQL_UNIQUE_VIOLATION ->
+          Just "{\"error\": \"such user is already an author\"}"
         _ -> Nothing)
 
 editAuthor ::
@@ -172,10 +186,11 @@ editAuthor sessionRun connection editAuthorRequest = do
   pure
     ( valueToUTFLBS sessionResults
     , case getErrorCode sessionResults of
-        Just "22001" ->
+        Just PSQL_STRING_DATA_RIGHT_TRUNCATION ->
           Just
             "{\"error\": \"name and surname field length must be 80 characters at most\"}"
-        Just "0" -> Just "{\"error\": \"such author does not exist\"}"
+        Just UnexpectedAmountOfRowsOrUnexpectedNull ->
+          Just "{\"error\": \"such author does not exist\"}"
         _ -> Nothing)
 
 getAuthor ::
@@ -191,7 +206,8 @@ getAuthor sessionRun connection authorIdRequest = do
   pure
     ( valueToUTFLBS sessionResults
     , case getErrorCode sessionResults of
-        Just "0" -> Just "{\"error\": \"such author does not exist\"}"
+        Just UnexpectedAmountOfRowsOrUnexpectedNull ->
+          Just "{\"error\": \"such author does not exist\"}"
         _ -> Nothing)
 
 deleteAuthorRole ::
@@ -207,7 +223,8 @@ deleteAuthorRole sessionRun connection authorIdRequest = do
   pure
     ( valueToUTFLBS sessionResults
     , case getErrorCode sessionResults of
-        Just "0" -> Just "{\"error\": \"such author does not exist\"}"
+        Just UnexpectedAmountOfRowsOrUnexpectedNull ->
+          Just "{\"error\": \"such author does not exist\"}"
         _ -> Nothing)
 
 createCategory ::
@@ -225,10 +242,11 @@ createCategory sessionRun connection createCategoryRequest = do
   pure
     ( valueToUTFLBS sessionResults
     , case getErrorCode sessionResults of
-        Just "22001" ->
+        Just PSQL_STRING_DATA_RIGHT_TRUNCATION ->
           Just
             "{\"error\": \"category name length must be 80 characters at most\"}"
-        Just "23503" -> Just "{\"error\": \"parent category does not exist\"}"
+        Just PSQL_FOREIGN_KEY_VIOLATION ->
+          Just "{\"error\": \"parent category does not exist\"}"
         _ -> Nothing)
 
 updateCategory ::
@@ -247,11 +265,13 @@ updateCategory sessionRun connection updateCategoryRequest = do
   pure
     ( valueToUTFLBS sessionResults
     , case getErrorCode sessionResults of
-        Just "22001" ->
+        Just PSQL_STRING_DATA_RIGHT_TRUNCATION ->
           Just
             "{\"error\": \"category name length must be 80 characters at most\"}"
-        Just "23503" -> Just "{\"error\": \"parent category does not exist\"}"
-        Just "0" -> Just "{\"error\": \"no such category\"}"
+        Just PSQL_FOREIGN_KEY_VIOLATION ->
+          Just "{\"error\": \"parent category does not exist\"}"
+        Just UnexpectedAmountOfRowsOrUnexpectedNull ->
+          Just "{\"error\": \"no such category\"}"
         _ -> Nothing)
 
 getCategory ::
@@ -267,7 +287,8 @@ getCategory sessionRun connection categoryIdRequest = do
   pure
     ( valueToUTFLBS sessionResults
     , case getErrorCode sessionResults of
-        Just "0" -> Just "{\"error\": \"no such category\"}"
+        Just UnexpectedAmountOfRowsOrUnexpectedNull ->
+          Just "{\"error\": \"no such category\"}"
         _ -> Nothing)
 
 deleteCategory ::
@@ -283,8 +304,10 @@ deleteCategory sessionRun connection categoryIdRequest = do
   pure
     ( valueToUTFLBS sessionResults
     , case getErrorCode sessionResults of
-        Just "23503" -> Just "{\"error\": \"category is in use\"}"
-        Just "0" -> Just "{\"error\": \"no such category\"}"
+        Just PSQL_FOREIGN_KEY_VIOLATION ->
+          Just "{\"error\": \"category is in use\"}"
+        Just UnexpectedAmountOfRowsOrUnexpectedNull ->
+          Just "{\"error\": \"no such category\"}"
         _ -> Nothing)
 
 createTag ::
@@ -300,9 +323,9 @@ createTag sessionRun connection createTagRequest = do
   pure
     ( valueToUTFLBS sessionResults
     , case getErrorCode sessionResults of
-        Just "22001" ->
+        Just PSQL_STRING_DATA_RIGHT_TRUNCATION ->
           Just "{\"error\": \"tag_name length must be 80 characters at most\"}"
-        Just "23505" ->
+        Just PSQL_UNIQUE_VIOLATION ->
           Just "{\"error\": \"tag with such name already exists\"}"
         _ -> Nothing)
 
@@ -320,11 +343,12 @@ editTag sessionRun connection editTagRequest = do
   pure
     ( valueToUTFLBS sessionResults
     , case getErrorCode sessionResults of
-        Just "22001" ->
+        Just PSQL_STRING_DATA_RIGHT_TRUNCATION ->
           Just "{\"error\": \"tag_name length must be 80 characters at most\"}"
-        Just "23505" ->
+        Just PSQL_UNIQUE_VIOLATION ->
           Just "{\"error\": \"tag with such name already exists\"}"
-        Just "0" -> Just "{\"error\": \"no such tag\"}"
+        Just UnexpectedAmountOfRowsOrUnexpectedNull ->
+          Just "{\"error\": \"no such tag\"}"
         _ -> Nothing)
 
 deleteTag ::
@@ -340,8 +364,10 @@ deleteTag sessionRun connection deleteTagRequest = do
   pure
     ( valueToUTFLBS sessionResults
     , case getErrorCode sessionResults of
-        Just "23503" -> Just "{\"error\": \"tag is referenced by an article\"}"
-        Just "0" -> Just "{\"error\": \"no such tag\"}"
+        Just PSQL_FOREIGN_KEY_VIOLATION ->
+          Just "{\"error\": \"tag is referenced by an article\"}"
+        Just UnexpectedAmountOfRowsOrUnexpectedNull ->
+          Just "{\"error\": \"no such tag\"}"
         _ -> Nothing)
 
 getTag ::
@@ -356,7 +382,8 @@ getTag sessionRun connection getTagRequest = do
   pure
     ( valueToUTFLBS sessionResults
     , case getErrorCode sessionResults of
-        Just "0" -> Just "{\"error\": \"no such tag\"}"
+        Just UnexpectedAmountOfRowsOrUnexpectedNull ->
+          Just "{\"error\": \"no such tag\"}"
         _ -> Nothing)
 
 createComment ::
@@ -376,7 +403,8 @@ createComment sessionRun connection createCommentRequest user_id' = do
   pure
     ( valueToUTFLBS sessionResults
     , case getErrorCode sessionResults of
-        Just "23503" -> Just "{\"error\": \"no such article\"}"
+        Just PSQL_FOREIGN_KEY_VIOLATION ->
+          Just "{\"error\": \"no such article\"}"
         _ -> Nothing)
 
 deleteComment ::
@@ -393,7 +421,8 @@ deleteComment sessionRun connection deleteCommentRequest user_id' = do
   pure
     ( valueToUTFLBS sessionResults
     , case getErrorCode sessionResults of
-        Just "0" -> Just "{\"error\": \"no such comment\"}"
+        Just UnexpectedAmountOfRowsOrUnexpectedNull ->
+          Just "{\"error\": \"no such comment\"}"
         _ -> Nothing)
 
 getArticleComments ::
@@ -411,7 +440,7 @@ getArticleComments sessionRun connection articleCommentsRequest = do
   pure
     ( valueToUTFLBS sessionResults
     , case getError sessionResults of
-        Just ("2201X", Just msg) ->
+        Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) ->
           if "OFFSET" `isPrefixOf` msg
             then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
             else Nothing
@@ -438,16 +467,17 @@ createArticleDraft sessionRun connection articleDraftRequest author_id' = do
   pure
     ( valueToUTFLBS sessionResults
     , case getError sessionResults of
-        Just ("22001", _) ->
+        Just (PSQL_STRING_DATA_RIGHT_TRUNCATION, _) ->
           Just
             "{\"error\": \"article_title length must be 80 characters at most\"}"
-        Just ("23503", details) ->
+        Just (PSQL_FOREIGN_KEY_VIOLATION, details) ->
           let detailsPrefix = fmap (take 12) details
            in case detailsPrefix of
                 Just "Key (tag_id)" -> Just "{\"error\": \"no such tag\"}"
                 Just "Key (categor" -> Just "{\"error\": \"no such category\"}"
                 _ -> error $ show details
-        Just ("0", Nothing) -> Just "{\"error\": \"no such article\"}"
+        Just (UnexpectedAmountOfRowsOrUnexpectedNull, Nothing) ->
+          Just "{\"error\": \"no such article\"}"
         _ -> Nothing)
 
 publishArticleDraft ::
@@ -466,7 +496,8 @@ publishArticleDraft sessionRun connection articleDraftIdRequest author_id' = do
   pure
     ( valueToUTFLBS sessionResults
     , case getErrorCode sessionResults of
-        Just "0" -> Just "{\"error\": \"no such article\"}"
+        Just UnexpectedAmountOfRowsOrUnexpectedNull ->
+          Just "{\"error\": \"no such article\"}"
         _ -> Nothing)
 
 editArticleDraft ::
@@ -491,17 +522,18 @@ editArticleDraft sessionRun connection articleDraftEditRequest author_id' = do
   pure
     ( valueToUTFLBS sessionResults
     , case getError sessionResults of
-        Just ("22001", _) ->
+        Just (PSQL_STRING_DATA_RIGHT_TRUNCATION, _) ->
           Just
             "{\"error\": \"article_title length must be 80 characters at most\"}"
-        Just ("23503", details) ->
+        Just (PSQL_FOREIGN_KEY_VIOLATION, details) ->
           let detailsPrefix = fmap (take 12) details
            in case detailsPrefix of
                 Just "Key (tag_id)" -> Just "{\"error\": \"no such tag\"}"
                 Just "Key (categor" -> Just "{\"error\": \"no such category\"}"
                 Just "Key (article" -> Just "{\"error\": \"no such article\"}"
                 _ -> error $ show details
-        Just ("0", Nothing) -> Just "{\"error\": \"no such article\"}"
+        Just (UnexpectedAmountOfRowsOrUnexpectedNull, Nothing) ->
+          Just "{\"error\": \"no such article\"}"
         _ -> Nothing)
 
 getArticleDraft ::
@@ -520,7 +552,8 @@ getArticleDraft sessionRun connection articleDraftIdRequest author_id' = do
   pure
     ( valueToUTFLBS sessionResults
     , case getErrorCode sessionResults of
-        Just "0" -> Just "{\"error\": \"no such article\"}"
+        Just UnexpectedAmountOfRowsOrUnexpectedNull ->
+          Just "{\"error\": \"no such article\"}"
         _ -> Nothing)
 
 deleteArticleDraft ::
@@ -539,7 +572,8 @@ deleteArticleDraft sessionRun connection articleDraftIdRequest author_id' = do
   pure
     ( valueToUTFLBS sessionResults
     , case getErrorCode sessionResults of
-        Just "0" -> Just "{\"error\": \"no such article\"}"
+        Just UnexpectedAmountOfRowsOrUnexpectedNull ->
+          Just "{\"error\": \"no such article\"}"
         _ -> Nothing)
 
 getArticlesByCategoryId ::
@@ -558,7 +592,7 @@ getArticlesByCategoryId sessionRun connection articlesByCategoryIdRequest = do
   pure
     ( valueToUTFLBS sessionResults
     , case getError sessionResults of
-        Just ("2201X", Just msg) ->
+        Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) ->
           if "OFFSET" `isPrefixOf` msg
             then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
             else Nothing
@@ -579,7 +613,7 @@ getArticlesByTagId sessionRun connection tagIdRequestWithOffset = do
   pure
     ( valueToUTFLBS sessionResults
     , case getError sessionResults of
-        Just ("2201X", Just msg) ->
+        Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) ->
           if "OFFSET" `isPrefixOf` msg
             then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
             else Nothing
@@ -600,7 +634,7 @@ getArticlesByAnyTagId sessionRun connection tagIdsRequest = do
   pure
     ( valueToUTFLBS sessionResults
     , case getError sessionResults of
-        Just ("2201X", Just msg) ->
+        Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) ->
           if "OFFSET" `isPrefixOf` msg
             then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
             else Nothing
@@ -621,7 +655,7 @@ getArticlesByAllTagId sessionRun connection tagIdsRequest = do
   pure
     ( valueToUTFLBS sessionResults
     , case getError sessionResults of
-        Just ("2201X", Just msg) ->
+        Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) ->
           if "OFFSET" `isPrefixOf` msg
             then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
             else Nothing
@@ -642,7 +676,7 @@ getArticlesByTitlePart sessionRun connection substringRequest = do
   pure
     ( valueToUTFLBS sessionResults
     , case getError sessionResults of
-        Just ("2201X", Just msg) ->
+        Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) ->
           if "OFFSET" `isPrefixOf` msg
             then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
             else Nothing
@@ -665,7 +699,7 @@ getArticlesByContentPart sessionRun connection substringRequest = do
   pure
     ( valueToUTFLBS sessionResults
     , case getError sessionResults of
-        Just ("2201X", Just msg) ->
+        Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) ->
           if "OFFSET" `isPrefixOf` msg
             then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
             else Nothing
@@ -689,7 +723,7 @@ getArticlesByAuthorNamePart sessionRun connection substringRequest = do
   pure
     ( valueToUTFLBS sessionResults
     , case getError sessionResults of
-        Just ("2201X", Just msg) ->
+        Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) ->
           if "OFFSET" `isPrefixOf` msg
             then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
             else Nothing
@@ -710,7 +744,7 @@ getArticlesSortedByPhotosNumber sessionRun connection request = do
   pure
     ( valueToUTFLBS sessionResults
     , case getError sessionResults of
-        Just ("2201X", Just msg) ->
+        Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) ->
           if "OFFSET" `isPrefixOf` msg
             then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
             else Nothing
@@ -731,7 +765,7 @@ getArticlesSortedByCreationDate sessionRun connection request = do
   pure
     ( valueToUTFLBS sessionResults
     , case getError sessionResults of
-        Just ("2201X", Just msg) ->
+        Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) ->
           if "OFFSET" `isPrefixOf` msg
             then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
             else Nothing
@@ -752,7 +786,7 @@ getArticlesSortedByAuthor sessionRun connection request = do
   pure
     ( valueToUTFLBS sessionResults
     , case getError sessionResults of
-        Just ("2201X", Just msg) ->
+        Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) ->
           if "OFFSET" `isPrefixOf` msg
             then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
             else Nothing
@@ -773,7 +807,7 @@ getArticlesSortedByCategory sessionRun connection request = do
   pure
     ( valueToUTFLBS sessionResults
     , case getError sessionResults of
-        Just ("2201X", Just msg) ->
+        Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) ->
           if "OFFSET" `isPrefixOf` msg
             then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
             else Nothing
@@ -796,7 +830,7 @@ getArticlesFilteredBy statement sessionRun connection articlesByCreationDateRequ
   pure
     ( valueToUTFLBS sessionResults
     , case getError sessionResults of
-        Just ("2201X", Just msg) ->
+        Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) ->
           if "OFFSET" `isPrefixOf` msg
             then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
             else Nothing
@@ -846,5 +880,6 @@ getCredentials sessionRun connection authRequest = do
   pure
     ( first show sessionResults
     , case getErrorCode sessionResults of
-        Just "0" -> Just "wrong username/password"
+        Just UnexpectedAmountOfRowsOrUnexpectedNull ->
+          Just "wrong username/password"
         _ -> Nothing)
