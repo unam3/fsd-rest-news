@@ -20,7 +20,7 @@ import qualified RestNews.WAI as WAI
 import Control.Exception (Exception, bracket_, throw)
 import Control.Monad (void, when)
 import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
-import Data.Either (fromRight)
+import Data.Either (fromRight, isLeft)
 import qualified Data.HashMap.Strict as HMS
 import Data.Int (Int32)
 import Data.Maybe (fromMaybe, isJust, isNothing)
@@ -185,15 +185,20 @@ restAPI loggerH sessionsH dbH waiH request respond =
                    case snd results of
                      Just errorForClient -> pure errorForClient
                      _ ->
-                       L.hError loggerH "\n^^^ unhandled exception ^^^\n\n" >>
+                       L.hError
+                         loggerH
+                         "\n^^^ unhandled (hasql session) exception has occured with request above^^^\n\n" >>
                        pure
                          no_output_for_the_user_in_case_of_unhandled_exception)
         let endpointNeeded = Left "Endpoint needed"
+            has_unhandled_hasql_session_exception =
+              isLeft (fst results) && isNothing (snd results)
             httpStatus
               | errorOrSessionName == endpointNeeded ||
                   errorOrSessionName == PC.noSuchEndpoint = H.status404
               | errorOrSessionName == PC.wrongParamsOrValues = H.status400
-              | fst results == dbError = H.status500
+              | fst results == dbError || has_unhandled_hasql_session_exception =
+                H.status500
               | otherwise = H.status200
          in respond $ responseLBS httpStatus [] processedResults)
 
