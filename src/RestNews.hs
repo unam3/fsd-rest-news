@@ -51,8 +51,8 @@ processCredentials :: Monad m => (String -> m a)
     -> (Either String (Int32, Bool, Int32), Maybe UTFLBS.ByteString)
     -> m (Either String (Int32, Bool, Int32), Maybe UTFLBS.ByteString);
 processCredentials debug sessionLookup clearSessionPartial request sessionInsert sessionResults =
-    let (user_id, is_admin, author_id) = fromRight (0, False, 0) $ fst sessionResults
-    in do
+    do
+        let (user_id, is_admin, author_id) = fromRight (0, False, 0) $ fst sessionResults
         -- clearSession will fail if request has no associated session with cookies:
         -- https://github.com/hce/postgresql-session/blob/master/src/Network/Wai/Session/PostgreSQL.hs#L232
         (do
@@ -203,39 +203,39 @@ processConfig (C.Config runAtPort dbHost dbPort dbUser dbPassword dbName) =
 
 makeApplication :: L.Handle () -> Settings -> ConnectInfo -> IO Application
 makeApplication loggerH dbConnectionSettings connectInfo =  
+    do  
         let storeSettings = defaultSettings {storeSettingsLog = L.hDebug loggerH}
-        in do
-            vaultKey <- Vault.newKey
-            simpleConnection <- connectPostgreSQL (postgreSQLConnectionString connectInfo)
-                >>= fromSimpleConnection
-            store <- dbStore simpleConnection storeSettings :: IO (SessionStore IO String String)
-            void (purger simpleConnection storeSettings)
+        vaultKey <- Vault.newKey
+        simpleConnection <- connectPostgreSQL (postgreSQLConnectionString connectInfo)
+            >>= fromSimpleConnection
+        store <- dbStore simpleConnection storeSettings :: IO (SessionStore IO String String)
+        void (purger simpleConnection storeSettings)
 
-            pure $ S.withSessions
-                (S.Config
-                    (withSession store "SESSION" defaultSetCookie vaultKey)
-                    (Vault.lookup vaultKey . vault)
-                    (clearSession simpleConnection "SESSION")
-                )
-                (\ sessionsH ->
-                    DBC.withDBConnection
-                        (DBC.Config $ acquire dbConnectionSettings)
-                        (\ dbH ->
-                            WAI.withWAI
-                                (WAI.Config
-                                    requestMethod
-                                    pathInfo
-                                    strictRequestBody
-                                )
-                                (\ waiH ->
-                                    Static.router (
-                                        S.hWithSession
-                                            sessionsH
-                                            $ restAPI loggerH sessionsH dbH waiH
-                                        )
-                                )
-                        )
-                )
+        pure $ S.withSessions
+            (S.Config
+                (withSession store "SESSION" defaultSetCookie vaultKey)
+                (Vault.lookup vaultKey . vault)
+                (clearSession simpleConnection "SESSION")
+            )
+            (\ sessionsH ->
+                DBC.withDBConnection
+                    (DBC.Config $ acquire dbConnectionSettings)
+                    (\ dbH ->
+                        WAI.withWAI
+                            (WAI.Config
+                                requestMethod
+                                pathInfo
+                                strictRequestBody
+                            )
+                            (\ waiH ->
+                                Static.router (
+                                    S.hWithSession
+                                        sessionsH
+                                        $ restAPI loggerH sessionsH dbH waiH
+                                    )
+                            )
+                    )
+            )
             
 
 runWarpWithLogger :: IO ()

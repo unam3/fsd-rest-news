@@ -95,39 +95,39 @@ createUser :: MonadIO m =>
     -> Connection
     -> CreateUserRequest
     -> m (Either String ByteString, Maybe ByteString)
-createUser sessionRun connection createUserRequest = let {
-    params = (
-        username (createUserRequest :: CreateUserRequest),
-        password (createUserRequest :: CreateUserRequest),
-        name (createUserRequest :: CreateUserRequest),
-        surname createUserRequest,
-        avatar createUserRequest
-        );
-} in do
-    sessionResults <- sessionRun (Session.statement params DBR.createUser) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getErrorCode sessionResults of
-            Just "22001" -> Just "{\"error\": \"name and surname field length must be 80 characters at most\"}"
-            Just "23505" -> Just "{\"error\": \"user with this username already exists\"}"
-            _ -> Nothing
-        )
+createUser sessionRun connection createUserRequest =
+    do
+        let params = (
+                username (createUserRequest :: CreateUserRequest),
+                password (createUserRequest :: CreateUserRequest),
+                name (createUserRequest :: CreateUserRequest),
+                surname createUserRequest,
+                avatar createUserRequest
+                )
+        sessionResults <- sessionRun (Session.statement params DBR.createUser) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getErrorCode sessionResults of
+                Just "22001" -> Just "{\"error\": \"name and surname field length must be 80 characters at most\"}"
+                Just "23505" -> Just "{\"error\": \"user with this username already exists\"}"
+                _ -> Nothing
+            )
 
 deleteUser :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> UserIdRequest
     -> m (Either String ByteString, Maybe ByteString)
-deleteUser sessionRun connection deleteUserRequest = let {
-    params = user_id (deleteUserRequest :: UserIdRequest);
-} in do
-    sessionResults <- sessionRun (Session.statement params DBR.deleteUser) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getErrorCode sessionResults of
-            Just "0" -> Just "{\"error\": \"such user does not exist\"}"
-            _ -> Nothing
-        )
+deleteUser sessionRun connection deleteUserRequest = 
+    do
+        let params = user_id (deleteUserRequest :: UserIdRequest)
+        sessionResults <- sessionRun (Session.statement params DBR.deleteUser) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getErrorCode sessionResults of
+                Just "0" -> Just "{\"error\": \"such user does not exist\"}"
+                _ -> Nothing
+            )
 
 getUser :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
@@ -148,145 +148,147 @@ promoteUserToAuthor :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection -> PromoteUserToAuthorRequest
     -> m (Either String ByteString, Maybe ByteString)
-promoteUserToAuthor sessionRun connection promoteUserToAuthorRequest = let {
-    params = (
-        user_id (promoteUserToAuthorRequest :: PromoteUserToAuthorRequest),
-        description (promoteUserToAuthorRequest :: PromoteUserToAuthorRequest));
-} in do
-    sessionResults <- sessionRun (Session.statement params DBR.promoteUserToAuthor) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getErrorCode sessionResults of
-            Just "23503" -> Just "{\"error\": \"such user does not exist\"}"
-            Just "23505" -> Just "{\"error\": \"such user is already an author\"}"
-            _ -> Nothing
-        )
+promoteUserToAuthor sessionRun connection promoteUserToAuthorRequest =
+    do
+        let params = (
+                user_id (promoteUserToAuthorRequest :: PromoteUserToAuthorRequest),
+                description (promoteUserToAuthorRequest :: PromoteUserToAuthorRequest)
+                )
+        sessionResults <- sessionRun (Session.statement params DBR.promoteUserToAuthor) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getErrorCode sessionResults of
+                Just "23503" -> Just "{\"error\": \"such user does not exist\"}"
+                Just "23505" -> Just "{\"error\": \"such user is already an author\"}"
+                _ -> Nothing
+            )
 
 editAuthor :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> EditAuthorRequest
     -> m (Either String ByteString, Maybe ByteString)
-editAuthor sessionRun connection editAuthorRequest = let {
-    params = (
-        author_id (editAuthorRequest :: EditAuthorRequest),
-        description (editAuthorRequest :: EditAuthorRequest));
-} in do
-    sessionResults <- sessionRun (Session.statement params DBR.editAuthor) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getErrorCode sessionResults of
-            Just "22001" -> Just "{\"error\": \"name and surname field length must be 80 characters at most\"}"
-            Just "0" -> Just "{\"error\": \"such author does not exist\"}"
-            _ -> Nothing
-        )
+editAuthor sessionRun connection editAuthorRequest =
+    do
+        let params = (
+                author_id (editAuthorRequest :: EditAuthorRequest),
+                description (editAuthorRequest :: EditAuthorRequest)
+                )
+        sessionResults <- sessionRun (Session.statement params DBR.editAuthor) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getErrorCode sessionResults of
+                Just "22001" -> Just "{\"error\": \"name and surname field length must be 80 characters at most\"}"
+                Just "0" -> Just "{\"error\": \"such author does not exist\"}"
+                _ -> Nothing
+            )
 
 getAuthor :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> AuthorIdRequest
     -> m (Either String ByteString, Maybe ByteString)
-getAuthor sessionRun connection authorIdRequest = let {
-    params = author_id (authorIdRequest :: AuthorIdRequest);
-} in do
-    sessionResults <- sessionRun (Session.statement params DBR.getAuthor) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getErrorCode sessionResults of
-            Just "0" -> Just "{\"error\": \"such author does not exist\"}"
-            _ -> Nothing
-        )
+getAuthor sessionRun connection authorIdRequest =
+    do
+        let params = author_id (authorIdRequest :: AuthorIdRequest)
+        sessionResults <- sessionRun (Session.statement params DBR.getAuthor) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getErrorCode sessionResults of
+                Just "0" -> Just "{\"error\": \"such author does not exist\"}"
+                _ -> Nothing
+            )
 
 deleteAuthorRole :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> AuthorIdRequest
     -> m (Either String ByteString, Maybe ByteString)
-deleteAuthorRole sessionRun connection authorIdRequest = let {
-    params = author_id (authorIdRequest :: AuthorIdRequest);
-} in do
-    sessionResults <- sessionRun (Session.statement params DBR.deleteAuthorRole) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getErrorCode sessionResults of
-            Just "0" -> Just "{\"error\": \"such author does not exist\"}"
-            _ -> Nothing
-        )
+deleteAuthorRole sessionRun connection authorIdRequest =
+    do
+        let params = author_id (authorIdRequest :: AuthorIdRequest)
+        sessionResults <- sessionRun (Session.statement params DBR.deleteAuthorRole) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getErrorCode sessionResults of
+                Just "0" -> Just "{\"error\": \"such author does not exist\"}"
+                _ -> Nothing
+            )
 
 createCategory :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> CreateCategoryRequest
     -> m (Either String ByteString, Maybe ByteString)
-createCategory sessionRun connection createCategoryRequest = let {
-    params = (
-        name (createCategoryRequest :: CreateCategoryRequest),
-        parent_id (createCategoryRequest :: CreateCategoryRequest)
-        );
-} in do
-    sessionResults <- sessionRun (Session.statement params DBR.createCategory) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getErrorCode sessionResults of
-            Just "22001" -> Just "{\"error\": \"category name length must be 80 characters at most\"}"
-            Just "23503" -> Just "{\"error\": \"parent category does not exist\"}"
-            _ -> Nothing
-        )
+createCategory sessionRun connection createCategoryRequest =
+    do
+        let params = (
+                name (createCategoryRequest :: CreateCategoryRequest),
+                parent_id (createCategoryRequest :: CreateCategoryRequest)
+                )
+        sessionResults <- sessionRun (Session.statement params DBR.createCategory) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getErrorCode sessionResults of
+                Just "22001" -> Just "{\"error\": \"category name length must be 80 characters at most\"}"
+                Just "23503" -> Just "{\"error\": \"parent category does not exist\"}"
+                _ -> Nothing
+            )
 
 updateCategory :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> UpdateCategoryRequest
     -> m (Either String ByteString, Maybe ByteString)
-updateCategory sessionRun connection updateCategoryRequest = let {
-    params = (
-        category_id (updateCategoryRequest :: UpdateCategoryRequest),
-        name (updateCategoryRequest :: UpdateCategoryRequest),
-        parent_id (updateCategoryRequest :: UpdateCategoryRequest)
-        );
-} in do
-    sessionResults <- sessionRun (Session.statement params DBR.updateCategory) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getErrorCode sessionResults of
-            Just "22001" -> Just "{\"error\": \"category name length must be 80 characters at most\"}"
-            Just "23503" -> Just "{\"error\": \"parent category does not exist\"}"
-            Just "0" -> Just "{\"error\": \"no such category\"}"
-            _ -> Nothing
-        )
+updateCategory sessionRun connection updateCategoryRequest =
+    do
+        let params = (
+                category_id (updateCategoryRequest :: UpdateCategoryRequest),
+                name (updateCategoryRequest :: UpdateCategoryRequest),
+                parent_id (updateCategoryRequest :: UpdateCategoryRequest)
+                )
+        sessionResults <- sessionRun (Session.statement params DBR.updateCategory) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getErrorCode sessionResults of
+                Just "22001" -> Just "{\"error\": \"category name length must be 80 characters at most\"}"
+                Just "23503" -> Just "{\"error\": \"parent category does not exist\"}"
+                Just "0" -> Just "{\"error\": \"no such category\"}"
+                _ -> Nothing
+            )
 
 getCategory :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> CategoryIdRequest
     -> m (Either String ByteString, Maybe ByteString)
-getCategory sessionRun connection categoryIdRequest = let {
-    params = category_id (categoryIdRequest :: CategoryIdRequest);
-} in do
-    sessionResults <- sessionRun (Session.statement params DBR.getCategory) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getErrorCode sessionResults of
-            Just "0" -> Just "{\"error\": \"no such category\"}"
-            _ -> Nothing
-        )
+getCategory sessionRun connection categoryIdRequest =
+    do
+        let params = category_id (categoryIdRequest :: CategoryIdRequest)
+        sessionResults <- sessionRun (Session.statement params DBR.getCategory) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getErrorCode sessionResults of
+                Just "0" -> Just "{\"error\": \"no such category\"}"
+                _ -> Nothing
+            )
 
 deleteCategory :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> CategoryIdRequest
     -> m (Either String ByteString, Maybe ByteString)
-deleteCategory sessionRun connection categoryIdRequest = let {
-    params = category_id (categoryIdRequest :: CategoryIdRequest);
-} in do
-    sessionResults <- sessionRun (Session.statement params DBR.deleteCategory) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getErrorCode sessionResults of
-            Just "23503" -> Just "{\"error\": \"category is in use\"}"
-            Just "0" -> Just "{\"error\": \"no such category\"}"
-            _ -> Nothing
-        )
+deleteCategory sessionRun connection categoryIdRequest =
+    do
+        let params = category_id (categoryIdRequest :: CategoryIdRequest)
+        sessionResults <- sessionRun (Session.statement params DBR.deleteCategory) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getErrorCode sessionResults of
+                Just "23503" -> Just "{\"error\": \"category is in use\"}"
+                Just "0" -> Just "{\"error\": \"no such category\"}"
+                _ -> Nothing
+            )
 
 
 createTag :: MonadIO m =>
@@ -294,68 +296,68 @@ createTag :: MonadIO m =>
     -> Connection
     -> CreateTagRequest
     -> m (Either String ByteString, Maybe ByteString)
-createTag sessionRun connection createTagRequest = let {
-    params = tag_name (createTagRequest :: CreateTagRequest);
-} in do
-    sessionResults <- sessionRun (Session.statement params DBR.createTag) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getErrorCode sessionResults of
-            Just "22001" -> Just "{\"error\": \"tag_name length must be 80 characters at most\"}"
-            Just "23505" -> Just "{\"error\": \"tag with such name already exists\"}"
-            _ -> Nothing
-        )
+createTag sessionRun connection createTagRequest =
+    do
+        let params = tag_name (createTagRequest :: CreateTagRequest)
+        sessionResults <- sessionRun (Session.statement params DBR.createTag) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getErrorCode sessionResults of
+                Just "22001" -> Just "{\"error\": \"tag_name length must be 80 characters at most\"}"
+                Just "23505" -> Just "{\"error\": \"tag with such name already exists\"}"
+                _ -> Nothing
+            )
 
 editTag :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> EditTagRequest
     -> m (Either String ByteString, Maybe ByteString)
-editTag sessionRun connection editTagRequest = let {
-    params = (tag_id (editTagRequest :: EditTagRequest), tag_name (editTagRequest :: EditTagRequest));
-} in do
-    sessionResults <- sessionRun (Session.statement params DBR.editTag) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getErrorCode sessionResults of
-            Just "22001" -> Just "{\"error\": \"tag_name length must be 80 characters at most\"}"
-            Just "23505" -> Just "{\"error\": \"tag with such name already exists\"}"
-            Just "0" -> Just "{\"error\": \"no such tag\"}"
-            _ -> Nothing
-        )
+editTag sessionRun connection editTagRequest =
+    do
+        let params = (tag_id (editTagRequest :: EditTagRequest), tag_name (editTagRequest :: EditTagRequest))
+        sessionResults <- sessionRun (Session.statement params DBR.editTag) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getErrorCode sessionResults of
+                Just "22001" -> Just "{\"error\": \"tag_name length must be 80 characters at most\"}"
+                Just "23505" -> Just "{\"error\": \"tag with such name already exists\"}"
+                Just "0" -> Just "{\"error\": \"no such tag\"}"
+                _ -> Nothing
+            )
 
 deleteTag :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> TagIdRequest
     -> m (Either String ByteString, Maybe ByteString)
-deleteTag sessionRun connection deleteTagRequest = let {
-    params = tag_id (deleteTagRequest :: TagIdRequest);
-} in do
-    sessionResults <- sessionRun (Session.statement params DBR.deleteTag) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getErrorCode sessionResults of
-            Just "23503" -> Just "{\"error\": \"tag is referenced by an article\"}"
-            Just "0" -> Just "{\"error\": \"no such tag\"}"
-            _ -> Nothing
-        )
+deleteTag sessionRun connection deleteTagRequest =
+    do
+        let params = tag_id (deleteTagRequest :: TagIdRequest)
+        sessionResults <- sessionRun (Session.statement params DBR.deleteTag) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getErrorCode sessionResults of
+                Just "23503" -> Just "{\"error\": \"tag is referenced by an article\"}"
+                Just "0" -> Just "{\"error\": \"no such tag\"}"
+                _ -> Nothing
+            )
 
 getTag :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> TagIdRequest
     -> m (Either String ByteString, Maybe ByteString)
-getTag sessionRun connection getTagRequest = let {
-    params = tag_id (getTagRequest :: TagIdRequest);
-} in do
-    sessionResults <- sessionRun (Session.statement params DBR.getTag) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getErrorCode sessionResults of
-            Just "0" -> Just "{\"error\": \"no such tag\"}"
-            _ -> Nothing
-        )
+getTag sessionRun connection getTagRequest =
+    do
+        let params = tag_id (getTagRequest :: TagIdRequest)
+        sessionResults <- sessionRun (Session.statement params DBR.getTag) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getErrorCode sessionResults of
+                Just "0" -> Just "{\"error\": \"no such tag\"}"
+                _ -> Nothing
+            )
 
 
 createComment :: MonadIO m =>
@@ -364,20 +366,20 @@ createComment :: MonadIO m =>
     -> CreateCommentRequest
     -> Int32
     -> m (Either String ByteString, Maybe ByteString)
-createComment sessionRun connection createCommentRequest user_id' = let {
-    params = (
-        article_id (createCommentRequest :: CreateCommentRequest),
-        comment_text (createCommentRequest :: CreateCommentRequest),
-        user_id'
-        );
-} in do
-    sessionResults <- sessionRun (Session.statement params DBR.createComment) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getErrorCode sessionResults of
-            Just "23503" -> Just "{\"error\": \"no such article\"}"
-            _ -> Nothing
-        )
+createComment sessionRun connection createCommentRequest user_id' =
+    do
+        let params = (
+                article_id (createCommentRequest :: CreateCommentRequest),
+                comment_text (createCommentRequest :: CreateCommentRequest),
+                user_id'
+                )
+        sessionResults <- sessionRun (Session.statement params DBR.createComment) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getErrorCode sessionResults of
+                Just "23503" -> Just "{\"error\": \"no such article\"}"
+                _ -> Nothing
+            )
 
 deleteComment :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
@@ -385,40 +387,40 @@ deleteComment :: MonadIO m =>
     -> CommentIdRequest
     -> Int32
     -> m (Either String ByteString, Maybe ByteString)
-deleteComment sessionRun connection deleteCommentRequest user_id' = let {
-    params = (
-        comment_id (deleteCommentRequest :: CommentIdRequest),
-        user_id'
-    );
-} in do
-    sessionResults <- sessionRun (Session.statement params DBR.deleteComment) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getErrorCode sessionResults of
-            Just "0" -> Just "{\"error\": \"no such comment\"}"
-            _ -> Nothing
-        )
+deleteComment sessionRun connection deleteCommentRequest user_id' =
+    do
+        let params = (
+                comment_id (deleteCommentRequest :: CommentIdRequest),
+                user_id'
+                )
+        sessionResults <- sessionRun (Session.statement params DBR.deleteComment) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getErrorCode sessionResults of
+                Just "0" -> Just "{\"error\": \"no such comment\"}"
+                _ -> Nothing
+            )
 
 getArticleComments :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> ArticleCommentsRequest
     -> m (Either String ByteString, Maybe ByteString)
-getArticleComments sessionRun connection articleCommentsRequest = let {
-    params = (
-        article_id (articleCommentsRequest :: ArticleCommentsRequest),
-        offset (articleCommentsRequest :: ArticleCommentsRequest)
-        );
-} in do
-    sessionResults <- sessionRun (Session.statement params DBR.getArticleComments) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getError sessionResults of
-            Just ("2201X", Just msg) -> if "OFFSET" `isPrefixOf` msg
-                then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
-                else Nothing
-            _ -> Nothing
-        )
+getArticleComments sessionRun connection articleCommentsRequest =
+    do
+        let params = (
+                article_id (articleCommentsRequest :: ArticleCommentsRequest),
+                offset (articleCommentsRequest :: ArticleCommentsRequest)
+                )
+        sessionResults <- sessionRun (Session.statement params DBR.getArticleComments) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getError sessionResults of
+                Just ("2201X", Just msg) -> if "OFFSET" `isPrefixOf` msg
+                    then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+                    else Nothing
+                _ -> Nothing
+            )
 
 
 createArticleDraft :: MonadIO m =>
@@ -427,32 +429,32 @@ createArticleDraft :: MonadIO m =>
     -> ArticleDraftRequest
     -> Int32
     -> m (Either String ByteString, Maybe ByteString)
-createArticleDraft sessionRun connection articleDraftRequest author_id' = let {
-    params = (
-        author_id',
-        category_id (articleDraftRequest :: ArticleDraftRequest),
-        article_title (articleDraftRequest :: ArticleDraftRequest),
-        article_content (articleDraftRequest :: ArticleDraftRequest),
-        tags (articleDraftRequest :: ArticleDraftRequest),
-        main_photo (articleDraftRequest :: ArticleDraftRequest),
-        additional_photos (articleDraftRequest :: ArticleDraftRequest)
-        );
-} in do
-    sessionResults <- sessionRun (Session.statement params DBR.createArticleDraft) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getError sessionResults of
-            Just ("22001", _) -> Just "{\"error\": \"article_title length must be 80 characters at most\"}"
-            Just ("23503", details) ->
-                let {
-                    detailsPrefix = fmap (take 12) details;
-                } in case detailsPrefix of
-                    Just "Key (tag_id)" -> Just "{\"error\": \"no such tag\"}"
-                    Just "Key (categor" -> Just "{\"error\": \"no such category\"}"
-                    _ -> error $ show details
-            Just ("0", Nothing) -> Just "{\"error\": \"no such article\"}"
-            _ -> Nothing
-        )
+createArticleDraft sessionRun connection articleDraftRequest author_id' =
+    do
+        let params = (
+                author_id',
+                category_id (articleDraftRequest :: ArticleDraftRequest),
+                article_title (articleDraftRequest :: ArticleDraftRequest),
+                article_content (articleDraftRequest :: ArticleDraftRequest),
+                tags (articleDraftRequest :: ArticleDraftRequest),
+                main_photo (articleDraftRequest :: ArticleDraftRequest),
+                additional_photos (articleDraftRequest :: ArticleDraftRequest)
+                )
+        sessionResults <- sessionRun (Session.statement params DBR.createArticleDraft) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getError sessionResults of
+                Just ("22001", _) -> Just "{\"error\": \"article_title length must be 80 characters at most\"}"
+                Just ("23503", details) ->
+                    let {
+                        detailsPrefix = fmap (take 12) details;
+                    } in case detailsPrefix of
+                        Just "Key (tag_id)" -> Just "{\"error\": \"no such tag\"}"
+                        Just "Key (categor" -> Just "{\"error\": \"no such category\"}"
+                        _ -> error $ show details
+                Just ("0", Nothing) -> Just "{\"error\": \"no such article\"}"
+                _ -> Nothing
+            )
 
 publishArticleDraft :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
@@ -460,19 +462,19 @@ publishArticleDraft :: MonadIO m =>
     -> ArticleDraftIdRequest
     -> Int32 ->
     m (Either String ByteString, Maybe ByteString)
-publishArticleDraft sessionRun connection articleDraftIdRequest author_id' = let {
-    params = (
-        author_id',
-        article_id (articleDraftIdRequest :: ArticleDraftIdRequest)
-        );
-} in do
-    sessionResults <- sessionRun (Session.statement params DBR.publishArticleDraft) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getErrorCode sessionResults of
-            Just "0" -> Just "{\"error\": \"no such article\"}"
-            _ -> Nothing
-        )
+publishArticleDraft sessionRun connection articleDraftIdRequest author_id' =
+    do
+        let params = (
+                author_id',
+                article_id (articleDraftIdRequest :: ArticleDraftIdRequest)
+                )
+        sessionResults <- sessionRun (Session.statement params DBR.publishArticleDraft) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getErrorCode sessionResults of
+                Just "0" -> Just "{\"error\": \"no such article\"}"
+                _ -> Nothing
+            )
 
 editArticleDraft :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
@@ -480,34 +482,34 @@ editArticleDraft :: MonadIO m =>
     -> ArticleDraftEditRequest
     -> Int32
     -> m (Either String ByteString, Maybe ByteString)
-editArticleDraft sessionRun connection articleDraftEditRequest author_id' = let {
-    params = (
-        author_id',
-        article_id (articleDraftEditRequest :: ArticleDraftEditRequest),
-        category_id (articleDraftEditRequest :: ArticleDraftEditRequest),
-        article_title (articleDraftEditRequest :: ArticleDraftEditRequest),
-        article_content (articleDraftEditRequest :: ArticleDraftEditRequest),
-        main_photo (articleDraftEditRequest :: ArticleDraftEditRequest),
-        additional_photos (articleDraftEditRequest :: ArticleDraftEditRequest),
-        tags (articleDraftEditRequest :: ArticleDraftEditRequest)
-        );
-} in do
-    sessionResults <- sessionRun (Session.statement params DBR.editArticleDraft) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getError sessionResults of
-            Just ("22001", _) -> Just "{\"error\": \"article_title length must be 80 characters at most\"}"
-            Just ("23503", details) ->
-                let {
-                    detailsPrefix = fmap (take 12) details;
-                } in case detailsPrefix of
-                    Just "Key (tag_id)" -> Just "{\"error\": \"no such tag\"}"
-                    Just "Key (categor" -> Just "{\"error\": \"no such category\"}"
-                    Just "Key (article" -> Just "{\"error\": \"no such article\"}"
-                    _ -> error $ show details
-            Just ("0", Nothing) -> Just "{\"error\": \"no such article\"}"
-            _ -> Nothing
-        )
+editArticleDraft sessionRun connection articleDraftEditRequest author_id' =
+    do
+        let params = (
+                author_id',
+                article_id (articleDraftEditRequest :: ArticleDraftEditRequest),
+                category_id (articleDraftEditRequest :: ArticleDraftEditRequest),
+                article_title (articleDraftEditRequest :: ArticleDraftEditRequest),
+                article_content (articleDraftEditRequest :: ArticleDraftEditRequest),
+                main_photo (articleDraftEditRequest :: ArticleDraftEditRequest),
+                additional_photos (articleDraftEditRequest :: ArticleDraftEditRequest),
+                tags (articleDraftEditRequest :: ArticleDraftEditRequest)
+                )
+        sessionResults <- sessionRun (Session.statement params DBR.editArticleDraft) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getError sessionResults of
+                Just ("22001", _) -> Just "{\"error\": \"article_title length must be 80 characters at most\"}"
+                Just ("23503", details) ->
+                    let {
+                        detailsPrefix = fmap (take 12) details;
+                    } in case detailsPrefix of
+                        Just "Key (tag_id)" -> Just "{\"error\": \"no such tag\"}"
+                        Just "Key (categor" -> Just "{\"error\": \"no such category\"}"
+                        Just "Key (article" -> Just "{\"error\": \"no such article\"}"
+                        _ -> error $ show details
+                Just ("0", Nothing) -> Just "{\"error\": \"no such article\"}"
+                _ -> Nothing
+            )
 
 getArticleDraft :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
@@ -515,19 +517,19 @@ getArticleDraft :: MonadIO m =>
     -> ArticleDraftIdRequest
     -> Int32 ->
     m (Either String ByteString, Maybe ByteString)
-getArticleDraft sessionRun connection articleDraftIdRequest author_id' = let {
-    params = (
-        article_id (articleDraftIdRequest :: ArticleDraftIdRequest),
-        author_id'
-        );
-} in do
-    sessionResults <- sessionRun (Session.statement params DBR.getArticleDraft) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getErrorCode sessionResults of
-            Just "0" -> Just "{\"error\": \"no such article\"}"
-            _ -> Nothing
-        )
+getArticleDraft sessionRun connection articleDraftIdRequest author_id' =
+    do
+        let params = (
+                article_id (articleDraftIdRequest :: ArticleDraftIdRequest),
+                author_id'
+                )
+        sessionResults <- sessionRun (Session.statement params DBR.getArticleDraft) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getErrorCode sessionResults of
+                Just "0" -> Just "{\"error\": \"no such article\"}"
+                _ -> Nothing
+            )
 
 deleteArticleDraft :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
@@ -535,19 +537,19 @@ deleteArticleDraft :: MonadIO m =>
     -> ArticleDraftIdRequest
     -> Int32
     -> m (Either String ByteString, Maybe ByteString)
-deleteArticleDraft sessionRun connection articleDraftIdRequest author_id' = let {
-    params = (
-        article_id (articleDraftIdRequest :: ArticleDraftIdRequest),
-        author_id'
-        );
-} in do
-    sessionResults <- sessionRun (Session.statement params DBR.deleteArticleDraft) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getErrorCode sessionResults of
-            Just "0" -> Just "{\"error\": \"no such article\"}"
-            _ -> Nothing
-        )
+deleteArticleDraft sessionRun connection articleDraftIdRequest author_id' =
+    do
+        let params = (
+                article_id (articleDraftIdRequest :: ArticleDraftIdRequest),
+                author_id'
+                )
+        sessionResults <- sessionRun (Session.statement params DBR.deleteArticleDraft) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getErrorCode sessionResults of
+                Just "0" -> Just "{\"error\": \"no such article\"}"
+                _ -> Nothing
+            )
 
 
 getArticlesByCategoryId :: MonadIO m =>
@@ -555,42 +557,42 @@ getArticlesByCategoryId :: MonadIO m =>
     -> Connection
     -> ArticlesByCategoryIdRequest
     -> m (Either String ByteString, Maybe ByteString)
-getArticlesByCategoryId sessionRun connection articlesByCategoryIdRequest = let {
-    params = (
-        category_id (articlesByCategoryIdRequest :: ArticlesByCategoryIdRequest),
-        offset (articlesByCategoryIdRequest :: ArticlesByCategoryIdRequest)
-        );
-} in do
-    sessionResults <- sessionRun (Session.statement params DBR.getArticlesByCategoryId) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getError sessionResults of
-            Just ("2201X", Just msg) -> if "OFFSET" `isPrefixOf` msg
-                then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
-                else Nothing
-            _ -> Nothing
-        )
+getArticlesByCategoryId sessionRun connection articlesByCategoryIdRequest =
+    do
+        let params = (
+                category_id (articlesByCategoryIdRequest :: ArticlesByCategoryIdRequest),
+                offset (articlesByCategoryIdRequest :: ArticlesByCategoryIdRequest)
+                )
+        sessionResults <- sessionRun (Session.statement params DBR.getArticlesByCategoryId) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getError sessionResults of
+                Just ("2201X", Just msg) -> if "OFFSET" `isPrefixOf` msg
+                    then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+                    else Nothing
+                _ -> Nothing
+            )
 
 getArticlesByTagId :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> TagIdRequestWithOffset
     -> m (Either String ByteString, Maybe ByteString)
-getArticlesByTagId sessionRun connection tagIdRequestWithOffset = let {
-    params = (
-        tag_id (tagIdRequestWithOffset :: TagIdRequestWithOffset),
-        offset (tagIdRequestWithOffset :: TagIdRequestWithOffset)
-        );
-} in do
-    sessionResults <- sessionRun (Session.statement params DBR.getArticlesByTagId) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getError sessionResults of
-            Just ("2201X", Just msg) -> if "OFFSET" `isPrefixOf` msg
-                then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
-                else Nothing
-            _ -> Nothing
-        )
+getArticlesByTagId sessionRun connection tagIdRequestWithOffset =
+    do
+        let params = (
+                tag_id (tagIdRequestWithOffset :: TagIdRequestWithOffset),
+                offset (tagIdRequestWithOffset :: TagIdRequestWithOffset)
+                )
+        sessionResults <- sessionRun (Session.statement params DBR.getArticlesByTagId) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getError sessionResults of
+                Just ("2201X", Just msg) -> if "OFFSET" `isPrefixOf` msg
+                    then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+                    else Nothing
+                _ -> Nothing
+            )
 
 
 getArticlesByAnyTagId :: MonadIO m =>
@@ -598,105 +600,105 @@ getArticlesByAnyTagId :: MonadIO m =>
     -> Connection
     -> ArticlesByTagIdListRequest
     -> m (Either String ByteString, Maybe ByteString)
-getArticlesByAnyTagId sessionRun connection tagIdsRequest = let {
-    params = (
-        tags_ids (tagIdsRequest :: ArticlesByTagIdListRequest),
-        offset (tagIdsRequest :: ArticlesByTagIdListRequest)
-        );
-} in do
-    sessionResults <- sessionRun (Session.statement params DBR.getArticlesByAnyTagId) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getError sessionResults of
-            Just ("2201X", Just msg) -> if "OFFSET" `isPrefixOf` msg
-                then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
-                else Nothing
-            _ -> Nothing
-        )
+getArticlesByAnyTagId sessionRun connection tagIdsRequest =
+    do
+        let params = (
+                tags_ids (tagIdsRequest :: ArticlesByTagIdListRequest),
+                offset (tagIdsRequest :: ArticlesByTagIdListRequest)
+                )
+        sessionResults <- sessionRun (Session.statement params DBR.getArticlesByAnyTagId) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getError sessionResults of
+                Just ("2201X", Just msg) -> if "OFFSET" `isPrefixOf` msg
+                    then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+                    else Nothing
+                _ -> Nothing
+            )
 
 getArticlesByAllTagId :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> ArticlesByTagIdListRequest
     -> m (Either String ByteString, Maybe ByteString)
-getArticlesByAllTagId sessionRun connection tagIdsRequest = let {
-    params = (
-        tags_ids (tagIdsRequest :: ArticlesByTagIdListRequest),
-        offset (tagIdsRequest :: ArticlesByTagIdListRequest)
-        );
-} in do
-    sessionResults <- sessionRun (Session.statement params DBR.getArticlesByAllTagId) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getError sessionResults of
-            Just ("2201X", Just msg) -> if "OFFSET" `isPrefixOf` msg
-                then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
-                else Nothing
-            _ -> Nothing
-        )
+getArticlesByAllTagId sessionRun connection tagIdsRequest =
+    do
+        let params = (
+                tags_ids (tagIdsRequest :: ArticlesByTagIdListRequest),
+                offset (tagIdsRequest :: ArticlesByTagIdListRequest)
+                )
+        sessionResults <- sessionRun (Session.statement params DBR.getArticlesByAllTagId) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getError sessionResults of
+                Just ("2201X", Just msg) -> if "OFFSET" `isPrefixOf` msg
+                    then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+                    else Nothing
+                _ -> Nothing
+            )
 
 getArticlesByTitlePart :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> ArticlesByTitlePartRequest
     -> m (Either String ByteString, Maybe ByteString)
-getArticlesByTitlePart sessionRun connection substringRequest = let {
-    params = (
-        title_substring (substringRequest :: ArticlesByTitlePartRequest),
-        offset (substringRequest :: ArticlesByTitlePartRequest)
-        );
-} in do
-    sessionResults <- sessionRun (Session.statement params DBR.getArticlesByTitlePart) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getError sessionResults of
-            Just ("2201X", Just msg) -> if "OFFSET" `isPrefixOf` msg
-                then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
-                else Nothing
-            _ -> Nothing
-        )
+getArticlesByTitlePart sessionRun connection substringRequest =
+    do
+        let params = (
+                title_substring (substringRequest :: ArticlesByTitlePartRequest),
+                offset (substringRequest :: ArticlesByTitlePartRequest)
+                )
+        sessionResults <- sessionRun (Session.statement params DBR.getArticlesByTitlePart) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getError sessionResults of
+                Just ("2201X", Just msg) -> if "OFFSET" `isPrefixOf` msg
+                    then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+                    else Nothing
+                _ -> Nothing
+            )
 
 getArticlesByContentPart :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> ArticlesByContentPartRequest
     -> m (Either String ByteString, Maybe ByteString)
-getArticlesByContentPart sessionRun connection substringRequest = let {
-    params = (
-        content_substring (substringRequest :: ArticlesByContentPartRequest),
-        offset (substringRequest :: ArticlesByContentPartRequest)
-        );
-} in do
-    sessionResults <- sessionRun (Session.statement params DBR.getArticlesByContentPart) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getError sessionResults of
-            Just ("2201X", Just msg) -> if "OFFSET" `isPrefixOf` msg
-                then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
-                else Nothing
-            _ -> Nothing
-        )
+getArticlesByContentPart sessionRun connection substringRequest =
+    do
+        let params = (
+                content_substring (substringRequest :: ArticlesByContentPartRequest),
+                offset (substringRequest :: ArticlesByContentPartRequest)
+                )
+        sessionResults <- sessionRun (Session.statement params DBR.getArticlesByContentPart) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getError sessionResults of
+                Just ("2201X", Just msg) -> if "OFFSET" `isPrefixOf` msg
+                    then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+                    else Nothing
+                _ -> Nothing
+            )
 
 getArticlesByAuthorNamePart :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> ArticlesByAuthorNamePartRequest
     -> m (Either String ByteString, Maybe ByteString)
-getArticlesByAuthorNamePart sessionRun connection substringRequest = let {
-    params = (
-        author_name_substring (substringRequest :: ArticlesByAuthorNamePartRequest),
-        offset (substringRequest :: ArticlesByAuthorNamePartRequest)
-        );
-} in do
-    sessionResults <- sessionRun (Session.statement params DBR.getArticlesByAuthorNamePart) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getError sessionResults of
-            Just ("2201X", Just msg) -> if "OFFSET" `isPrefixOf` msg
-                then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
-                else Nothing
-            _ -> Nothing
-        )
+getArticlesByAuthorNamePart sessionRun connection substringRequest =
+    do
+        let params = (
+                author_name_substring (substringRequest :: ArticlesByAuthorNamePartRequest),
+                offset (substringRequest :: ArticlesByAuthorNamePartRequest)
+                )
+        sessionResults <- sessionRun (Session.statement params DBR.getArticlesByAuthorNamePart) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getError sessionResults of
+                Just ("2201X", Just msg) -> if "OFFSET" `isPrefixOf` msg
+                    then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+                    else Nothing
+                _ -> Nothing
+            )
 
 getArticlesSortedByPhotosNumber :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
@@ -704,17 +706,17 @@ getArticlesSortedByPhotosNumber :: MonadIO m =>
     -> OffsetRequest
     -> m (Either String ByteString, Maybe ByteString)
 getArticlesSortedByPhotosNumber sessionRun connection request =
-    let params = offset (request :: OffsetRequest)
-    in do
-    sessionResults <- sessionRun (Session.statement params DBR.getArticlesSortedByPhotosNumber) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getError sessionResults of
-            Just ("2201X", Just msg) -> if "OFFSET" `isPrefixOf` msg
-                then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
-                else Nothing
-            _ -> Nothing
-        )
+    do
+        let params = offset (request :: OffsetRequest)
+        sessionResults <- sessionRun (Session.statement params DBR.getArticlesSortedByPhotosNumber) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getError sessionResults of
+                Just ("2201X", Just msg) -> if "OFFSET" `isPrefixOf` msg
+                    then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+                    else Nothing
+                _ -> Nothing
+            )
 
 getArticlesSortedByCreationDate :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
@@ -722,17 +724,17 @@ getArticlesSortedByCreationDate :: MonadIO m =>
     -> OffsetRequest
     -> m (Either String ByteString, Maybe ByteString)
 getArticlesSortedByCreationDate sessionRun connection request =
-    let params = offset (request :: OffsetRequest)
-    in do
-    sessionResults <- sessionRun (Session.statement params DBR.getArticlesSortedByCreationDate) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getError sessionResults of
-            Just ("2201X", Just msg) -> if "OFFSET" `isPrefixOf` msg
-                then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
-                else Nothing
-            _ -> Nothing
-        )
+    do
+        let params = offset (request :: OffsetRequest)
+        sessionResults <- sessionRun (Session.statement params DBR.getArticlesSortedByCreationDate) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getError sessionResults of
+                Just ("2201X", Just msg) -> if "OFFSET" `isPrefixOf` msg
+                    then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+                    else Nothing
+                _ -> Nothing
+            )
 
 getArticlesSortedByAuthor :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
@@ -740,17 +742,17 @@ getArticlesSortedByAuthor :: MonadIO m =>
     -> OffsetRequest
     -> m (Either String ByteString, Maybe ByteString)
 getArticlesSortedByAuthor sessionRun connection request =
-    let params = offset (request :: OffsetRequest)
-    in do
-    sessionResults <- sessionRun (Session.statement params DBR.getArticlesSortedByAuthor) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getError sessionResults of
-            Just ("2201X", Just msg) -> if "OFFSET" `isPrefixOf` msg
-                then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
-                else Nothing
-            _ -> Nothing
-        )
+    do
+        let params = offset (request :: OffsetRequest)
+        sessionResults <- sessionRun (Session.statement params DBR.getArticlesSortedByAuthor) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getError sessionResults of
+                Just ("2201X", Just msg) -> if "OFFSET" `isPrefixOf` msg
+                    then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+                    else Nothing
+                _ -> Nothing
+            )
 
 getArticlesSortedByCategory :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
@@ -758,17 +760,17 @@ getArticlesSortedByCategory :: MonadIO m =>
     -> OffsetRequest
     -> m (Either String ByteString, Maybe ByteString)
 getArticlesSortedByCategory sessionRun connection request =
-    let params = offset (request :: OffsetRequest)
-    in do
-    sessionResults <- sessionRun (Session.statement params DBR.getArticlesSortedByCategory) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getError sessionResults of
-            Just ("2201X", Just msg) -> if "OFFSET" `isPrefixOf` msg
-                then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
-                else Nothing
-            _ -> Nothing
-        )
+    do
+        let params = offset (request :: OffsetRequest)
+        sessionResults <- sessionRun (Session.statement params DBR.getArticlesSortedByCategory) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getError sessionResults of
+                Just ("2201X", Just msg) -> if "OFFSET" `isPrefixOf` msg
+                    then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+                    else Nothing
+                _ -> Nothing
+            )
 
 getArticlesFilteredBy :: MonadIO m =>
     Statement (Text, Maybe Int32) Value
@@ -776,21 +778,21 @@ getArticlesFilteredBy :: MonadIO m =>
     -> Connection
     -> ArticlesByCreationDateRequest
     -> m (Either String ByteString, Maybe ByteString)
-getArticlesFilteredBy statement sessionRun connection articlesByCreationDateRequest = let {
-    params = (
-        pack . showGregorian $ day (articlesByCreationDateRequest :: ArticlesByCreationDateRequest),
-        offset (articlesByCreationDateRequest :: ArticlesByCreationDateRequest)
-        );
-} in do
-    sessionResults <- sessionRun (Session.statement params statement) connection
-    pure (
-        valueToUTFLBS sessionResults,
-        case getError sessionResults of
-            Just ("2201X", Just msg) -> if "OFFSET" `isPrefixOf` msg
-                then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
-                else Nothing
-            _ -> Nothing
-        )
+getArticlesFilteredBy statement sessionRun connection articlesByCreationDateRequest =
+    do
+        let params = (
+                pack . showGregorian $ day (articlesByCreationDateRequest :: ArticlesByCreationDateRequest),
+                offset (articlesByCreationDateRequest :: ArticlesByCreationDateRequest)
+                )
+        sessionResults <- sessionRun (Session.statement params statement) connection
+        pure (
+            valueToUTFLBS sessionResults,
+            case getError sessionResults of
+                Just ("2201X", Just msg) -> if "OFFSET" `isPrefixOf` msg
+                    then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+                    else Nothing
+                _ -> Nothing
+            )
 
 getArticlesFilteredByCreationDate :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
@@ -817,16 +819,16 @@ getArticlesCreatedAfterDate = getArticlesFilteredBy DBR.getArticlesCreatedAfterD
 getCredentials :: MonadIO m => 
     (Session.Session (Int32, Bool, Int32) -> Connection -> m (Either Session.QueryError (Int32, Bool, Int32)))
     -> Connection -> AuthRequest -> m (Either String (Int32, Bool, Int32), Maybe ByteString)
-getCredentials sessionRun connection authRequest = let {
-    params = (
-        username (authRequest :: AuthRequest),
-        password (authRequest :: AuthRequest)
-        );
-} in do
-    sessionResults <- sessionRun (Session.statement params DBR.getCredentials) connection
-    pure (
-        first show sessionResults,
-        case getErrorCode sessionResults of
-            Just "0" -> Just "wrong username/password"
-            _ -> Nothing
-        )
+getCredentials sessionRun connection authRequest =
+    do
+        let params = (
+                username (authRequest :: AuthRequest),
+                password (authRequest :: AuthRequest)
+                )
+        sessionResults <- sessionRun (Session.statement params DBR.getCredentials) connection
+        pure (
+            first show sessionResults,
+            case getErrorCode sessionResults of
+                Just "0" -> Just "wrong username/password"
+                _ -> Nothing
+            )
