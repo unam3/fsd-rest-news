@@ -2,15 +2,15 @@
 
 module RestNews.DB.ProcessRequestSpec where
 
-import RestNews.DB.ProcessRequest (getError)
+import RestNews.DB.ProcessRequest (SessionError(..), getError)
 
 import Data.ByteString.Internal (unpackChars)
 import Hasql.Session
 import Test.Hspec (Spec, describe, it, shouldBe)
 
 
-e2201X :: Either QueryError resultsType
-e2201X =
+ePSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE :: Either QueryError resultsType
+ePSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE =
     Left (
         QueryError
             "SELECT CASE WHEN count(ordered) = 0 THEN to_json(ARRAY [] :: INT[]) ELSE json_agg(ordered.*) END :: json FROM (SELECT comment_id, comment_text FROM articles_comments WHERE article_id = $1 :: int4 ORDER BY comment_id LIMIT 20 OFFSET $2 :: int4) AS ordered"
@@ -23,8 +23,8 @@ e2201X =
     )
 
 
-e22001 :: Either QueryError resultsType
-e22001 =
+ePSQL_STRING_DATA_RIGHT_TRUNCATION :: Either QueryError resultsType
+ePSQL_STRING_DATA_RIGHT_TRUNCATION =
     Left (
         QueryError
             "SELECT edit_article_draft($1 :: int4, $2 :: int4, $3 :: int4, $4 :: text, $5 :: text, $6 :: text, $7 :: text[], $8 :: int4[]) :: json"
@@ -41,8 +41,8 @@ e22001 =
             )
     )
 
-e23503 :: Either QueryError resultsType
-e23503 = 
+ePSQL_FOREIGN_KEY_VIOLATION :: Either QueryError resultsType
+ePSQL_FOREIGN_KEY_VIOLATION = 
     Left (
         QueryError
             "WITH delete_results AS (DELETE FROM categories WHERE category_id = $1 :: int4 RETURNING *) SELECT CASE WHEN count(delete_results) = 0 THEN json_build_object('error', 'no such category') ELSE json_build_object('results', 'ook') END :: json FROM delete_results"
@@ -58,8 +58,8 @@ e23503 =
             )
     )
 
-e23505 :: Either QueryError resultsType
-e23505 = 
+ePSQL_UNIQUE_VIOLATION :: Either QueryError resultsType
+ePSQL_UNIQUE_VIOLATION = 
     Left (
         QueryError
             "INSERT INTO users (username, password, name, surname, avatar, is_admin) VALUES ($1 :: text, crypt($2 :: text, gen_salt('bf', 8)), $3 :: text, $4 :: text, $5 :: text, FALSE) RETURNING json_build_object('user_id', user_id, 'name', name, 'surname', surname, 'avatar', avatar, 'creation_date', creation_date, 'is_admin', is_admin) :: json"
@@ -108,18 +108,32 @@ spec :: Spec
 spec =
     describe "getError"
         $ do
-            it "process 22001"
-                $ shouldBe (getError e22001) $ Just ("22001", Nothing)
+            it "process psql_string_data_right_truncation"
+                $ shouldBe (getError ePSQL_STRING_DATA_RIGHT_TRUNCATION)
+                    $ Just (PSQL_STRING_DATA_RIGHT_TRUNCATION, Nothing)
 
-            it "process 2201X"
-                $ shouldBe (getError e2201X) $ Just ("2201X", Just "OFFSET must not be negative")
+            it "process psql_invalid_row_count_in_result_offset_clause"
+                $ shouldBe (getError ePSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE) $ Just (
+                    PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE,
+                    Just "OFFSET must not be negative"
+                    )
 
-            it "process 23503"
-                $ shouldBe (getError e23503)
-                    $ Just ("23503", fmap unpackChars (Just "Key (category_id)=(1) is still referenced from table \"categories\"."))
+            it "process psql_foreign_key_violation"
+                $ shouldBe (getError ePSQL_FOREIGN_KEY_VIOLATION)
+                    $ Just (
+                        PSQL_FOREIGN_KEY_VIOLATION,
+                        fmap unpackChars (Just "Key (category_id)=(1) is still referenced from table \"categories\".")
+                        )
+
+            it "process psql_unique_violation"
+                $ shouldBe (getError ePSQL_UNIQUE_VIOLATION)
+                    $ Just (
+                        PSQL_UNIQUE_VIOLATION,
+                        fmap unpackChars (Just "Key (username)=(asdq) already exists.")
+                        )
 
             it "process UnexpectedAmountOfRows 0"
-                $ shouldBe (getError eUnexpectedAmountOfRows0) $ Just ("0", Nothing)
+                $ shouldBe (getError eUnexpectedAmountOfRows0) $ Just (UnexpectedAmountOfRowsOrUnexpectedNull, Nothing)
 
             it "process UnexpectedNull"
-                $ shouldBe (getError eUnexpectedNull) $ Just ("0", Nothing)
+                $ shouldBe (getError eUnexpectedNull) $ Just (UnexpectedAmountOfRowsOrUnexpectedNull, Nothing)
