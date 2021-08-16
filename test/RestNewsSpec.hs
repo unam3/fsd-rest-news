@@ -19,7 +19,6 @@ import Network.Wai
   )
 import Network.Wai.Handler.Warp (Port, testWithApplication, withApplication)
 import Network.Wai.Internal (ResponseReceived(..))
-import System.Exit (ExitCode(ExitFailure))
 import System.Log.Logger (Priority(DEBUG))
 import System.Process (readProcess)
 import Test.Hspec
@@ -261,7 +260,7 @@ spec = do
   describe "restAPI" $
     it "exit with failure if no vault" $ do
       (_, dbConnectionSettings, connectInfo) <- processedConfig
-      eitherExitCode <-
+      eitherException <-
         try
                     -- Right ResponseReceived -> Right ()
           (void $
@@ -269,10 +268,11 @@ spec = do
              (withLogger'
                 (\loggerH ->
                    makeApplication' loggerH dbConnectionSettings connectInfo))
-             (\port -> auth port >> pure ResponseReceived)) :: IO (Either SomeException ())
+             (\port -> auth port >> pure ResponseReceived)) :: IO (Either SessionErrorThatNeverOccured ())
       shouldBe
-        (show eitherExitCode)
-        (show (Left $ toException (ExitFailure 1) :: Either SomeException ()))
+        (show eitherException)
+        (show
+           (Left SessionErrorThatNeverOccured :: Either SessionErrorThatNeverOccured ()))
   describe "auth" $ do
     it "recognize existing user credentials"
             -- $ do
