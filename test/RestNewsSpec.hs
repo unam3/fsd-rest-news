@@ -2,7 +2,7 @@
 
 module RestNewsSpec where
 
-import Control.Exception (SomeException, toException, try)
+import Control.Exception (try)
 import Control.Monad (void)
 import Data.Functor ((<&>))
 import Data.List (find, isPrefixOf, stripPrefix, uncons)
