@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings  #-}
 
 module RestNews
-    ( makeApplication
+    ( SessionErrorThatNeverOccured(..)
+    , makeApplication
     , runWarpWithLogger
     , restAPI
     , processConfig
@@ -86,15 +87,7 @@ restAPI loggerH sessionsH dbH waiH request respond =
             _ <- L.hDebug loggerH $ show request
 
             let maybeSessionMethods = S.hMaybeSessionMethods sessionsH request
-
-            when
-                (isNothing maybeSessionMethods)
-                (L.hError loggerH "Vault session error"
-                    -- kills current warp child's thread
-                    -- warp will return 500
-                    >> exitFailure)
-
-            let (sessionLookup, sessionInsert) = fromMaybe (throw SessionErrorThatNeverOccured) maybeSessionMethods
+                (sessionLookup, sessionInsert) = fromMaybe (throw SessionErrorThatNeverOccured) maybeSessionMethods
 
             maybeUserId <- sessionLookup "user_id"
             maybeIsAdmin <- sessionLookup "is_admin"

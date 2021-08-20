@@ -2,7 +2,7 @@
 
 module RestNewsSpec where
 
-import Control.Exception (SomeException, toException, try)
+import Control.Exception (try)
 import Control.Monad (void)
 import Data.List (find, isPrefixOf, stripPrefix, uncons)
 import Data.Maybe (fromMaybe)
@@ -13,7 +13,6 @@ import Network.Wai.Internal (ResponseReceived(..))
 import Network.Wai.Handler.Warp (Port, testWithApplication, withApplication)
 import System.Log.Logger (Priority (DEBUG))
 import System.Process (readProcess)
-import System.Exit (ExitCode(ExitFailure))
 import Test.Hspec (Spec, afterAll, beforeAll, describe, it, runIO, shouldBe, shouldStartWith)
 
 import RestNews
@@ -327,7 +326,7 @@ spec = do
         it "exit with failure if no vault"
             $ do 
                 (_, dbConnectionSettings, connectInfo) <- processedConfig
-                eitherExitCode <- try
+                eitherException <- try
                     -- Right ResponseReceived -> Right ()
                     (void $
                         testWithApplication
@@ -335,11 +334,11 @@ spec = do
                                 (\loggerH -> makeApplication' loggerH dbConnectionSettings connectInfo)
                             )
                             (\ port -> auth port >> pure ResponseReceived)
-                        ) :: IO (Either SomeException ())
+                        ) :: IO (Either SessionErrorThatNeverOccured ())
 
                 shouldBe
-                    (show eitherExitCode)
-                    (show (Left $ toException (ExitFailure 1) :: Either SomeException ()))
+                    (show eitherException)
+                    (show (Left SessionErrorThatNeverOccured :: Either SessionErrorThatNeverOccured ()))
 
 
     describe "auth" $ do
