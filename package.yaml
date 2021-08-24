@@ -48,6 +48,8 @@ dependencies:
 - headed-megaparsec
 - util
 
+- mtl == 2.2.2
+
 ghc-options:
 - -Wall
 - -Wincomplete-uni-patterns

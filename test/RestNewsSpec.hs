@@ -4,6 +4,7 @@ module RestNewsSpec where
 
 import Control.Exception (try)
 import Control.Monad (void)
+import Data.ByteString.Lazy.UTF8 (toString)
 import Data.Functor ((<&>))
 import Data.List (find, isPrefixOf, stripPrefix, uncons)
 import Data.Maybe (fromMaybe)
@@ -34,9 +35,11 @@ import Test.Hspec
 
 import RestNews
 import qualified RestNews.Config as C
+import RestNews.DB.RequestRunner (cantDecodeBS)
 import qualified RestNews.DBConnection as DBC
 import qualified RestNews.Logger as L
 import qualified RestNews.Middleware.Sessions as S
+import RestNews.Requests.SessionName (noSuchEndpointS)
 import qualified RestNews.WAI as WAI
 
 getStringStartingWith :: String -> String -> Maybe String
@@ -80,6 +83,22 @@ curl method session dashDData url =
            _ -> "-d" : dashDData : dataWithCookies)
       ioResponse = readProcess "curl" options []
    in ioResponse
+
+wrongPathRequest :: Int -> IO String
+wrongPathRequest port =
+  curl "GET" [] [] ("http://0.0.0.0:" ++ show port ++ "/wrongPath")
+
+wrongCredsRequest :: Int -> IO String
+wrongCredsRequest port =
+  curl "GET" [] [] ("http://0.0.0.0:" ++ show port ++ "/users")
+
+dbSessionErrorRequest :: Int -> IO String
+dbSessionErrorRequest port =
+  curl
+    "POST"
+    []
+    "{\"username\": \"asdqasdqasdqasdqasdqasdqasdqasdqasdqasdqasdqasdqasdqasdqasdqasdqasdqasdqasdqasdqa0\", \"surname\": \"surname\", \"avatar\": \"asd\"}"
+    ("http://0.0.0.0:" ++ show port ++ "/users")
 
 auth :: Int -> IO String
 auth port =
@@ -260,7 +279,7 @@ runApllicationWith f = do
 
 spec :: Spec
 spec = do
-  describe "restAPI" $
+  describe "restAPI" $ do
     it "exit with failure if no vault" $ do
       (_, dbConnectionSettings, connectInfo) <- processedConfig
       eitherException <-
@@ -276,6 +295,13 @@ spec = do
         (show eitherException)
         (show
            (Left SessionErrorThatNeverOccured :: Either SessionErrorThatNeverOccured ()))
+    it "message when wrong path was requested" $
+      runApllicationWith wrongPathRequest >>= (`shouldBe` noSuchEndpointS)
+    it "message when wrong credentials" $
+      runApllicationWith wrongCredsRequest >>= (`shouldBe` noSuchEndpointS)
+    it "message when DB session error" $
+      runApllicationWith dbSessionErrorRequest >>=
+      (`shouldBe` toString cantDecodeBS)
   describe "auth" $ do
     it "recognize existing user credentials"
             -- $ do

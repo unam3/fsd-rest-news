@@ -2,6 +2,8 @@
 
 module RestNews.DB.RequestRunner
   ( cantDecode
+  , cantDecodeS
+  , cantDecodeBS
   , runSession
   ) where
 
@@ -9,29 +11,33 @@ import qualified RestNews.DB.ProcessRequest as PR
 
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson (decode)
-import Data.Bifunctor (first)
-import Data.ByteString.Lazy.UTF8 (ByteString)
+import Data.ByteString.Lazy.UTF8 (ByteString, fromString)
 import Data.Functor ((<&>))
 import Data.Int (Int32)
 import Hasql.Connection (Connection)
 import qualified Hasql.Session as Session
 import qualified Util
 
-cantDecode :: (Either String b, Maybe ByteString)
-cantDecode =
-  (Left "Can't decode JSON", Just "Wrong parameters/parameters values")
+cantDecodeS :: String
+cantDecodeS = "Wrong parameters/parameters values"
+
+cantDecodeBS :: ByteString
+cantDecodeBS = fromString cantDecodeS
+
+cantDecode :: PR.HasqlSessionResults a
+cantDecode = PR.H $ Left $ Right cantDecodeBS
 
 runSession ::
      Connection
   -> ByteString
-  -> ((Either String (Int32, Bool, Int32), Maybe ByteString) -> IO ( Either String ( Int32
-                                                                                   , Bool
-                                                                                   , Int32)
-                                                                   , Maybe ByteString))
+  -> (PR.HasqlSessionResults (Int32, Bool, Int32) -> IO (PR.HasqlSessionResults ( Int32
+                                                                                , Bool
+                                                                                , Int32)))
   -> Int32
   -> Int32
   -> String
-  -> IO (Either String ByteString, Maybe ByteString)
+    -- -> IO (PR.HasqlSessionResults a)
+  -> IO (PR.HasqlSessionResults ByteString)
 runSession connection requestBody processCredentialsPartial sessionUserId sessionAuthorId sessionName
         -- (Util.∘∘) == (.).(.)
  =
@@ -50,7 +56,8 @@ runSession connection requestBody processCredentialsPartial sessionUserId sessio
    in case sessionName of
         "auth" ->
           runSessionWithJSON PR.getCredentials >>=
-          processCredentialsPartial <&> first (fmap $ const "cookies are baked")
+          processCredentialsPartial <&> \(PR.H wrappedEither) ->
+            PR.H $ fmap (const "cookies are baked") wrappedEither
         "createUser" -> runSessionWithJSON PR.createUser
         "getUser" -> PR.getUser sessionRun connection sessionUserId
         "deleteUser" -> runSessionWithJSON PR.deleteUser
@@ -105,4 +112,4 @@ runSession connection requestBody processCredentialsPartial sessionUserId sessio
           runSessionWithJSON PR.getArticlesCreatedBeforeDate
         "getArticlesCreatedAfterDate" ->
           runSessionWithJSON PR.getArticlesCreatedAfterDate
-        nonMatched -> pure (Left nonMatched, Nothing)
+        nonMatched -> pure $ PR.H $ Left $ Left nonMatched
