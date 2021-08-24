@@ -14,8 +14,8 @@ import qualified RestNews.DBConnection as DBC
 import qualified RestNews.Logger as L
 import qualified RestNews.Middleware.Sessions as S
 import RestNews.DB.RequestRunner (cantDecode, runSession)
---import qualified RestNews.Requests.SessionName (prerequisitesChecks)
 import qualified RestNews.Requests.PrerequisitesCheck as PC
+import RestNews.Requests.SessionName (getSessionName)
 import qualified RestNews.Middleware.Static as Static
 import qualified RestNews.WAI as WAI
 
@@ -87,6 +87,20 @@ restAPI loggerH sessionsH dbH waiH request respond =
         (do
             _ <- L.hDebug loggerH $ show request
 
+            let method = WAI.hRequestMethod waiH request
+                pathTextChunks = WAI.hPathInfo waiH request
+
+            _ <- L.hInfo loggerH $ show (method, pathTextChunks)
+
+            --errorOrSessionName <- case getSessionName (pathTextChunks, method) of
+            --    Just sessionName -> sessionName
+            --    Nothing -> PC.noSuchEndpoint
+
+            let maybeSessionName <- case getSessionName (pathTextChunks, method) of
+                Just sessionName -> sessionName
+                Nothing -> PC.noSuchEndpoint
+
+
             let maybeSessionMethods = S.hMaybeSessionMethods sessionsH request
                 (sessionLookup, sessionInsert) = fromMaybe (throw SessionErrorThatNeverOccured) maybeSessionMethods
 
@@ -97,12 +111,6 @@ restAPI loggerH sessionsH dbH waiH request respond =
             _ <- L.hDebug loggerH $ show ("session user_id" :: String, maybeUserId)
             _ <- L.hDebug loggerH $ show ("session is_admin" :: String, maybeIsAdmin)
             _ <- L.hDebug loggerH $ show ("session author_id" :: String, maybeAuthorId)
-
-
-            let method = WAI.hRequestMethod waiH request
-                pathTextChunks = WAI.hPathInfo waiH request
-
-            _ <- L.hInfo loggerH $ show (method, pathTextChunks)
 
             let sessionUserIdString = getIdString maybeUserId
                 sessionAuthorIdString = getIdString maybeAuthorId
@@ -115,7 +123,7 @@ restAPI loggerH sessionsH dbH waiH request respond =
                     }
                 in pure (
                     case PC.getPrerequisitesCheck (pathTextChunks, method) of
-                        Just getSessionNameIfPrerequisitesCheck -> getSessionNameIfPrerequisitesCheck params
+                        Just getSessionNameIfPrerequisitesChecks -> getSessionNameIfPrerequisitesChecks params
                         Nothing -> PC.noSuchEndpoint
                     )
 
