@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings  #-}
 
 module RestNews
@@ -12,7 +13,8 @@ import qualified RestNews.Config as C
 import qualified RestNews.DBConnection as DBC
 import qualified RestNews.Logger as L
 import qualified RestNews.Middleware.Sessions as S
-import RestNews.DB.RequestRunner (runSession)
+import RestNews.DB.RequestRunner (cantDecode, runSession)
+--import qualified RestNews.Requests.SessionName (prerequisitesChecks)
 import qualified RestNews.Requests.PrerequisitesCheck as PC
 import qualified RestNews.Middleware.Static as Static
 import qualified RestNews.WAI as WAI
@@ -22,7 +24,6 @@ import Control.Monad (void, when)
 import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
 import Data.Either (fromRight, isLeft)
 import Data.Int (Int32)
-import qualified Data.HashMap.Strict as HMS
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import Data.String (fromString)
 import qualified Data.Vault.Lazy as Vault
@@ -35,7 +36,7 @@ import Network.Wai.Session (SessionStore, withSession)
 import Prelude hiding (error)
 import Network.Wai.Session.PostgreSQL (clearSession, dbStore, defaultSettings, fromSimpleConnection, purger, storeSettingsLog)
 import System.Exit (exitFailure)
-import System.Log.Logger (Priority (INFO, ERROR), debugM, infoM, errorM, setLevel, traplogging, updateGlobalLogger)
+import System.Log.Logger (Priority (DEBUG, ERROR), debugM, infoM, errorM, setLevel, traplogging, updateGlobalLogger)
 import Web.Cookie (defaultSetCookie)
 
 dbError :: Either String UTFLBS.ByteString
@@ -101,23 +102,20 @@ restAPI loggerH sessionsH dbH waiH request respond =
             let method = WAI.hRequestMethod waiH request
                 pathTextChunks = WAI.hPathInfo waiH request
 
-            requestBody <- WAI.hStrictRequestBody waiH request
-
-            _ <- L.hInfo loggerH $ show (method, pathTextChunks, requestBody)
+            _ <- L.hInfo loggerH $ show (method, pathTextChunks)
 
             let sessionUserIdString = getIdString maybeUserId
                 sessionAuthorIdString = getIdString maybeAuthorId
 
             errorOrSessionName <-
                 let params = PC.Params {
-                        PC.lbsRequest = requestBody,
                         PC.isAdmin = maybeIsAdmin == Just "True",
                         PC.hasUserId = sessionUserIdString /= "0",
                         PC.hasAuthorId = sessionAuthorIdString /= "0"
                     }
                 in pure (
-                    case HMS.lookup (pathTextChunks, method) PC.endpointToEitherSessionName of
-                        Just checkRequest -> checkRequest params
+                    case PC.getPrerequisitesCheck (pathTextChunks, method) of
+                        Just getSessionNameIfPrerequisitesCheck -> getSessionNameIfPrerequisitesCheck params
                         Nothing -> PC.noSuchEndpoint
                     )
 
@@ -126,6 +124,10 @@ restAPI loggerH sessionsH dbH waiH request respond =
                 Left error -> pure (Left error, Just $ UTFLBS.fromString error)
                 Right sessionName -> 
                     do
+                        requestBody <- WAI.hStrictRequestBody waiH request
+
+                        _ <- L.hInfo loggerH $ show requestBody
+
                         eitherConnection <- DBC.hAcquiredConnection dbH
 
                         case eitherConnection of
@@ -153,6 +155,8 @@ restAPI loggerH sessionsH dbH waiH request respond =
                                     sessionAuthorId
                                     sessionName
 
+            _ <- L.hDebug loggerH $ show results
+
             _ <- L.hDebug
                 loggerH
                 (case fst results of
@@ -168,15 +172,13 @@ restAPI loggerH sessionsH dbH waiH request respond =
                         Just errorForClient -> pure errorForClient
                         _ -> L.hError
                                 loggerH
-                                "\n^^^ unhandled (hasql session) exception has occured with request above^^^\n\n"
+                                "\n^^^ unhandled exception has occured with request above^^^\n\n"
                                     >> pure no_output_for_the_user_in_case_of_unhandled_exception)
 
-            let endpointNeeded = Left "Endpoint needed"
-                has_unhandled_hasql_session_exception = isLeft (fst results) && isNothing (snd results)
+            let has_unhandled_hasql_session_exception = isLeft (fst results) && isNothing (snd results)
                 httpStatus
-                    | errorOrSessionName == endpointNeeded
-                        || errorOrSessionName == PC.noSuchEndpoint = H.status404
-                    | errorOrSessionName == PC.wrongParamsOrValues = H.status400
+                    | errorOrSessionName == PC.noSuchEndpoint = H.status404
+                    | results == cantDecode = H.status400
                     | fst results == dbError
                         || has_unhandled_hasql_session_exception = H.status500
                     | otherwise = H.status200
@@ -242,7 +244,7 @@ runWarpWithLogger =
             (L.Config
                 -- use INFO, DEBUG or ERROR here
                 -- (add to System.Log.Logger import items if missed)
-                INFO
+                DEBUG
                 (traplogging
                     "rest-news"
                     ERROR
@@ -253,7 +255,7 @@ runWarpWithLogger =
                 (errorM "rest-news"))
             (\ loggerH ->
                 C.parseConfig "config.ini"
-                    >>= \ eitherConfig -> case eitherConfig of
+                    >>= \ case
                         Left errorMessage ->
                             L.hError loggerH errorMessage
                                 >> exitFailure

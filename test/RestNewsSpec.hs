@@ -4,6 +4,7 @@ module RestNewsSpec where
 
 import Control.Exception (try)
 import Control.Monad (void)
+import Data.Functor ((<&>))
 import Data.List (find, isPrefixOf, stripPrefix, uncons)
 import Data.Maybe (fromMaybe)
 import Database.PostgreSQL.Simple (ConnectInfo)
@@ -29,7 +30,7 @@ getStringStartingWith stringToFind stringWithNewLines =  find (isPrefixOf string
 getCookieSession :: String -> Maybe String
 getCookieSession response = getStringStartingWith "Set-Cookie:" response
     >>= stripPrefix "Set-Cookie: SESSION="
-        >>= pure . takeWhile (/= '\r')
+       <&> takeWhile (/= '\r')
 
 getSession :: Int -> IO String
 getSession port =
@@ -224,7 +225,7 @@ publishArticleDraft params session port = curl
     "POST"
     session
     params
-    ("http://0.0.0.0:" ++ show port ++ "/articles")
+    ("http://0.0.0.0:" ++ show port ++ "/articles/publish")
 
 deleteArticleDraft :: String -> String -> Int -> IO String
 deleteArticleDraft params session port = curl

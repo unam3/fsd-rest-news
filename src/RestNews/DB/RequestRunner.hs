@@ -2,7 +2,8 @@
 
 
 module RestNews.DB.RequestRunner
-    ( runSession
+    ( cantDecode
+    , runSession
     ) where
 
 import qualified RestNews.DB.ProcessRequest as PR
@@ -11,11 +12,17 @@ import Control.Monad.IO.Class (liftIO)
 import Data.Aeson (decode)
 import Data.Bifunctor (first)
 import Data.ByteString.Lazy.UTF8 (ByteString)
+import Data.Functor ((<&>))
 import Data.Int (Int32)
 import Hasql.Connection (Connection)
 import qualified Hasql.Session as Session
 import qualified Util
 
+cantDecode :: (Either String b, Maybe ByteString)
+cantDecode = (
+        Left "Can't decode JSON",
+        Just "Wrong parameters/parameters values"
+    )
 
 runSession ::
     Connection
@@ -35,22 +42,18 @@ runSession
     sessionName = let {
         -- (Util.∘∘) == (.).(.)
         sessionRun = (Util.∘∘) liftIO  Session.run;
-        cantDecode = pure (
-                Left "Can't decode request body",
-                Nothing
-            );
-        runSessionWithJSON session = maybe cantDecode (session sessionRun connection) (decode requestBody);
+        runSessionWithJSON session = maybe (pure cantDecode) (session sessionRun connection) (decode requestBody);
         runSessionWithJSONAndArg session arg =
             let partiallyAppliedSession = session sessionRun connection
-            in maybe cantDecode (`partiallyAppliedSession` arg) (decode requestBody);
+            in maybe (pure cantDecode) (`partiallyAppliedSession` arg) (decode requestBody);
     } in case sessionName of
         "auth" -> runSessionWithJSON PR.getCredentials
             >>= processCredentialsPartial
-            >>= pure . first (fmap $ const "cookies are baked")
-        "createUser" -> runSessionWithJSON PR.createUser;
+                <&> first (fmap $ const "cookies are baked")
+        "createUser" -> runSessionWithJSON PR.createUser
         "getUser" -> PR.getUser sessionRun connection sessionUserId
         "deleteUser" -> runSessionWithJSON PR.deleteUser
-        "promoteUserToAuthor" -> runSessionWithJSON PR.promoteUserToAuthor;
+        "promoteUserToAuthor" -> runSessionWithJSON PR.promoteUserToAuthor
         "editAuthor" -> runSessionWithJSON PR.editAuthor
         "getAuthor" -> runSessionWithJSON PR.getAuthor
         "deleteAuthorRole" -> runSessionWithJSON PR.deleteAuthorRole
