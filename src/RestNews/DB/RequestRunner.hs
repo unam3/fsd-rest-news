@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module RestNews.DB.RequestRunner
-  ( runSession
+  ( cantDecode
+  , runSession
   ) where
 
 import qualified RestNews.DB.ProcessRequest as PR
@@ -15,6 +16,10 @@ import Data.Int (Int32)
 import Hasql.Connection (Connection)
 import qualified Hasql.Session as Session
 import qualified Util
+
+cantDecode :: (Either String b, Maybe ByteString)
+cantDecode =
+  (Left "Can't decode JSON", Just "Wrong parameters/parameters values")
 
 runSession ::
      Connection
@@ -31,19 +36,21 @@ runSession connection requestBody processCredentialsPartial sessionUserId sessio
         -- (Util.∘∘) == (.).(.)
  =
   let sessionRun = (Util.∘∘) liftIO Session.run
-      cantDecode = pure (Left "Can't decode request body", Nothing)
       runSessionWithJSON session =
-        maybe cantDecode (session sessionRun connection) (decode requestBody)
+        maybe
+          (pure cantDecode)
+          (session sessionRun connection)
+          (decode requestBody)
       runSessionWithJSONAndArg session arg =
         let partiallyAppliedSession = session sessionRun connection
          in maybe
-              cantDecode
+              (pure cantDecode)
               (`partiallyAppliedSession` arg)
               (decode requestBody)
    in case sessionName of
         "auth" ->
-          (runSessionWithJSON PR.getCredentials >>= processCredentialsPartial) <&>
-          first (fmap $ const "cookies are baked")
+          runSessionWithJSON PR.getCredentials >>=
+          processCredentialsPartial <&> first (fmap $ const "cookies are baked")
         "createUser" -> runSessionWithJSON PR.createUser
         "getUser" -> PR.getUser sessionRun connection sessionUserId
         "deleteUser" -> runSessionWithJSON PR.deleteUser

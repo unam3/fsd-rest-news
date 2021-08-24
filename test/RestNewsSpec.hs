@@ -45,9 +45,8 @@ getStringStartingWith stringToFind stringWithNewLines =
 
 getCookieSession :: String -> Maybe String
 getCookieSession response =
-  (getStringStartingWith "Set-Cookie:" response >>=
-   stripPrefix "Set-Cookie: SESSION=") <&>
-  takeWhile (/= '\r')
+  getStringStartingWith "Set-Cookie:" response >>=
+  stripPrefix "Set-Cookie: SESSION=" <&> takeWhile (/= '\r')
 
 getSession :: Int -> IO String
 getSession port = do
@@ -184,7 +183,11 @@ getArticleDraft params session port =
 
 publishArticleDraft :: String -> String -> Int -> IO String
 publishArticleDraft params session port =
-  curl "POST" session params ("http://0.0.0.0:" ++ show port ++ "/articles")
+  curl
+    "POST"
+    session
+    params
+    ("http://0.0.0.0:" ++ show port ++ "/articles/publish")
 
 deleteArticleDraft :: String -> String -> Int -> IO String
 deleteArticleDraft params session port =

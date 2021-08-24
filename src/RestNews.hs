@@ -10,10 +10,11 @@ module RestNews
   ) where
 
 import qualified RestNews.Config as C
-import RestNews.DB.RequestRunner (runSession)
+import RestNews.DB.RequestRunner (cantDecode, runSession)
 import qualified RestNews.DBConnection as DBC
 import qualified RestNews.Logger as L
 import qualified RestNews.Middleware.Sessions as S
+
 import qualified RestNews.Middleware.Static as Static
 import qualified RestNews.Requests.PrerequisitesCheck as PC
 import qualified RestNews.WAI as WAI
@@ -22,7 +23,6 @@ import Control.Exception (Exception, bracket_, throw)
 import Control.Monad (void, when)
 import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
 import Data.Either (fromRight, isLeft)
-import qualified Data.HashMap.Strict as HMS
 import Data.Int (Int32)
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import Data.String (fromString)
@@ -56,7 +56,7 @@ import Network.Wai.Session.PostgreSQL
 import Prelude hiding (error)
 import System.Exit (exitFailure)
 import System.Log.Logger
-  ( Priority(ERROR, INFO)
+  ( Priority(DEBUG, ERROR)
   , debugM
   , errorM
   , infoM
@@ -121,28 +121,27 @@ restAPI loggerH sessionsH dbH waiH request respond =
           L.hDebug loggerH $ show ("session author_id" :: String, maybeAuthorId)
         let method = WAI.hRequestMethod waiH request
             pathTextChunks = WAI.hPathInfo waiH request
-        requestBody <- WAI.hStrictRequestBody waiH request
-        _ <- L.hInfo loggerH $ show (method, pathTextChunks, requestBody)
+        _ <- L.hInfo loggerH $ show (method, pathTextChunks)
         let sessionUserIdString = getIdString maybeUserId
             sessionAuthorIdString = getIdString maybeAuthorId
         errorOrSessionName <-
           let params =
                 PC.Params
-                  { PC.lbsRequest = requestBody
-                  , PC.isAdmin = maybeIsAdmin == Just "True"
+                  { PC.isAdmin = maybeIsAdmin == Just "True"
                   , PC.hasUserId = sessionUserIdString /= "0"
                   , PC.hasAuthorId = sessionAuthorIdString /= "0"
                   }
            in pure
-                (case HMS.lookup
-                        (pathTextChunks, method)
-                        PC.endpointToEitherSessionName of
-                   Just checkRequest -> checkRequest params
+                (case PC.getPrerequisitesCheck (pathTextChunks, method) of
+                   Just getSessionNameIfPrerequisitesCheck ->
+                     getSessionNameIfPrerequisitesCheck params
                    Nothing -> PC.noSuchEndpoint)
         results <-
           case errorOrSessionName of
             Left error -> pure (Left error, Just $ UTFLBS.fromString error)
             Right sessionName -> do
+              requestBody <- WAI.hStrictRequestBody waiH request
+              _ <- L.hInfo loggerH $ show requestBody
               eitherConnection <- DBC.hAcquiredConnection dbH
               case eitherConnection of
                 Left connectionError ->
@@ -165,6 +164,7 @@ restAPI loggerH sessionsH dbH waiH request respond =
                         sessionUserId
                         sessionAuthorId
                         sessionName
+        _ <- L.hDebug loggerH $ show results
         _ <-
           L.hDebug
             loggerH
@@ -181,16 +181,14 @@ restAPI loggerH sessionsH dbH waiH request respond =
                      _ ->
                        L.hError
                          loggerH
-                         "\n^^^ unhandled (hasql session) exception has occured with request above^^^\n\n" >>
+                         "\n^^^ unhandled exception has occured with request above^^^\n\n" >>
                        pure
                          no_output_for_the_user_in_case_of_unhandled_exception)
-        let endpointNeeded = Left "Endpoint needed"
-            has_unhandled_hasql_session_exception =
+        let has_unhandled_hasql_session_exception =
               isLeft (fst results) && isNothing (snd results)
             httpStatus
-              | errorOrSessionName == endpointNeeded ||
-                  errorOrSessionName == PC.noSuchEndpoint = H.status404
-              | errorOrSessionName == PC.wrongParamsOrValues = H.status400
+              | errorOrSessionName == PC.noSuchEndpoint = H.status404
+              | results == cantDecode = H.status400
               | fst results == dbError || has_unhandled_hasql_session_exception =
                 H.status500
               | otherwise = H.status200
@@ -246,7 +244,7 @@ runWarpWithLogger = do
     (L.Config
                 -- use INFO, DEBUG or ERROR here
                 -- (add to System.Log.Logger import items if missed)
-       INFO
+       DEBUG
        (traplogging "rest-news" ERROR "Unhandled exception occured" .
         updateGlobalLogger "rest-news" . setLevel)
        (debugM "rest-news")
