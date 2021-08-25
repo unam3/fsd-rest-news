@@ -73,6 +73,26 @@ data SessionErrorThatNeverOccured = SessionErrorThatNeverOccured deriving Show
 
 instance Exception SessionErrorThatNeverOccured
 
+getSessionName' :: 
+    L.Handle a
+    -> WAI.Handle a
+    -> Request
+    -> IO (Either String String)
+getSessionName' loggerH waiH request = do
+    _ <- L.hDebug loggerH $ show request
+
+    let method = WAI.hRequestMethod waiH request
+        pathTextChunks = WAI.hPathInfo waiH request
+
+    _ <- L.hInfo loggerH $ show (method, pathTextChunks)
+
+    let eitherSessionName = getSessionName (pathTextChunks, method)
+
+    _ <- L.hInfo loggerH $ show eitherSessionName
+
+    return eitherSessionName
+
+
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
 restAPI ::
     L.Handle a
@@ -85,112 +105,105 @@ restAPI loggerH sessionsH dbH waiH request respond =
         (L.hDebug loggerH "Allocating scarce resource")
         (L.hDebug loggerH "Cleaning up")
         (do
-            _ <- L.hDebug loggerH $ show request
+            getSessionName' loggerH waiH request
+                -- >>= respond . responseLBS H.status200 []
+                >>= \case
+                    Left error -> respond $ responseLBS H.status400 [] $ UTFLBS.fromString error
+                    Right results -> respond $ responseLBS H.status200 [] $ UTFLBS.fromString results
 
-            let method = WAI.hRequestMethod waiH request
-                pathTextChunks = WAI.hPathInfo waiH request
-
-            _ <- L.hInfo loggerH $ show (method, pathTextChunks)
-
-            --errorOrSessionName <- case getSessionName (pathTextChunks, method) of
-            --    Just sessionName -> sessionName
-            --    Nothing -> PC.noSuchEndpoint
-
-            let maybeSessionName <- case getSessionName (pathTextChunks, method) of
-                Just sessionName -> sessionName
-                Nothing -> PC.noSuchEndpoint
+            )
 
 
-            let maybeSessionMethods = S.hMaybeSessionMethods sessionsH request
-                (sessionLookup, sessionInsert) = fromMaybe (throw SessionErrorThatNeverOccured) maybeSessionMethods
+            --let maybeSessionMethods = S.hMaybeSessionMethods sessionsH request
+            --    (sessionLookup, sessionInsert) = fromMaybe (throw SessionErrorThatNeverOccured) maybeSessionMethods
 
-            maybeUserId <- sessionLookup "user_id"
-            maybeIsAdmin <- sessionLookup "is_admin"
-            maybeAuthorId <- sessionLookup "author_id"
+            --maybeUserId <- sessionLookup "user_id"
+            --maybeIsAdmin <- sessionLookup "is_admin"
+            --maybeAuthorId <- sessionLookup "author_id"
 
-            _ <- L.hDebug loggerH $ show ("session user_id" :: String, maybeUserId)
-            _ <- L.hDebug loggerH $ show ("session is_admin" :: String, maybeIsAdmin)
-            _ <- L.hDebug loggerH $ show ("session author_id" :: String, maybeAuthorId)
+            --_ <- L.hDebug loggerH $ show ("session user_id" :: String, maybeUserId)
+            --_ <- L.hDebug loggerH $ show ("session is_admin" :: String, maybeIsAdmin)
+            --_ <- L.hDebug loggerH $ show ("session author_id" :: String, maybeAuthorId)
 
-            let sessionUserIdString = getIdString maybeUserId
-                sessionAuthorIdString = getIdString maybeAuthorId
+            --let sessionUserIdString = getIdString maybeUserId
+            --    sessionAuthorIdString = getIdString maybeAuthorId
 
-            errorOrSessionName <-
-                let params = PC.Params {
-                        PC.isAdmin = maybeIsAdmin == Just "True",
-                        PC.hasUserId = sessionUserIdString /= "0",
-                        PC.hasAuthorId = sessionAuthorIdString /= "0"
-                    }
-                in pure (
-                    case PC.getPrerequisitesCheck (pathTextChunks, method) of
-                        Just getSessionNameIfPrerequisitesChecks -> getSessionNameIfPrerequisitesChecks params
-                        Nothing -> PC.noSuchEndpoint
-                    )
+            --errorOrSessionName <-
+            --    let params = PC.Params {
+            --            PC.isAdmin = maybeIsAdmin == Just "True",
+            --            PC.hasUserId = sessionUserIdString /= "0",
+            --            PC.hasAuthorId = sessionAuthorIdString /= "0"
+            --        }
+            --    in pure (
+            --        case PC.getPrerequisitesCheck (pathTextChunks, method) of
+            --            Just getSessionNameIfPrerequisitesChecks -> getSessionNameIfPrerequisitesChecks params
+            --            Nothing -> PC.noSuchEndpoint
+            --        )
 
 
-            results <- case errorOrSessionName of
-                Left error -> pure (Left error, Just $ UTFLBS.fromString error)
-                Right sessionName -> 
-                    do
-                        requestBody <- WAI.hStrictRequestBody waiH request
+            --results <- case errorOrSessionName of
+            --    Left error -> pure (Left error, Just $ UTFLBS.fromString error)
+            --    Right sessionName -> 
+            --        do
+            --            requestBody <- WAI.hStrictRequestBody waiH request
 
-                        _ <- L.hInfo loggerH $ show requestBody
+            --            _ <- L.hInfo loggerH $ show requestBody
 
-                        eitherConnection <- DBC.hAcquiredConnection dbH
+            --            eitherConnection <- DBC.hAcquiredConnection dbH
 
-                        case eitherConnection of
-                            Left connectionError -> 
-                                L.hError loggerH (show connectionError)
-                                    >> pure (
-                                        dbError,
-                                        Just "DB connection error"
-                                    )
-                            Right connection ->
-                                let processCredentialsPartial =
-                                        processCredentials
-                                            (L.hDebug loggerH)
-                                            sessionLookup
-                                            (S.hClearSession sessionsH)
-                                            request
-                                            sessionInsert
-                                    sessionAuthorId = (read sessionAuthorIdString :: Int32)
-                                    sessionUserId = (read sessionUserIdString :: Int32)
-                                in runSession
-                                    connection
-                                    requestBody
-                                    processCredentialsPartial
-                                    sessionUserId
-                                    sessionAuthorId
-                                    sessionName
+            --            case eitherConnection of
+            --                Left connectionError -> 
+            --                    L.hError loggerH (show connectionError)
+            --                        >> pure (
+            --                            dbError,
+            --                            Just "DB connection error"
+            --                        )
+            --                Right connection ->
+            --                    let processCredentialsPartial =
+            --                            processCredentials
+            --                                (L.hDebug loggerH)
+            --                                sessionLookup
+            --                                (S.hClearSession sessionsH)
+            --                                request
+            --                                sessionInsert
+            --                        sessionAuthorId = (read sessionAuthorIdString :: Int32)
+            --                        sessionUserId = (read sessionUserIdString :: Int32)
+            --                    in runSession
+            --                        connection
+            --                        requestBody
+            --                        processCredentialsPartial
+            --                        sessionUserId
+            --                        sessionAuthorId
+            --                        sessionName
 
-            _ <- L.hDebug loggerH $ show results
+            --_ <- L.hDebug loggerH $ show results
 
-            _ <- L.hDebug
-                loggerH
-                (case fst results of
-                    Left leftErr -> show (snd results) ++ ", " ++ leftErr
-                    Right ulbs -> UTFLBS.toString ulbs
-                )
+            --_ <- L.hDebug
+            --    loggerH
+            --    (case fst results of
+            --        Left leftErr -> show (snd results) ++ ", " ++ leftErr
+            --        Right ulbs -> UTFLBS.toString ulbs
+            --    )
 
-            processedResults <-
-                let no_output_for_the_user_in_case_of_unhandled_exception = ""
-                in (case fst results of
-                    Right ulbs -> pure ulbs
-                    _ -> case snd results of
-                        Just errorForClient -> pure errorForClient
-                        _ -> L.hError
-                                loggerH
-                                "\n^^^ unhandled exception has occured with request above^^^\n\n"
-                                    >> pure no_output_for_the_user_in_case_of_unhandled_exception)
+            --processedResults <-
+            --    let no_output_for_the_user_in_case_of_unhandled_exception = ""
+            --    in (case fst results of
+            --        Right ulbs -> pure ulbs
+            --        _ -> case snd results of
+            --            Just errorForClient -> pure errorForClient
+            --            _ -> L.hError
+            --                    loggerH
+            --                    "\n^^^ unhandled exception has occured with request above^^^\n\n"
+            --                        >> pure no_output_for_the_user_in_case_of_unhandled_exception)
 
-            let has_unhandled_hasql_session_exception = isLeft (fst results) && isNothing (snd results)
-                httpStatus
-                    | errorOrSessionName == PC.noSuchEndpoint = H.status404
-                    | results == cantDecode = H.status400
-                    | fst results == dbError
-                        || has_unhandled_hasql_session_exception = H.status500
-                    | otherwise = H.status200
-                in respond $ responseLBS httpStatus [] processedResults)
+            --let has_unhandled_hasql_session_exception = isLeft (fst results) && isNothing (snd results)
+            --    httpStatus
+            --        | errorOrSessionName == PC.noSuchEndpoint = H.status404
+            --        | results == cantDecode = H.status400
+            --        | fst results == dbError
+            --            || has_unhandled_hasql_session_exception = H.status500
+            --        | otherwise = H.status200
+            --    in respond $ responseLBS httpStatus [] processedResults)
 
 
 processConfig :: C.Config -> (Port, Settings, ConnectInfo)

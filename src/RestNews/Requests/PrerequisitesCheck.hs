@@ -40,44 +40,44 @@ instance CheckMethods Params where
     passSessionNameIfAdmin reqAndParams sessionName = passSessionNameIf sessionName $ isAdmin reqAndParams
 
 
-getPrerequisitesCheck :: ([Text], BS.ByteString) -> Maybe (Params -> Either String String)
+getPrerequisitesCheck :: ([Text], BS.ByteString) -> Either String (Params -> Either String String)
 getPrerequisitesCheck pathAndMethod = case pathAndMethod of
-    (["auth"], "POST") -> Just . const $ Right "auth"
-    (["users"], "POST") -> Just . const $ Right "createUser"
-    (["users"], "GET") -> Just (`passSessionNameIfHasUserId` "getUser")
-    (["users"], "DELETE") -> Just (`passSessionNameIfAdmin` "deleteUser")
-    (["articles"], "POST") -> Just (`passSessionNameIfHasAuthorId` "createArticleDraft")
-    (["articles"], "PATCH") -> Just (`passSessionNameIfHasAuthorId` "editArticleDraft")
-    (["articles"], "GET") -> Just (`passSessionNameIfHasAuthorId` "getArticleDraft")
-    (["articles"], "DELETE") -> Just (`passSessionNameIfHasAuthorId` "deleteArticleDraft")
-    (["articles", "publish"], "POST") -> Just (`passSessionNameIfHasAuthorId` "publishArticleDraft")
-    (["authors"], "POST") -> Just (`passSessionNameIfAdmin` "promoteUserToAuthor")
-    (["authors"], "PATCH") -> Just (`passSessionNameIfAdmin` "editAuthor")
-    (["authors"], "GET") -> Just (`passSessionNameIfAdmin` "getAuthor")
-    (["authors"], "DELETE") -> Just (`passSessionNameIfAdmin` "deleteAuthorRole")
-    (["categories"], "POST") -> Just (`passSessionNameIfAdmin` "createCategory")
-    (["categories"], "PATCH") -> Just (`passSessionNameIfAdmin` "updateCategory")
-    (["categories"], "GET") -> Just . const $ Right "getCategory"
-    (["categories"], "DELETE") -> Just (`passSessionNameIfAdmin` "deleteCategory")
-    (["tags"], "POST") -> Just (`passSessionNameIfAdmin` "createTag")
-    (["tags"], "PATCH") -> Just (`passSessionNameIfAdmin` "editTag")
-    (["tags"], "GET") -> Just . const $ Right "getTag"
-    (["tags"], "DELETE") -> Just (`passSessionNameIfAdmin` "deleteTag")
-    (["comments"], "POST") -> Just (`passSessionNameIfHasUserId` "createComment")
-    (["comments"], "GET") -> Just . const $ Right "getArticleComments"
-    (["comments"], "DELETE") -> Just (`passSessionNameIfHasUserId` "deleteComment")
-    (["articles", "category"], "GET") -> Just . const $ Right "getArticlesByCategoryId"
-    (["articles", "tag"], "GET") -> Just . const $ Right "getArticlesByTagId"
-    (["articles", "tags__any"], "GET") -> Just . const $ Right "getArticlesByAnyTagId"
-    (["articles", "tags__all"], "GET") -> Just . const $ Right "getArticlesByAllTagId"
-    (["articles", "in__title"], "GET") -> Just . const $ Right "getArticlesByTitlePart"
-    (["articles", "in__content"], "GET") -> Just . const $ Right "getArticlesByContentPart"
-    (["articles", "in__author_name"], "GET") -> Just . const $ Right "getArticlesByAuthorNamePart"
-    (["articles", "byPhotosNumber"], "GET") -> Just . const $ Right "getArticlesSortedByPhotosNumber"
-    (["articles", "byCreationDate"], "GET") -> Just . const $ Right "getArticlesSortedByCreationDate"
-    (["articles", "sortByAuthor"], "GET") -> Just . const $ Right "getArticlesSortedByAuthor"
-    (["articles", "sortByCategory"], "GET") -> Just . const $ Right "getArticlesSortedByCategory"
-    (["articles", "createdAt"], "GET") -> Just . const $ Right "getArticlesFilteredByCreationDate"
-    (["articles", "createdBefore"], "GET") -> Just . const $ Right "getArticlesCreatedBeforeDate"
-    (["articles", "createdAfter"], "GET") -> Just . const $ Right "getArticlesCreatedAfterDate"
-    _ -> Nothing
+    (["auth"], "POST") -> Right . const $ Right "auth"
+    (["users"], "POST") -> Right . const $ Right "createUser"
+    (["users"], "GET") -> Right (`passSessionNameIfHasUserId` "getUser")
+    (["users"], "DELETE") -> Right (`passSessionNameIfAdmin` "deleteUser")
+    (["articles"], "POST") -> Right (`passSessionNameIfHasAuthorId` "createArticleDraft")
+    (["articles"], "PATCH") -> Right (`passSessionNameIfHasAuthorId` "editArticleDraft")
+    (["articles"], "GET") -> Right (`passSessionNameIfHasAuthorId` "getArticleDraft")
+    (["articles"], "DELETE") -> Right (`passSessionNameIfHasAuthorId` "deleteArticleDraft")
+    (["articles", "publish"], "POST") -> Right (`passSessionNameIfHasAuthorId` "publishArticleDraft")
+    (["authors"], "POST") -> Right (`passSessionNameIfAdmin` "promoteUserToAuthor")
+    (["authors"], "PATCH") -> Right (`passSessionNameIfAdmin` "editAuthor")
+    (["authors"], "GET") -> Right (`passSessionNameIfAdmin` "getAuthor")
+    (["authors"], "DELETE") -> Right (`passSessionNameIfAdmin` "deleteAuthorRole")
+    (["categories"], "POST") -> Right (`passSessionNameIfAdmin` "createCategory")
+    (["categories"], "PATCH") -> Right (`passSessionNameIfAdmin` "updateCategory")
+    (["categories"], "GET") -> Right . const $ Right "getCategory"
+    (["categories"], "DELETE") -> Right (`passSessionNameIfAdmin` "deleteCategory")
+    (["tags"], "POST") -> Right (`passSessionNameIfAdmin` "createTag")
+    (["tags"], "PATCH") -> Right (`passSessionNameIfAdmin` "editTag")
+    (["tags"], "GET") -> Right . const $ Right "getTag"
+    (["tags"], "DELETE") -> Right (`passSessionNameIfAdmin` "deleteTag")
+    (["comments"], "POST") -> Right (`passSessionNameIfHasUserId` "createComment")
+    (["comments"], "GET") -> Right . const $ Right "getArticleComments"
+    (["comments"], "DELETE") -> Right (`passSessionNameIfHasUserId` "deleteComment")
+    (["articles", "category"], "GET") -> Right . const $ Right "getArticlesByCategoryId"
+    (["articles", "tag"], "GET") -> Right . const $ Right "getArticlesByTagId"
+    (["articles", "tags__any"], "GET") -> Right . const $ Right "getArticlesByAnyTagId"
+    (["articles", "tags__all"], "GET") -> Right . const $ Right "getArticlesByAllTagId"
+    (["articles", "in__title"], "GET") -> Right . const $ Right "getArticlesByTitlePart"
+    (["articles", "in__content"], "GET") -> Right . const $ Right "getArticlesByContentPart"
+    (["articles", "in__author_name"], "GET") -> Right . const $ Right "getArticlesByAuthorNamePart"
+    (["articles", "byPhotosNumber"], "GET") -> Right . const $ Right "getArticlesSortedByPhotosNumber"
+    (["articles", "byCreationDate"], "GET") -> Right . const $ Right "getArticlesSortedByCreationDate"
+    (["articles", "sortByAuthor"], "GET") -> Right . const $ Right "getArticlesSortedByAuthor"
+    (["articles", "sortByCategory"], "GET") -> Right . const $ Right "getArticlesSortedByCategory"
+    (["articles", "createdAt"], "GET") -> Right . const $ Right "getArticlesFilteredByCreationDate"
+    (["articles", "createdBefore"], "GET") -> Right . const $ Right "getArticlesCreatedBeforeDate"
+    (["articles", "createdAfter"], "GET") -> Right . const $ Right "getArticlesCreatedAfterDate"
+    _ -> Left noSuchEndpointS
