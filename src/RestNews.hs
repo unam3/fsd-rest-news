@@ -93,6 +93,37 @@ getSessionName' loggerH waiH request = do
     return eitherSessionName
 
 
+getPrerequisitesCheck' :: 
+    L.Handle a
+    -> S.Handle
+    -> Request
+    -> String
+    -> IO (Either String String)
+getPrerequisitesCheck' loggerH sessionsH request ioSessionName = do
+    sessionName <- ioSessionName
+
+    let maybeSessionMethods = S.hMaybeSessionMethods sessionsH request
+        (sessionLookup, sessionInsert) = fromMaybe (throw SessionErrorThatNeverOccured) maybeSessionMethods
+
+    maybeUserId <- sessionLookup "user_id"
+    maybeIsAdmin <- sessionLookup "is_admin"
+    maybeAuthorId <- sessionLookup "author_id"
+
+    _ <- L.hDebug loggerH $ show ("session user_id" :: String, maybeUserId)
+    _ <- L.hDebug loggerH $ show ("session is_admin" :: String, maybeIsAdmin)
+    _ <- L.hDebug loggerH $ show ("session author_id" :: String, maybeAuthorId)
+
+    let sessionUserIdString = getIdString maybeUserId
+        sessionAuthorIdString = getIdString maybeAuthorId
+        params = PC.Params {
+            PC.isAdmin = maybeIsAdmin == Just "True",
+            PC.hasUserId = sessionUserIdString /= "0",
+            PC.hasAuthorId = sessionAuthorIdString /= "0"
+        }
+    
+    pure $ PC.prerequisitesCheck params sessionName
+
+
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
 restAPI ::
     L.Handle a
@@ -106,39 +137,13 @@ restAPI loggerH sessionsH dbH waiH request respond =
         (L.hDebug loggerH "Cleaning up")
         (do
             getSessionName' loggerH waiH request
-                -- >>= respond . responseLBS H.status200 []
-                >>= \case
-                    Left error -> respond $ responseLBS H.status400 [] $ UTFLBS.fromString error
-                    Right results -> respond $ responseLBS H.status200 [] $ UTFLBS.fromString results
+                -- >>= pure . (>>= Left)
+                >>= getPrerequisitesCheck' loggerH sessionsH request
+                    >>= \case
+                        Left error -> respond $ responseLBS H.status400 [] $ UTFLBS.fromString error
+                        Right results -> respond $ responseLBS H.status200 [] $ UTFLBS.fromString results
 
             )
-
-
-            --let maybeSessionMethods = S.hMaybeSessionMethods sessionsH request
-            --    (sessionLookup, sessionInsert) = fromMaybe (throw SessionErrorThatNeverOccured) maybeSessionMethods
-
-            --maybeUserId <- sessionLookup "user_id"
-            --maybeIsAdmin <- sessionLookup "is_admin"
-            --maybeAuthorId <- sessionLookup "author_id"
-
-            --_ <- L.hDebug loggerH $ show ("session user_id" :: String, maybeUserId)
-            --_ <- L.hDebug loggerH $ show ("session is_admin" :: String, maybeIsAdmin)
-            --_ <- L.hDebug loggerH $ show ("session author_id" :: String, maybeAuthorId)
-
-            --let sessionUserIdString = getIdString maybeUserId
-            --    sessionAuthorIdString = getIdString maybeAuthorId
-
-            --errorOrSessionName <-
-            --    let params = PC.Params {
-            --            PC.isAdmin = maybeIsAdmin == Just "True",
-            --            PC.hasUserId = sessionUserIdString /= "0",
-            --            PC.hasAuthorId = sessionAuthorIdString /= "0"
-            --        }
-            --    in pure (
-            --        case PC.getPrerequisitesCheck (pathTextChunks, method) of
-            --            Just getSessionNameIfPrerequisitesChecks -> getSessionNameIfPrerequisitesChecks params
-            --            Nothing -> PC.noSuchEndpoint
-            --        )
 
 
             --results <- case errorOrSessionName of

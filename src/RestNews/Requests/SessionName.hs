@@ -3,10 +3,14 @@
 module RestNews.Requests.SessionName
     (
     getSessionName
+    , noSuchEndpointS
     ) where
 
 import Data.ByteString (ByteString)
 import Data.Text (Text)
+
+noSuchEndpointS :: String
+noSuchEndpointS = "No such endpoint"
 
 getSessionName :: ([Text], ByteString) -> Either String String
 getSessionName pathAndMethod = case pathAndMethod of
@@ -48,4 +52,4 @@ getSessionName pathAndMethod = case pathAndMethod of
     (["articles", "createdAt"], "GET") -> Right "getArticlesFilteredByCreationDate"
     (["articles", "createdBefore"], "GET") -> Right "getArticlesCreatedBeforeDate"
     (["articles", "createdAfter"], "GET") -> Right "getArticlesCreatedAfterDate"
-    _ -> Left "No such endpoint"
+    _ -> Left noSuchEndpointS
