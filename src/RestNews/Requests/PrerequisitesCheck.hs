@@ -42,12 +42,34 @@ instance CheckMethods Params where
 prerequisitesCheck :: Params -> String -> Either String String
 prerequisitesCheck params sessionName =
     let passWithoutCheck = Right sessionName
-        passSessionNameIfHasUserId' = Right $ passSessionNameIfHasUserId params sessionName
-        passSessionNameIfAdmin' = Right $ passSessionNameIfAdmin params sessionName
-        passSessionNameIfHasAuthorId' = Right $ passSessionNameIfHasAuthorId params sessionName
+        passSessionNameIfHasUserId' = passSessionNameIfHasUserId params sessionName
+        passSessionNameIfAdmin' = passSessionNameIfAdmin params sessionName
+        passSessionNameIfHasAuthorId' = passSessionNameIfHasAuthorId params sessionName
     in case sessionName of
     "auth"                              -> passWithoutCheck
     "createUser"                        -> passWithoutCheck
+    "getUser"                           -> passSessionNameIfHasUserId'
+    "deleteUser"                        -> passSessionNameIfAdmin'
+    "createArticleDraft"                -> passSessionNameIfHasAuthorId'
+    "editArticleDraft"                  -> passSessionNameIfHasAuthorId'
+    "getArticleDraft"                   -> passSessionNameIfHasAuthorId'
+    "deleteArticleDraft"                -> passSessionNameIfHasAuthorId'
+    "publishArticleDraft"               -> passSessionNameIfHasAuthorId'
+    "promoteUserToAuthor"               -> passSessionNameIfAdmin'
+    "editAuthor"                        -> passSessionNameIfAdmin'
+    "getAuthor"                         -> passSessionNameIfAdmin'
+    "deleteAuthorRole"                  -> passSessionNameIfAdmin'
+    "createCategory"                    -> passSessionNameIfAdmin'
+    "updateCategory"                    -> passSessionNameIfAdmin'
+    "getCategory"                       -> passWithoutCheck
+    "deleteCategory"                    -> passSessionNameIfAdmin'
+    "createTag"                         -> passSessionNameIfAdmin'
+    "editTag"                           -> passSessionNameIfAdmin'
+    "getTag"                            -> passWithoutCheck
+    "deleteTag"                         -> passSessionNameIfAdmin'
+    "createComment"                     -> passSessionNameIfHasUserId'
+    "getArticleComments"                -> passWithoutCheck
+    "deleteComment"                     -> passSessionNameIfHasUserId'
     "getArticlesByCategoryId"           -> passWithoutCheck
     "getArticlesByTagId"                -> passWithoutCheck
     "getArticlesByAnyTagId"             -> passWithoutCheck

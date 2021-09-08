@@ -18,21 +18,19 @@ import Hasql.Connection (Connection)
 import qualified Hasql.Session as Session
 import qualified Util
 
-cantDecode :: (Either String b, Maybe ByteString)
-cantDecode = (
-        Left "Can't decode JSON",
-        Just "Wrong parameters/parameters values"
-    )
+cantDecode :: PR.HasqlSessionResults a
+cantDecode = PR.H $ Left $ Right "Wrong parameters/parameters values"
 
 runSession ::
     Connection
     -> ByteString
-    -> ((Either String (Int32, Bool, Int32), Maybe ByteString)
-        -> IO (Either String (Int32, Bool, Int32), Maybe ByteString))
+    -> (PR.HasqlSessionResults (Int32, Bool, Int32)
+        -> IO (PR.HasqlSessionResults (Int32, Bool, Int32)))
     -> Int32
     -> Int32
     -> String
-    -> IO (Either String ByteString, Maybe ByteString)
+    -- -> IO (PR.HasqlSessionResults a)
+    -> IO (PR.HasqlSessionResults ByteString)
 runSession
     connection
     requestBody
@@ -49,7 +47,7 @@ runSession
     } in case sessionName of
         "auth" -> runSessionWithJSON PR.getCredentials
             >>= processCredentialsPartial
-                <&> first (fmap $ const "cookies are baked")
+                <&> \(PR.H wrappedEither) -> PR.H $ fmap (const "cookies are baked") wrappedEither
         "createUser" -> runSessionWithJSON PR.createUser
         "getUser" -> PR.getUser sessionRun connection sessionUserId
         "deleteUser" -> runSessionWithJSON PR.deleteUser
@@ -87,7 +85,4 @@ runSession
         "getArticlesFilteredByCreationDate" -> runSessionWithJSON PR.getArticlesFilteredByCreationDate
         "getArticlesCreatedBeforeDate" -> runSessionWithJSON PR.getArticlesCreatedBeforeDate
         "getArticlesCreatedAfterDate" -> runSessionWithJSON PR.getArticlesCreatedAfterDate
-        nonMatched -> pure (
-            Left nonMatched,
-            Nothing
-            )
+        nonMatched -> pure $ PR.H $ Left $ Left nonMatched

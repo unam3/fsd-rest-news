@@ -11,17 +11,20 @@ module RestNews
 
 import qualified RestNews.Config as C
 import qualified RestNews.DBConnection as DBC
+import qualified RestNews.DB.ProcessRequest as PR
+import RestNews.DB.RequestRunner (cantDecode, runSession)
 import qualified RestNews.Logger as L
 import qualified RestNews.Middleware.Sessions as S
-import RestNews.DB.RequestRunner (cantDecode, runSession)
 import qualified RestNews.Requests.PrerequisitesCheck as PC
 import RestNews.Requests.SessionName (getSessionName)
 import qualified RestNews.Middleware.Static as Static
 import qualified RestNews.WAI as WAI
 
+import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
 import Control.Exception (Exception, bracket_, throw)
 import Control.Monad (void, when)
-import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
+import Control.Monad.Except
+import Control.Monad.IO.Class (liftIO)
 import Data.Either (fromRight, isLeft)
 import Data.Int (Int32)
 import Data.Maybe (fromMaybe, isJust, isNothing)
@@ -30,7 +33,7 @@ import qualified Data.Vault.Lazy as Vault
 import Database.PostgreSQL.Simple (ConnectInfo(..), connectPostgreSQL, postgreSQLConnectionString)
 import Hasql.Connection (Settings, acquire, settings)
 import qualified Network.HTTP.Types as H
-import Network.Wai (Application, Request, pathInfo, requestMethod, responseLBS, strictRequestBody, vault)
+import Network.Wai (Application, Request, Response, ResponseReceived, pathInfo, requestMethod, responseLBS, strictRequestBody, vault)
 import Network.Wai.Handler.Warp (Port, run)
 import Network.Wai.Session (SessionStore, withSession)
 import Prelude hiding (error)
@@ -39,35 +42,11 @@ import System.Exit (exitFailure)
 import System.Log.Logger (Priority (DEBUG, ERROR), debugM, infoM, errorM, setLevel, traplogging, updateGlobalLogger)
 import Web.Cookie (defaultSetCookie)
 
-dbError :: Either String UTFLBS.ByteString
-dbError = Left "DB error"
+dbError :: UTFLBS.ByteString
+dbError = "DB connection error"
 
 getIdString :: Maybe String -> String
 getIdString = fromMaybe "0"
-
-processCredentials :: Monad m => (String -> m a)
-    -> (String -> m (Maybe String))
-    -> (Request -> m ())
-    -> Request
-    -> (String -> String -> m ())
-    -> (Either String (Int32, Bool, Int32), Maybe UTFLBS.ByteString)
-    -> m (Either String (Int32, Bool, Int32), Maybe UTFLBS.ByteString);
-processCredentials debug sessionLookup clearSessionPartial request sessionInsert sessionResults =
-    do
-        let (user_id, is_admin, author_id) = fromRight (0, False, 0) $ fst sessionResults
-        -- clearSession will fail if request has no associated session with cookies:
-        -- https://github.com/hce/postgresql-session/blob/master/src/Network/Wai/Session/PostgreSQL.hs#L232
-        (do
-            session_user_id <- sessionLookup "user_id"
-            when
-                (isJust session_user_id)
-                (clearSessionPartial request)
-            )
-        _ <- debug (show ("put into sessions:" :: String, user_id, is_admin, author_id))
-        sessionInsert "is_admin" (show is_admin)
-        sessionInsert "user_id" (show user_id)
-        sessionInsert "author_id" (show author_id)
-        pure sessionResults
 
 data SessionErrorThatNeverOccured = SessionErrorThatNeverOccured deriving Show
 
@@ -77,31 +56,31 @@ getSessionName' ::
     L.Handle a
     -> WAI.Handle a
     -> Request
+-- newtype ExceptT e m a = ExceptT (m (Either e a))
+    -- можно IO (Either), а снаружи — ExceptT
     -> IO (Either String String)
 getSessionName' loggerH waiH request = do
-    _ <- L.hDebug loggerH $ show request
+    _ <- liftIO . L.hDebug loggerH $ show request
 
     let method = WAI.hRequestMethod waiH request
         pathTextChunks = WAI.hPathInfo waiH request
 
-    _ <- L.hInfo loggerH $ show (method, pathTextChunks)
+    _ <- liftIO . L.hInfo loggerH $ show (method, pathTextChunks)
 
     let eitherSessionName = getSessionName (pathTextChunks, method)
 
-    _ <- L.hInfo loggerH $ show eitherSessionName
+    _ <- liftIO . L.hInfo loggerH $ show eitherSessionName
 
-    return eitherSessionName
+    pure eitherSessionName
 
 
-getPrerequisitesCheck' :: 
+prerequisitesCheck :: 
     L.Handle a
     -> S.Handle
     -> Request
     -> String
-    -> IO (Either String String)
-getPrerequisitesCheck' loggerH sessionsH request ioSessionName = do
-    sessionName <- ioSessionName
-
+    -> IO (Either String DBSessionNameAndSessionThings)
+prerequisitesCheck loggerH sessionsH request sessionName = do
     let maybeSessionMethods = S.hMaybeSessionMethods sessionsH request
         (sessionLookup, sessionInsert) = fromMaybe (throw SessionErrorThatNeverOccured) maybeSessionMethods
 
@@ -109,9 +88,9 @@ getPrerequisitesCheck' loggerH sessionsH request ioSessionName = do
     maybeIsAdmin <- sessionLookup "is_admin"
     maybeAuthorId <- sessionLookup "author_id"
 
-    _ <- L.hDebug loggerH $ show ("session user_id" :: String, maybeUserId)
-    _ <- L.hDebug loggerH $ show ("session is_admin" :: String, maybeIsAdmin)
-    _ <- L.hDebug loggerH $ show ("session author_id" :: String, maybeAuthorId)
+    _ <- liftIO . L.hDebug loggerH $ show ("session user_id" :: String, maybeUserId)
+    _ <- liftIO . L.hDebug loggerH $ show ("session is_admin" :: String, maybeIsAdmin)
+    _ <- liftIO . L.hDebug loggerH $ show ("session author_id" :: String, maybeAuthorId)
 
     let sessionUserIdString = getIdString maybeUserId
         sessionAuthorIdString = getIdString maybeAuthorId
@@ -121,7 +100,126 @@ getPrerequisitesCheck' loggerH sessionsH request ioSessionName = do
             PC.hasAuthorId = sessionAuthorIdString /= "0"
         }
     
-    pure $ PC.prerequisitesCheck params sessionName
+    pure $ fmap (\sessionName -> DBSessionNameAndSessionThings
+                    sessionName
+                    maybeUserId
+                    sessionUserIdString
+                    sessionAuthorIdString
+                    sessionLookup
+                    sessionInsert
+                    (S.hClearSession sessionsH)) $ PC.prerequisitesCheck params sessionName
+
+
+
+data DBSessionNameAndSessionThings = DBSessionNameAndSessionThings {
+    sessionName :: String,
+    maybeUserId :: Maybe String,
+    sessionUserIdString :: String,
+    sessionAuthorIdString :: String,
+    sessionLookup :: String -> IO (Maybe String),
+    sessionInsert :: String -> String -> IO (),
+    clearSessionPartial :: Request -> IO ()
+
+}
+
+processCredentials :: Monad m => (String -> m a)
+    -> (String -> m (Maybe String))
+    -> (Request -> m ())
+    -> Request
+    -> Maybe String
+    -> (String -> String -> m ())
+    -> PR.HasqlSessionResults (Int32, Bool, Int32)
+    -> m (PR.HasqlSessionResults (Int32, Bool, Int32))
+processCredentials
+    debug
+    sessionLookup
+    clearSessionPartial
+    request
+    maybeUserId
+    sessionInsert
+    wrappedSessionResults = do
+        let (PR.H sessionResults) = wrappedSessionResults
+            (user_id, is_admin, author_id) = fromRight (0, False, 0) sessionResults
+        -- clearSession will fail if request has no associated session with cookies:
+        -- https://github.com/hce/postgresql-session/blob/master/src/Network/Wai/Session/PostgreSQL.hs#L232
+        (do
+            when
+                (isJust maybeUserId)
+                (clearSessionPartial request)
+            )
+        _ <- debug (show ("put into sessions:" :: String, user_id, is_admin, author_id))
+        sessionInsert "is_admin" (show is_admin)
+        sessionInsert "user_id" (show user_id)
+        sessionInsert "author_id" (show author_id)
+        pure wrappedSessionResults
+
+
+runDBSession ::
+    L.Handle a
+    -> WAI.Handle a
+    -> DBC.Handle
+    -> Request
+    -> DBSessionNameAndSessionThings
+    -> IO (Either String UTFLBS.ByteString)
+runDBSession
+    loggerH
+    waiH
+    dbH
+    request
+    (DBSessionNameAndSessionThings
+        sessionName
+        maybeUserId
+        sessionUserIdString
+        sessionAuthorIdString
+        sessionLookup
+        sessionInsert
+        clearSessionPartial
+    ) = do
+        let runSessionResults = do
+                requestBody <- WAI.hStrictRequestBody waiH request
+
+                _ <- liftIO . L.hInfo loggerH $ show requestBody
+
+                eitherConnection <- DBC.hAcquiredConnection dbH
+
+                case eitherConnection of
+                    Left connectionError -> 
+                        liftIO $ L.hError loggerH (show connectionError)
+                            >> pure (PR.H $ Left $ Right dbError)
+                    Right connection ->
+                        let processCredentialsPartial =
+                                processCredentials
+                                    (L.hDebug loggerH)
+                                    sessionLookup
+                                    clearSessionPartial
+                                    request
+                                    maybeUserId
+                                    sessionInsert
+                            sessionAuthorId = (read sessionAuthorIdString :: Int32)
+                            sessionUserId = (read sessionUserIdString :: Int32)
+                        in runSession
+                            connection
+                            requestBody
+                            processCredentialsPartial
+                            sessionUserId
+                            sessionAuthorId
+                            sessionName
+
+        hRunSessionResults <- runSessionResults
+
+        _ <- liftIO . L.hDebug loggerH $ show hRunSessionResults
+
+        let (PR.H runSessionResultsUnpacked) = hRunSessionResults
+
+        pure $ case runSessionResultsUnpacked of
+            Left (Left unhandledError) -> Left ""
+            Left (Right errorForUser) -> Left $ UTFLBS.toString errorForUser
+            Right runSessionResults' -> Right runSessionResults'
+
+respond' :: (Response -> IO ResponseReceived) -> ExceptT String IO String -> IO ResponseReceived
+respond' respond exceptT = runExceptT exceptT >>= (\case
+    Left error -> respond $ responseLBS H.status400 [] $ UTFLBS.fromString error
+    Right results -> respond $ responseLBS H.status200 [] $ UTFLBS.fromString results)
 
 
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
@@ -136,52 +234,20 @@ restAPI loggerH sessionsH dbH waiH request respond =
         (L.hDebug loggerH "Allocating scarce resource")
         (L.hDebug loggerH "Cleaning up")
         (do
-            getSessionName' loggerH waiH request
-                -- >>= pure . (>>= Left)
-                >>= getPrerequisitesCheck' loggerH sessionsH request
-                    >>= \case
-                        Left error -> respond $ responseLBS H.status400 [] $ UTFLBS.fromString error
-                        Right results -> respond $ responseLBS H.status200 [] $ UTFLBS.fromString results
+            let exceptTSessionName =
+                    ExceptT (getSessionName' loggerH waiH request)
+                        >>= (ExceptT . prerequisitesCheck loggerH sessionsH request)
+                            >>= (ExceptT . runDBSession loggerH waiH dbH request)
+                
+                -- >>= respond' respond
+
+            runExceptT exceptTSessionName >>= (\case
+                Left error -> respond $ responseLBS H.status400 [] $ UTFLBS.fromString error
+                Right results -> respond $ responseLBS H.status200 [] results)
 
             )
 
 
-            --results <- case errorOrSessionName of
-            --    Left error -> pure (Left error, Just $ UTFLBS.fromString error)
-            --    Right sessionName -> 
-            --        do
-            --            requestBody <- WAI.hStrictRequestBody waiH request
-
-            --            _ <- L.hInfo loggerH $ show requestBody
-
-            --            eitherConnection <- DBC.hAcquiredConnection dbH
-
-            --            case eitherConnection of
-            --                Left connectionError -> 
-            --                    L.hError loggerH (show connectionError)
-            --                        >> pure (
-            --                            dbError,
-            --                            Just "DB connection error"
-            --                        )
-            --                Right connection ->
-            --                    let processCredentialsPartial =
-            --                            processCredentials
-            --                                (L.hDebug loggerH)
-            --                                sessionLookup
-            --                                (S.hClearSession sessionsH)
-            --                                request
-            --                                sessionInsert
-            --                        sessionAuthorId = (read sessionAuthorIdString :: Int32)
-            --                        sessionUserId = (read sessionUserIdString :: Int32)
-            --                    in runSession
-            --                        connection
-            --                        requestBody
-            --                        processCredentialsPartial
-            --                        sessionUserId
-            --                        sessionAuthorId
-            --                        sessionName
-
-            --_ <- L.hDebug loggerH $ show results
 
             --_ <- L.hDebug
             --    loggerH

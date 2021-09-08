@@ -2,8 +2,8 @@
 {-# LANGUAGE OverloadedStrings  #-}
 
 module RestNews.DB.ProcessRequest (
+    HasqlSessionResults(..),
     SessionError(..),
-    getError,
     createUser,
     deleteUser,
     getUser,
@@ -48,7 +48,6 @@ import Control.Monad.IO.Class (MonadIO)
 import Data.Aeson (Value, encode)
 import Data.Bifunctor (bimap, first)
 import Data.ByteString.Lazy.UTF8 (ByteString)
-import Data.ByteString.Internal (unpackChars)
 import Data.Int (Int32)
 import Data.List (isPrefixOf)
 import Data.Text (Text, pack)
@@ -57,6 +56,7 @@ import Hasql.Connection (Connection)
 import qualified Hasql.Session as Session
 import Hasql.Statement (Statement)
 
+import RestNews.DB.Errors
 import RestNews.Requests.JSON
 import qualified RestNews.DB.Request as DBR
 
@@ -64,45 +64,20 @@ import qualified RestNews.DB.Request as DBR
 -- https://github.com/nikita-volkov/hasql-tutorial1
 
 
+type UnhandledError = String
+type ErrorForUser = ByteString
+newtype HasqlSessionResults successResults = H (Either (Either UnhandledError ErrorForUser) successResults)
+    deriving Show
+
+
 valueToUTFLBS :: Either Session.QueryError Value -> Either String ByteString
 valueToUTFLBS = bimap show encode
-
-data SessionError = PSQL_STRING_DATA_RIGHT_TRUNCATION
-    | PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE
-    | PSQL_FOREIGN_KEY_VIOLATION
-    | PSQL_UNIQUE_VIOLATION
-    | UnexpectedAmountOfRowsOrUnexpectedNull deriving (Show, Eq)
-
--- https://www.postgresql.org/docs/12/errcodes-appendix.html
-getError :: Either Session.QueryError resultsType -> Maybe (SessionError, Maybe String)
-getError (Left (Session.QueryError _ _ (Session.ResultError (Session.ServerError "22001" _ details _)))) =
-    Just (PSQL_STRING_DATA_RIGHT_TRUNCATION, fmap unpackChars details)
-
-getError (Left (Session.QueryError _ _ (Session.ResultError (Session.ServerError "2201X" msg _ _)))) =
-    Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just $ unpackChars msg)
-
-getError (Left (Session.QueryError _ _ (Session.ResultError (Session.ServerError "23503" _ details _)))) =
-    Just (PSQL_FOREIGN_KEY_VIOLATION, fmap unpackChars details)
-
-getError (Left (Session.QueryError _ _ (Session.ResultError (Session.ServerError "23505" _ details _)))) =
-    Just (PSQL_UNIQUE_VIOLATION, fmap unpackChars details)
-
-getError (Left (Session.QueryError _ _ (Session.ResultError (Session.UnexpectedAmountOfRows 0)))) =
-    Just (UnexpectedAmountOfRowsOrUnexpectedNull, Nothing)
-
-getError (Left (Session.QueryError _ _ (Session.ResultError (Session.RowError 0 Session.UnexpectedNull)))) =
-    Just (UnexpectedAmountOfRowsOrUnexpectedNull, Nothing)
-
-getError _ = Nothing
-
-getErrorCode :: Either Session.QueryError resultsType -> Maybe SessionError
-getErrorCode = fmap fst . getError
 
 createUser :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> CreateUserRequest
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 createUser sessionRun connection createUserRequest =
     do
         let params = (
@@ -114,48 +89,51 @@ createUser sessionRun connection createUserRequest =
                 )
         sessionResults <- sessionRun (Session.statement params DBR.createUser) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getErrorCode sessionResults of
-                Just PSQL_STRING_DATA_RIGHT_TRUNCATION -> Just "{\"error\": \"name and surname field length must be 80 characters at most\"}"
-                Just PSQL_UNIQUE_VIOLATION -> Just "{\"error\": \"user with this username already exists\"}"
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getErrorCode sessionError of
+                    Just PSQL_STRING_DATA_RIGHT_TRUNCATION -> H . Left $ Right "{\"error\": \"name and surname field length must be 80 characters at most\"}"
+                    Just PSQL_UNIQUE_VIOLATION -> H . Left $ Right "{\"error\": \"user with this username already exists\"}"
+                    _ -> H . Left . Left $ show sessionError
             )
 
 deleteUser :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> UserIdRequest
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 deleteUser sessionRun connection deleteUserRequest = 
     do
         let params = user_id (deleteUserRequest :: UserIdRequest)
         sessionResults <- sessionRun (Session.statement params DBR.deleteUser) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getErrorCode sessionResults of
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> Just "{\"error\": \"such user does not exist\"}"
-                _ -> Nothing
-            )
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getErrorCode sessionError of
+                    Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left $ Right  "{\"error\": \"such user does not exist\"}"
+                    _ -> H . Left . Left $ show sessionError
+                )
 
 getUser :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> Int32
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 getUser sessionRun connection userId = do
     sessionResults <- sessionRun (Session.statement userId DBR.getUser) connection
     pure (
-        valueToUTFLBS sessionResults,
-        case getErrorCode sessionResults of
-            Just UnexpectedAmountOfRowsOrUnexpectedNull -> Just "{\"error\": \"such user does not exist\"}"
-            _ -> Nothing
-        )
+        case sessionResults of
+            Right results -> H . Right $ encode results
+            Left sessionError -> case getErrorCode sessionError of
+                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left $ Right "{\"error\": \"such user does not exist\"}"
+                _ -> H . Left . Left $ show sessionError
+            )
 
 
 promoteUserToAuthor :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection -> PromoteUserToAuthorRequest
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 promoteUserToAuthor sessionRun connection promoteUserToAuthorRequest =
     do
         let params = (
@@ -164,18 +142,19 @@ promoteUserToAuthor sessionRun connection promoteUserToAuthorRequest =
                 )
         sessionResults <- sessionRun (Session.statement params DBR.promoteUserToAuthor) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getErrorCode sessionResults of
-                Just PSQL_FOREIGN_KEY_VIOLATION -> Just "{\"error\": \"such user does not exist\"}"
-                Just PSQL_UNIQUE_VIOLATION -> Just "{\"error\": \"such user is already an author\"}"
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getErrorCode sessionError of
+                    Just PSQL_FOREIGN_KEY_VIOLATION -> H . Left $ Right "{\"error\": \"such user does not exist\"}"
+                    Just PSQL_UNIQUE_VIOLATION -> H . Left $ Right "{\"error\": \"such user is already an author\"}"
+                    _ -> H . Left . Left $ show sessionError
             )
 
 editAuthor :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> EditAuthorRequest
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 editAuthor sessionRun connection editAuthorRequest =
     do
         let params = (
@@ -184,50 +163,53 @@ editAuthor sessionRun connection editAuthorRequest =
                 )
         sessionResults <- sessionRun (Session.statement params DBR.editAuthor) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getErrorCode sessionResults of
-                Just PSQL_STRING_DATA_RIGHT_TRUNCATION -> Just "{\"error\": \"name and surname field length must be 80 characters at most\"}"
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> Just "{\"error\": \"such author does not exist\"}"
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getErrorCode sessionError of
+                    Just PSQL_STRING_DATA_RIGHT_TRUNCATION -> H . Left $ Right "{\"error\": \"name and surname field length must be 80 characters at most\"}"
+                    Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left $ Right "{\"error\": \"such author does not exist\"}"
+                    _ -> H . Left . Left $ show sessionError
             )
 
 getAuthor :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> AuthorIdRequest
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 getAuthor sessionRun connection authorIdRequest =
     do
         let params = author_id (authorIdRequest :: AuthorIdRequest)
         sessionResults <- sessionRun (Session.statement params DBR.getAuthor) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getErrorCode sessionResults of
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> Just "{\"error\": \"such author does not exist\"}"
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getErrorCode sessionError of
+                    Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left $ Right "{\"error\": \"such author does not exist\"}"
+                    _ -> H . Left . Left $ show sessionError
             )
 
 deleteAuthorRole :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> AuthorIdRequest
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 deleteAuthorRole sessionRun connection authorIdRequest =
     do
         let params = author_id (authorIdRequest :: AuthorIdRequest)
         sessionResults <- sessionRun (Session.statement params DBR.deleteAuthorRole) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getErrorCode sessionResults of
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> Just "{\"error\": \"such author does not exist\"}"
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getErrorCode sessionError of
+                    Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left $ Right "{\"error\": \"such author does not exist\"}"
+                    _ -> H . Left . Left $ show sessionError
             )
 
 createCategory :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> CreateCategoryRequest
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 createCategory sessionRun connection createCategoryRequest =
     do
         let params = (
@@ -236,18 +218,19 @@ createCategory sessionRun connection createCategoryRequest =
                 )
         sessionResults <- sessionRun (Session.statement params DBR.createCategory) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getErrorCode sessionResults of
-                Just PSQL_STRING_DATA_RIGHT_TRUNCATION -> Just "{\"error\": \"category name length must be 80 characters at most\"}"
-                Just PSQL_FOREIGN_KEY_VIOLATION -> Just "{\"error\": \"parent category does not exist\"}"
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getErrorCode sessionError of
+                    Just PSQL_STRING_DATA_RIGHT_TRUNCATION -> H . Left $ Right "{\"error\": \"category name length must be 80 characters at most\"}"
+                    Just PSQL_FOREIGN_KEY_VIOLATION -> H . Left $ Right "{\"error\": \"parent category does not exist\"}"
+                    _ -> H . Left . Left $ show sessionError
             )
 
 updateCategory :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> UpdateCategoryRequest
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 updateCategory sessionRun connection updateCategoryRequest =
     do
         let params = (
@@ -257,45 +240,48 @@ updateCategory sessionRun connection updateCategoryRequest =
                 )
         sessionResults <- sessionRun (Session.statement params DBR.updateCategory) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getErrorCode sessionResults of
-                Just PSQL_STRING_DATA_RIGHT_TRUNCATION -> Just "{\"error\": \"category name length must be 80 characters at most\"}"
-                Just PSQL_FOREIGN_KEY_VIOLATION -> Just "{\"error\": \"parent category does not exist\"}"
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> Just "{\"error\": \"no such category\"}"
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getErrorCode sessionError of
+                    Just PSQL_STRING_DATA_RIGHT_TRUNCATION -> H . Left $ Right "{\"error\": \"category name length must be 80 characters at most\"}"
+                    Just PSQL_FOREIGN_KEY_VIOLATION -> H . Left $ Right "{\"error\": \"parent category does not exist\"}"
+                    Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left $ Right "{\"error\": \"no such category\"}"
+                    _ -> H . Left . Left $ show sessionError
             )
 
 getCategory :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> CategoryIdRequest
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 getCategory sessionRun connection categoryIdRequest =
     do
         let params = category_id (categoryIdRequest :: CategoryIdRequest)
         sessionResults <- sessionRun (Session.statement params DBR.getCategory) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getErrorCode sessionResults of
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> Just "{\"error\": \"no such category\"}"
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getErrorCode sessionError of
+                    Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left $ Right "{\"error\": \"no such category\"}"
+                    _ -> H . Left . Left $ show sessionError
             )
 
 deleteCategory :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> CategoryIdRequest
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 deleteCategory sessionRun connection categoryIdRequest =
     do
         let params = category_id (categoryIdRequest :: CategoryIdRequest)
         sessionResults <- sessionRun (Session.statement params DBR.deleteCategory) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getErrorCode sessionResults of
-                Just PSQL_FOREIGN_KEY_VIOLATION -> Just "{\"error\": \"category is in use\"}"
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> Just "{\"error\": \"no such category\"}"
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getErrorCode sessionError of
+                    Just PSQL_FOREIGN_KEY_VIOLATION -> H . Left $ Right "{\"error\": \"category is in use\"}"
+                    Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left $ Right "{\"error\": \"no such category\"}"
+                    _ -> H . Left . Left $ show sessionError
             )
 
 
@@ -303,68 +289,72 @@ createTag :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> CreateTagRequest
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 createTag sessionRun connection createTagRequest =
     do
         let params = tag_name (createTagRequest :: CreateTagRequest)
         sessionResults <- sessionRun (Session.statement params DBR.createTag) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getErrorCode sessionResults of
-                Just PSQL_STRING_DATA_RIGHT_TRUNCATION -> Just "{\"error\": \"tag_name length must be 80 characters at most\"}"
-                Just PSQL_UNIQUE_VIOLATION -> Just "{\"error\": \"tag with such name already exists\"}"
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getErrorCode sessionError of
+                    Just PSQL_STRING_DATA_RIGHT_TRUNCATION -> H . Left $ Right "{\"error\": \"tag_name length must be 80 characters at most\"}"
+                    Just PSQL_UNIQUE_VIOLATION -> H . Left $ Right "{\"error\": \"tag with such name already exists\"}"
+                    _ -> H . Left . Left $ show sessionError
             )
 
 editTag :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> EditTagRequest
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 editTag sessionRun connection editTagRequest =
     do
         let params = (tag_id (editTagRequest :: EditTagRequest), tag_name (editTagRequest :: EditTagRequest))
         sessionResults <- sessionRun (Session.statement params DBR.editTag) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getErrorCode sessionResults of
-                Just PSQL_STRING_DATA_RIGHT_TRUNCATION -> Just "{\"error\": \"tag_name length must be 80 characters at most\"}"
-                Just PSQL_UNIQUE_VIOLATION -> Just "{\"error\": \"tag with such name already exists\"}"
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> Just "{\"error\": \"no such tag\"}"
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getErrorCode sessionError of
+                    Just PSQL_STRING_DATA_RIGHT_TRUNCATION -> H . Left $ Right "{\"error\": \"tag_name length must be 80 characters at most\"}"
+                    Just PSQL_UNIQUE_VIOLATION -> H . Left $ Right "{\"error\": \"tag with such name already exists\"}"
+                    Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left $ Right "{\"error\": \"no such tag\"}"
+                    _ -> H . Left . Left $ show sessionError
             )
 
 deleteTag :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> TagIdRequest
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 deleteTag sessionRun connection deleteTagRequest =
     do
         let params = tag_id (deleteTagRequest :: TagIdRequest)
         sessionResults <- sessionRun (Session.statement params DBR.deleteTag) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getErrorCode sessionResults of
-                Just PSQL_FOREIGN_KEY_VIOLATION -> Just "{\"error\": \"tag is referenced by an article\"}"
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> Just "{\"error\": \"no such tag\"}"
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getErrorCode sessionError of
+                    Just PSQL_FOREIGN_KEY_VIOLATION -> H . Left $ Right "{\"error\": \"tag is referenced by an article\"}"
+                    Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left $ Right "{\"error\": \"no such tag\"}"
+                    _ -> H . Left . Left $ show sessionError
             )
 
 getTag :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> TagIdRequest
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 getTag sessionRun connection getTagRequest =
     do
         let params = tag_id (getTagRequest :: TagIdRequest)
         sessionResults <- sessionRun (Session.statement params DBR.getTag) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getErrorCode sessionResults of
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> Just "{\"error\": \"no such tag\"}"
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getErrorCode sessionError of
+                    Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left $ Right "{\"error\": \"no such tag\"}"
+                    _ -> H . Left . Left $ show sessionError
             )
 
 
@@ -373,7 +363,7 @@ createComment :: MonadIO m =>
     -> Connection
     -> CreateCommentRequest
     -> Int32
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 createComment sessionRun connection createCommentRequest user_id' =
     do
         let params = (
@@ -383,10 +373,11 @@ createComment sessionRun connection createCommentRequest user_id' =
                 )
         sessionResults <- sessionRun (Session.statement params DBR.createComment) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getErrorCode sessionResults of
-                Just PSQL_FOREIGN_KEY_VIOLATION -> Just "{\"error\": \"no such article\"}"
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getErrorCode sessionError of
+                    Just PSQL_FOREIGN_KEY_VIOLATION -> H . Left $ Right "{\"error\": \"no such article\"}"
+                    _ -> H . Left . Left $ show sessionError
             )
 
 deleteComment :: MonadIO m =>
@@ -394,7 +385,7 @@ deleteComment :: MonadIO m =>
     -> Connection
     -> CommentIdRequest
     -> Int32
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 deleteComment sessionRun connection deleteCommentRequest user_id' =
     do
         let params = (
@@ -403,17 +394,18 @@ deleteComment sessionRun connection deleteCommentRequest user_id' =
                 )
         sessionResults <- sessionRun (Session.statement params DBR.deleteComment) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getErrorCode sessionResults of
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> Just "{\"error\": \"no such comment\"}"
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getErrorCode sessionError of
+                    Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left $ Right "{\"error\": \"no such comment\"}"
+                    _ -> H . Left . Left $ show sessionError
             )
 
 getArticleComments :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> ArticleCommentsRequest
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 getArticleComments sessionRun connection articleCommentsRequest =
     do
         let params = (
@@ -422,12 +414,13 @@ getArticleComments sessionRun connection articleCommentsRequest =
                 )
         sessionResults <- sessionRun (Session.statement params DBR.getArticleComments) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getError sessionResults of
-                Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
-                    then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
-                    else Nothing
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getError sessionError of
+                    Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
+                        then H . Left . Right $ encode eNegativeOffset
+                        else H . Left . Left $ show sessionError
+                    _ -> H . Left . Left $ show sessionError
             )
 
 
@@ -436,7 +429,7 @@ createArticleDraft :: MonadIO m =>
     -> Connection
     -> ArticleDraftRequest
     -> Int32
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 createArticleDraft sessionRun connection articleDraftRequest author_id' =
     do
         let params = (
@@ -450,18 +443,19 @@ createArticleDraft sessionRun connection articleDraftRequest author_id' =
                 )
         sessionResults <- sessionRun (Session.statement params DBR.createArticleDraft) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getError sessionResults of
-                Just (PSQL_STRING_DATA_RIGHT_TRUNCATION, _) -> Just "{\"error\": \"article_title length must be 80 characters at most\"}"
-                Just (PSQL_FOREIGN_KEY_VIOLATION, details) ->
-                    let {
-                        detailsPrefix = fmap (take 12) details;
-                    } in case detailsPrefix of
-                        Just "Key (tag_id)" -> Just "{\"error\": \"no such tag\"}"
-                        Just "Key (categor" -> Just "{\"error\": \"no such category\"}"
-                        _ -> error $ show details
-                Just (UnexpectedAmountOfRowsOrUnexpectedNull, Nothing) -> Just "{\"error\": \"no such article\"}"
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getError sessionError of
+                    Just (PSQL_STRING_DATA_RIGHT_TRUNCATION, _) -> H . Left $ Right "{\"error\": \"article_title length must be 80 characters at most\"}"
+                    Just (PSQL_FOREIGN_KEY_VIOLATION, details) ->
+                        let {
+                            detailsPrefix = fmap (take 12) details;
+                        } in case detailsPrefix of
+                            Just "Key (tag_id)" -> H . Left $ Right "{\"error\": \"no such tag\"}"
+                            Just "Key (categor" -> H . Left $ Right "{\"error\": \"no such category\"}"
+                            _ -> error $ show details
+                    Just (UnexpectedAmountOfRowsOrUnexpectedNull, Nothing) -> H . Left $ Right "{\"error\": \"no such article\"}"
+                    _ -> H . Left . Left $ show sessionError
             )
 
 publishArticleDraft :: MonadIO m =>
@@ -469,7 +463,7 @@ publishArticleDraft :: MonadIO m =>
     -> Connection
     -> ArticleDraftIdRequest
     -> Int32 ->
-    m (Either String ByteString, Maybe ByteString)
+    m (HasqlSessionResults ByteString)
 publishArticleDraft sessionRun connection articleDraftIdRequest author_id' =
     do
         let params = (
@@ -478,10 +472,11 @@ publishArticleDraft sessionRun connection articleDraftIdRequest author_id' =
                 )
         sessionResults <- sessionRun (Session.statement params DBR.publishArticleDraft) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getErrorCode sessionResults of
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> Just "{\"error\": \"no such article\"}"
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getErrorCode sessionError of
+                    Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left $ Right "{\"error\": \"no such article\"}"
+                    _ -> H . Left . Left $ show sessionError
             )
 
 editArticleDraft :: MonadIO m =>
@@ -489,7 +484,7 @@ editArticleDraft :: MonadIO m =>
     -> Connection
     -> ArticleDraftEditRequest
     -> Int32
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 editArticleDraft sessionRun connection articleDraftEditRequest author_id' =
     do
         let params = (
@@ -504,19 +499,20 @@ editArticleDraft sessionRun connection articleDraftEditRequest author_id' =
                 )
         sessionResults <- sessionRun (Session.statement params DBR.editArticleDraft) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getError sessionResults of
-                Just (PSQL_STRING_DATA_RIGHT_TRUNCATION, _) -> Just "{\"error\": \"article_title length must be 80 characters at most\"}"
-                Just (PSQL_FOREIGN_KEY_VIOLATION, details) ->
-                    let {
-                        detailsPrefix = fmap (take 12) details;
-                    } in case detailsPrefix of
-                        Just "Key (tag_id)" -> Just "{\"error\": \"no such tag\"}"
-                        Just "Key (categor" -> Just "{\"error\": \"no such category\"}"
-                        Just "Key (article" -> Just "{\"error\": \"no such article\"}"
-                        _ -> error $ show details
-                Just (UnexpectedAmountOfRowsOrUnexpectedNull, Nothing) -> Just "{\"error\": \"no such article\"}"
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getError sessionError of
+                    Just (PSQL_STRING_DATA_RIGHT_TRUNCATION, _) -> H . Left $ Right "{\"error\": \"article_title length must be 80 characters at most\"}"
+                    Just (PSQL_FOREIGN_KEY_VIOLATION, details) ->
+                        let {
+                            detailsPrefix = fmap (take 12) details;
+                        } in case detailsPrefix of
+                            Just "Key (tag_id)" -> H . Left $ Right "{\"error\": \"no such tag\"}"
+                            Just "Key (categor" -> H . Left $ Right "{\"error\": \"no such category\"}"
+                            Just "Key (article" -> H . Left $ Right "{\"error\": \"no such article\"}"
+                            _ -> H . Left . Left $ show sessionError
+                    Just (UnexpectedAmountOfRowsOrUnexpectedNull, Nothing) -> H . Left $ Right "{\"error\": \"no such article\"}"
+                    _ -> H . Left . Left $ show sessionError
             )
 
 getArticleDraft :: MonadIO m =>
@@ -524,7 +520,7 @@ getArticleDraft :: MonadIO m =>
     -> Connection
     -> ArticleDraftIdRequest
     -> Int32 ->
-    m (Either String ByteString, Maybe ByteString)
+    m (HasqlSessionResults ByteString)
 getArticleDraft sessionRun connection articleDraftIdRequest author_id' =
     do
         let params = (
@@ -533,10 +529,11 @@ getArticleDraft sessionRun connection articleDraftIdRequest author_id' =
                 )
         sessionResults <- sessionRun (Session.statement params DBR.getArticleDraft) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getErrorCode sessionResults of
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> Just "{\"error\": \"no such article\"}"
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getErrorCode sessionError of
+                    Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left $ Right "{\"error\": \"no such article\"}"
+                    _ -> H . Left . Left $ show sessionError
             )
 
 deleteArticleDraft :: MonadIO m =>
@@ -544,7 +541,7 @@ deleteArticleDraft :: MonadIO m =>
     -> Connection
     -> ArticleDraftIdRequest
     -> Int32
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 deleteArticleDraft sessionRun connection articleDraftIdRequest author_id' =
     do
         let params = (
@@ -553,10 +550,11 @@ deleteArticleDraft sessionRun connection articleDraftIdRequest author_id' =
                 )
         sessionResults <- sessionRun (Session.statement params DBR.deleteArticleDraft) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getErrorCode sessionResults of
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> Just "{\"error\": \"no such article\"}"
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getErrorCode sessionError of
+                    Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left $ Right "{\"error\": \"no such article\"}"
+                    _ -> H . Left . Left $ show sessionError
             )
 
 
@@ -564,7 +562,7 @@ getArticlesByCategoryId :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> ArticlesByCategoryIdRequest
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 getArticlesByCategoryId sessionRun connection articlesByCategoryIdRequest =
     do
         let params = (
@@ -573,19 +571,20 @@ getArticlesByCategoryId sessionRun connection articlesByCategoryIdRequest =
                 )
         sessionResults <- sessionRun (Session.statement params DBR.getArticlesByCategoryId) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getError sessionResults of
-                Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
-                    then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
-                    else Nothing
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getError sessionError of
+                    Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
+                        then H . Left $ Right "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+                        else H . Left . Left $ show sessionError
+                    _ -> H . Left . Left $ show sessionError
             )
 
 getArticlesByTagId :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> TagIdRequestWithOffset
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 getArticlesByTagId sessionRun connection tagIdRequestWithOffset =
     do
         let params = (
@@ -594,12 +593,13 @@ getArticlesByTagId sessionRun connection tagIdRequestWithOffset =
                 )
         sessionResults <- sessionRun (Session.statement params DBR.getArticlesByTagId) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getError sessionResults of
-                Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
-                    then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
-                    else Nothing
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getError sessionError of
+                    Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
+                        then H . Left $ Right "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+                        else H . Left . Left $ show sessionError
+                    _ -> H . Left . Left $ show sessionError
             )
 
 
@@ -607,7 +607,7 @@ getArticlesByAnyTagId :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> ArticlesByTagIdListRequest
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 getArticlesByAnyTagId sessionRun connection tagIdsRequest =
     do
         let params = (
@@ -616,19 +616,20 @@ getArticlesByAnyTagId sessionRun connection tagIdsRequest =
                 )
         sessionResults <- sessionRun (Session.statement params DBR.getArticlesByAnyTagId) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getError sessionResults of
-                Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
-                    then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
-                    else Nothing
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getError sessionError of
+                    Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
+                        then H . Left $ Right "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+                        else H . Left . Left $ show sessionError
+                    _ -> H . Left . Left $ show sessionError
             )
 
 getArticlesByAllTagId :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> ArticlesByTagIdListRequest
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 getArticlesByAllTagId sessionRun connection tagIdsRequest =
     do
         let params = (
@@ -637,19 +638,20 @@ getArticlesByAllTagId sessionRun connection tagIdsRequest =
                 )
         sessionResults <- sessionRun (Session.statement params DBR.getArticlesByAllTagId) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getError sessionResults of
-                Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
-                    then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
-                    else Nothing
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getError sessionError of
+                    Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
+                        then H . Left $ Right "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+                        else H . Left . Left $ show sessionError
+                    _ -> H . Left . Left $ show sessionError
             )
 
 getArticlesByTitlePart :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> ArticlesByTitlePartRequest
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 getArticlesByTitlePart sessionRun connection substringRequest =
     do
         let params = (
@@ -658,19 +660,20 @@ getArticlesByTitlePart sessionRun connection substringRequest =
                 )
         sessionResults <- sessionRun (Session.statement params DBR.getArticlesByTitlePart) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getError sessionResults of
-                Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
-                    then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
-                    else Nothing
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getError sessionError of
+                    Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
+                        then H . Left $ Right "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+                        else H . Left . Left $ show sessionError
+                    _ -> H . Left . Left $ show sessionError
             )
 
 getArticlesByContentPart :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> ArticlesByContentPartRequest
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 getArticlesByContentPart sessionRun connection substringRequest =
     do
         let params = (
@@ -679,19 +682,20 @@ getArticlesByContentPart sessionRun connection substringRequest =
                 )
         sessionResults <- sessionRun (Session.statement params DBR.getArticlesByContentPart) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getError sessionResults of
-                Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
-                    then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
-                    else Nothing
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getError sessionError of
+                    Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
+                        then H . Left $ Right "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+                        else H . Left . Left $ show sessionError
+                    _ -> H . Left . Left $ show sessionError
             )
 
 getArticlesByAuthorNamePart :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> ArticlesByAuthorNamePartRequest
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 getArticlesByAuthorNamePart sessionRun connection substringRequest =
     do
         let params = (
@@ -700,84 +704,89 @@ getArticlesByAuthorNamePart sessionRun connection substringRequest =
                 )
         sessionResults <- sessionRun (Session.statement params DBR.getArticlesByAuthorNamePart) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getError sessionResults of
-                Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
-                    then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
-                    else Nothing
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getError sessionError of
+                    Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
+                        then H . Left $ Right "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+                        else H . Left . Left $ show sessionError
+                    _ -> H . Left . Left $ show sessionError
             )
 
 getArticlesSortedByPhotosNumber :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> OffsetRequest
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 getArticlesSortedByPhotosNumber sessionRun connection request =
     do
         let params = offset (request :: OffsetRequest)
         sessionResults <- sessionRun (Session.statement params DBR.getArticlesSortedByPhotosNumber) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getError sessionResults of
-                Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
-                    then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
-                    else Nothing
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getError sessionError of
+                    Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
+                        then H . Left $ Right "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+                        else H . Left . Left $ show sessionError
+                    _ -> H . Left . Left $ show sessionError
             )
 
 getArticlesSortedByCreationDate :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> OffsetRequest
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 getArticlesSortedByCreationDate sessionRun connection request =
     do
         let params = offset (request :: OffsetRequest)
         sessionResults <- sessionRun (Session.statement params DBR.getArticlesSortedByCreationDate) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getError sessionResults of
-                Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
-                    then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
-                    else Nothing
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getError sessionError of
+                    Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
+                        then H . Left $ Right "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+                        else H . Left . Left $ show sessionError
+                    _ -> H . Left . Left $ show sessionError
             )
 
 getArticlesSortedByAuthor :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> OffsetRequest
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 getArticlesSortedByAuthor sessionRun connection request =
     do
         let params = offset (request :: OffsetRequest)
         sessionResults <- sessionRun (Session.statement params DBR.getArticlesSortedByAuthor) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getError sessionResults of
-                Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
-                    then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
-                    else Nothing
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getError sessionError of
+                    Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
+                        then H . Left $ Right "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+                        else H . Left . Left $ show sessionError
+                    _ -> H . Left . Left $ show sessionError
             )
 
 getArticlesSortedByCategory :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> OffsetRequest
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 getArticlesSortedByCategory sessionRun connection request =
     do
         let params = offset (request :: OffsetRequest)
         sessionResults <- sessionRun (Session.statement params DBR.getArticlesSortedByCategory) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getError sessionResults of
-                Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
-                    then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
-                    else Nothing
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getError sessionError of
+                    Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
+                        then H . Left $ Right "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+                        else H . Left . Left $ show sessionError
+                    _ -> H . Left . Left $ show sessionError
             )
 
 getArticlesFilteredBy :: MonadIO m =>
@@ -785,7 +794,7 @@ getArticlesFilteredBy :: MonadIO m =>
     -> (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> ArticlesByCreationDateRequest
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 getArticlesFilteredBy statement sessionRun connection articlesByCreationDateRequest =
     do
         let params = (
@@ -794,39 +803,40 @@ getArticlesFilteredBy statement sessionRun connection articlesByCreationDateRequ
                 )
         sessionResults <- sessionRun (Session.statement params statement) connection
         pure (
-            valueToUTFLBS sessionResults,
-            case getError sessionResults of
-                Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
-                    then Just "{\"error\": \"\\\"offset\\\" must not be negative\"}"
-                    else Nothing
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H . Right $ encode results
+                Left sessionError -> case getError sessionError of
+                    Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
+                        then H . Left $ Right "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+                        else H . Left . Left $ show sessionError
+                    _ -> H . Left . Left $ show sessionError
             )
 
 getArticlesFilteredByCreationDate :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> ArticlesByCreationDateRequest
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 getArticlesFilteredByCreationDate = getArticlesFilteredBy DBR.getArticlesFilteredByCreationDate
 
 getArticlesCreatedBeforeDate :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> ArticlesByCreationDateRequest
-    -> m (Either String ByteString, Maybe ByteString)
+    -> m (HasqlSessionResults ByteString)
 getArticlesCreatedBeforeDate = getArticlesFilteredBy DBR.getArticlesCreatedBeforeDate
 
 getArticlesCreatedAfterDate :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
     -> ArticlesByCreationDateRequest ->
-    m (Either String ByteString, Maybe ByteString)
+    m (HasqlSessionResults ByteString)
 getArticlesCreatedAfterDate = getArticlesFilteredBy DBR.getArticlesCreatedAfterDate
 
 
 getCredentials :: MonadIO m => 
     (Session.Session (Int32, Bool, Int32) -> Connection -> m (Either Session.QueryError (Int32, Bool, Int32)))
-    -> Connection -> AuthRequest -> m (Either String (Int32, Bool, Int32), Maybe ByteString)
+    -> Connection -> AuthRequest -> m (HasqlSessionResults (Int32, Bool, Int32))
 getCredentials sessionRun connection authRequest =
     do
         let params = (
@@ -835,8 +845,9 @@ getCredentials sessionRun connection authRequest =
                 )
         sessionResults <- sessionRun (Session.statement params DBR.getCredentials) connection
         pure (
-            first show sessionResults,
-            case getErrorCode sessionResults of
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> Just "wrong username/password"
-                _ -> Nothing
+            case sessionResults of
+                Right results -> H $ Right results
+                Left sessionError -> case getErrorCode sessionError of
+                    Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left $ Right "wrong username/password"
+                    _ -> H . Left . Left $ show sessionError
             )
