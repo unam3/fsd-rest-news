@@ -46,7 +46,6 @@ module RestNews.DB.ProcessRequest (
 
 import Control.Monad.IO.Class (MonadIO)
 import Data.Aeson (Value, encode)
-import Data.Bifunctor (bimap, first)
 import Data.ByteString.Lazy.UTF8 (ByteString)
 import Data.Int (Int32)
 import Data.List (isPrefixOf)
@@ -69,9 +68,6 @@ type ErrorForUser = ByteString
 newtype HasqlSessionResults successResults = H (Either (Either UnhandledError ErrorForUser) successResults)
     deriving Show
 
-
-valueToUTFLBS :: Either Session.QueryError Value -> Either String ByteString
-valueToUTFLBS = bimap show encode
 
 createUser :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))

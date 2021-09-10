@@ -10,7 +10,6 @@ import qualified RestNews.DB.ProcessRequest as PR
 
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson (decode)
-import Data.Bifunctor (first)
 import Data.ByteString.Lazy.UTF8 (ByteString)
 import Data.Functor ((<&>))
 import Data.Int (Int32)

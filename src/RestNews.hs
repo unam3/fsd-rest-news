@@ -23,7 +23,7 @@ import qualified RestNews.WAI as WAI
 import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
 import Control.Exception (Exception, bracket_, throw)
 import Control.Monad (void, when)
-import Control.Monad.Except
+import Control.Monad.Except (ExceptT(..), runExceptT)
 import Control.Monad.IO.Class (liftIO)
 import Data.Either (fromRight, isLeft)
 import Data.Int (Int32)
@@ -33,7 +33,7 @@ import qualified Data.Vault.Lazy as Vault
 import Database.PostgreSQL.Simple (ConnectInfo(..), connectPostgreSQL, postgreSQLConnectionString)
 import Hasql.Connection (Settings, acquire, settings)
 import qualified Network.HTTP.Types as H
-import Network.Wai (Application, Request, Response, ResponseReceived, pathInfo, requestMethod, responseLBS, strictRequestBody, vault)
+import Network.Wai (Application, Request, pathInfo, requestMethod, responseLBS, strictRequestBody, vault)
 import Network.Wai.Handler.Warp (Port, run)
 import Network.Wai.Session (SessionStore, withSession)
 import Prelude hiding (error)
@@ -56,8 +56,6 @@ getSessionName' ::
     L.Handle a
     -> WAI.Handle a
     -> Request
--- newtype ExceptT e m a = ExceptT (m (Either e a))
-    -- можно IO (Either), а снаружи — ExceptT
     -> IO (Either String String)
 getSessionName' loggerH waiH request = do
     _ <- liftIO . L.hDebug loggerH $ show request
@@ -74,43 +72,6 @@ getSessionName' loggerH waiH request = do
     pure eitherSessionName
 
 
-prerequisitesCheck :: 
-    L.Handle a
-    -> S.Handle
-    -> Request
-    -> String
-    -> IO (Either String DBSessionNameAndSessionThings)
-prerequisitesCheck loggerH sessionsH request sessionName = do
-    let maybeSessionMethods = S.hMaybeSessionMethods sessionsH request
-        (sessionLookup, sessionInsert) = fromMaybe (throw SessionErrorThatNeverOccured) maybeSessionMethods
-
-    maybeUserId <- sessionLookup "user_id"
-    maybeIsAdmin <- sessionLookup "is_admin"
-    maybeAuthorId <- sessionLookup "author_id"
-
-    _ <- liftIO . L.hDebug loggerH $ show ("session user_id" :: String, maybeUserId)
-    _ <- liftIO . L.hDebug loggerH $ show ("session is_admin" :: String, maybeIsAdmin)
-    _ <- liftIO . L.hDebug loggerH $ show ("session author_id" :: String, maybeAuthorId)
-
-    let sessionUserIdString = getIdString maybeUserId
-        sessionAuthorIdString = getIdString maybeAuthorId
-        params = PC.Params {
-            PC.isAdmin = maybeIsAdmin == Just "True",
-            PC.hasUserId = sessionUserIdString /= "0",
-            PC.hasAuthorId = sessionAuthorIdString /= "0"
-        }
-    
-    pure $ fmap (\sessionName -> DBSessionNameAndSessionThings
-                    sessionName
-                    maybeUserId
-                    sessionUserIdString
-                    sessionAuthorIdString
-                    sessionLookup
-                    sessionInsert
-                    (S.hClearSession sessionsH)) $ PC.prerequisitesCheck params sessionName
-
-
-
 data DBSessionNameAndSessionThings = DBSessionNameAndSessionThings {
     sessionName :: String,
     maybeUserId :: Maybe String,
@@ -119,11 +80,46 @@ data DBSessionNameAndSessionThings = DBSessionNameAndSessionThings {
     sessionLookup :: String -> IO (Maybe String),
     sessionInsert :: String -> String -> IO (),
     clearSessionPartial :: Request -> IO ()
-
 }
 
+prerequisitesCheck :: 
+    L.Handle a
+    -> S.Handle
+    -> Request
+    -> String
+    -> IO (Either String DBSessionNameAndSessionThings)
+prerequisitesCheck loggerH sessionsH request sessionName = do
+    let maybeSessionMethods = S.hMaybeSessionMethods sessionsH request
+        (sessionLookup', sessionInsert') = fromMaybe (throw SessionErrorThatNeverOccured) maybeSessionMethods
+
+    maybeUserId' <- sessionLookup' "user_id"
+    maybeIsAdmin <- sessionLookup' "is_admin"
+    maybeAuthorId <- sessionLookup' "author_id"
+
+    _ <- liftIO . L.hDebug loggerH $ show ("session user_id" :: String, maybeUserId')
+    _ <- liftIO . L.hDebug loggerH $ show ("session is_admin" :: String, maybeIsAdmin)
+    _ <- liftIO . L.hDebug loggerH $ show ("session author_id" :: String, maybeAuthorId)
+
+    let sessionUserIdString' = getIdString maybeUserId'
+        sessionAuthorIdString' = getIdString maybeAuthorId
+        params = PC.Params {
+            PC.isAdmin = maybeIsAdmin == Just "True",
+            PC.hasUserId = sessionUserIdString' /= "0",
+            PC.hasAuthorId = sessionAuthorIdString' /= "0"
+        }
+    
+    -- what is this sessionName and why?
+    pure $ fmap (\sessionName -> DBSessionNameAndSessionThings
+                    sessionName
+                    maybeUserId'
+                    sessionUserIdString'
+                    sessionAuthorIdString'
+                    sessionLookup'
+                    sessionInsert'
+                    (S.hClearSession sessionsH)) $ PC.prerequisitesCheck params sessionName
+
+
 processCredentials :: Monad m => (String -> m a)
-    -> (String -> m (Maybe String))
     -> (Request -> m ())
     -> Request
     -> Maybe String
@@ -132,11 +128,10 @@ processCredentials :: Monad m => (String -> m a)
     -> m (PR.HasqlSessionResults (Int32, Bool, Int32))
 processCredentials
     debug
-    sessionLookup
-    clearSessionPartial
+    clearSessionPartial'
     request
-    maybeUserId
-    sessionInsert
+    maybeUserId'
+    sessionInsert'
     wrappedSessionResults = do
         let (PR.H sessionResults) = wrappedSessionResults
             (user_id, is_admin, author_id) = fromRight (0, False, 0) sessionResults
@@ -144,13 +139,13 @@ processCredentials
         -- https://github.com/hce/postgresql-session/blob/master/src/Network/Wai/Session/PostgreSQL.hs#L232
         (do
             when
-                (isJust maybeUserId)
-                (clearSessionPartial request)
+                (isJust maybeUserId')
+                (clearSessionPartial' request)
             )
         _ <- debug (show ("put into sessions:" :: String, user_id, is_admin, author_id))
-        sessionInsert "is_admin" (show is_admin)
-        sessionInsert "user_id" (show user_id)
-        sessionInsert "author_id" (show author_id)
+        sessionInsert' "is_admin" (show is_admin)
+        sessionInsert' "user_id" (show user_id)
+        sessionInsert' "author_id" (show author_id)
         pure wrappedSessionResults
 
 
@@ -167,13 +162,13 @@ runDBSession
     dbH
     request
     (DBSessionNameAndSessionThings
-        sessionName
-        maybeUserId
-        sessionUserIdString
-        sessionAuthorIdString
-        sessionLookup
-        sessionInsert
-        clearSessionPartial
+        sessionName'
+        maybeUserId'
+        sessionUserIdString'
+        sessionAuthorIdString'
+        _
+        sessionInsert'
+        clearSessionPartial'
     ) = do
         let runSessionResults = do
                 requestBody <- WAI.hStrictRequestBody waiH request
@@ -190,20 +185,19 @@ runDBSession
                         let processCredentialsPartial =
                                 processCredentials
                                     (L.hDebug loggerH)
-                                    sessionLookup
-                                    clearSessionPartial
+                                    clearSessionPartial'
                                     request
-                                    maybeUserId
-                                    sessionInsert
-                            sessionAuthorId = (read sessionAuthorIdString :: Int32)
-                            sessionUserId = (read sessionUserIdString :: Int32)
+                                    maybeUserId'
+                                    sessionInsert'
+                            sessionAuthorId' = (read sessionAuthorIdString' :: Int32)
+                            sessionUserId' = (read sessionUserIdString' :: Int32)
                         in runSession
                             connection
                             requestBody
                             processCredentialsPartial
-                            sessionUserId
-                            sessionAuthorId
-                            sessionName
+                            sessionUserId'
+                            sessionAuthorId'
+                            sessionName'
 
         hRunSessionResults <- runSessionResults
 
@@ -212,14 +206,16 @@ runDBSession
         let (PR.H runSessionResultsUnpacked) = hRunSessionResults
 
         pure $ case runSessionResultsUnpacked of
+            -- TODO: handle properly
             Left (Left unhandledError) -> Left ""
             Left (Right errorForUser) -> Left $ UTFLBS.toString errorForUser
             Right runSessionResults' -> Right runSessionResults'
 
-respond' :: (Response -> IO ResponseReceived) -> ExceptT String IO String -> IO ResponseReceived
-respond' respond exceptT = runExceptT exceptT >>= (\case
-    Left error -> respond $ responseLBS H.status400 [] $ UTFLBS.fromString error
-    Right results -> respond $ responseLBS H.status200 [] $ UTFLBS.fromString results)
+-- newtype ExceptT e m a = ExceptT (m (Either e a))
+--respond' :: (Response -> IO ResponseReceived) -> ExceptT String IO String -> IO ResponseReceived
+--respond' respond exceptT = runExceptT exceptT >>= (\case
+--    Left error -> respond $ responseLBS H.status400 [] $ UTFLBS.fromString error
+--    Right results -> respond $ responseLBS H.status200 [] $ UTFLBS.fromString results)
 
 
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
