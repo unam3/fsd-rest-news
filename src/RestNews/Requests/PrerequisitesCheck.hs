@@ -9,9 +9,6 @@ module RestNews.Requests.PrerequisitesCheck
 
 import RestNews.Requests.SessionName (noSuchEndpointS)
 
-import qualified Data.ByteString as BS
-import Data.Text (Text)
-
 
 noSuchEndpoint :: Either String String
 noSuchEndpoint = Left noSuchEndpointS
