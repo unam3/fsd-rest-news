@@ -48,10 +48,6 @@ dbError = "DB connection error"
 getIdString :: Maybe String -> String
 getIdString = fromMaybe "0"
 
-data SessionErrorThatNeverOccured = SessionErrorThatNeverOccured deriving Show
-
-instance Exception SessionErrorThatNeverOccured
-
 getSessionName' :: 
     L.Handle a
     -> WAI.Handle a
@@ -81,6 +77,10 @@ data DBSessionNameAndSessionThings = DBSessionNameAndSessionThings {
     sessionInsert :: String -> String -> IO (),
     clearSessionPartial :: Request -> IO ()
 }
+
+data SessionErrorThatNeverOccured = SessionErrorThatNeverOccured deriving Show
+
+instance Exception SessionErrorThatNeverOccured
 
 prerequisitesCheck :: 
     L.Handle a
@@ -148,6 +148,10 @@ processCredentials
         pure wrappedSessionResults
 
 
+newtype HasqlSessionError = HasqlSessionError String deriving Show
+
+instance Exception HasqlSessionError
+
 runDBSession ::
     L.Handle a
     -> WAI.Handle a
@@ -205,8 +209,7 @@ runDBSession
         let (PR.H runSessionResultsUnpacked) = hRunSessionResults
 
         pure $ case runSessionResultsUnpacked of
-            -- TODO: handle properly
-            Left (Left unhandledError) -> Left ""
+            Left (Left unhandledError) -> throw $ HasqlSessionError unhandledError
             Left (Right errorForUser) -> Left $ UTFLBS.toString errorForUser
             Right runSessionResults' -> Right runSessionResults'
 
