@@ -88,7 +88,7 @@ prerequisitesCheck ::
     -> Request
     -> String
     -> IO (Either String DBSessionNameAndSessionThings)
-prerequisitesCheck loggerH sessionsH request sessionName = do
+prerequisitesCheck loggerH sessionsH request sessionName' = do
     let maybeSessionMethods = S.hMaybeSessionMethods sessionsH request
         (sessionLookup', sessionInsert') = fromMaybe (throw SessionErrorThatNeverOccured) maybeSessionMethods
 
@@ -108,15 +108,14 @@ prerequisitesCheck loggerH sessionsH request sessionName = do
             PC.hasAuthorId = sessionAuthorIdString' /= "0"
         }
     
-    -- what is this sessionName and why?
-    pure $ fmap (\sessionName -> DBSessionNameAndSessionThings
-                    sessionName
+    pure . fmap (\sessionNameFromRight -> DBSessionNameAndSessionThings
+                    sessionNameFromRight
                     maybeUserId'
                     sessionUserIdString'
                     sessionAuthorIdString'
                     sessionLookup'
                     sessionInsert'
-                    (S.hClearSession sessionsH)) $ PC.prerequisitesCheck params sessionName
+                    (S.hClearSession sessionsH)) $ PC.prerequisitesCheck params sessionName'
 
 
 processCredentials :: Monad m => (String -> m a)
