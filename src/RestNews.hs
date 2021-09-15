@@ -33,7 +33,7 @@ import qualified Data.Vault.Lazy as Vault
 import Database.PostgreSQL.Simple (ConnectInfo(..), connectPostgreSQL, postgreSQLConnectionString)
 import Hasql.Connection (Settings, acquire, settings)
 import qualified Network.HTTP.Types as H
-import Network.Wai (Application, Request, pathInfo, requestMethod, responseLBS, strictRequestBody, vault)
+import Network.Wai (Application, Response, ResponseReceived, Request, pathInfo, requestMethod, responseLBS, strictRequestBody, vault)
 import Network.Wai.Handler.Warp (Port, run)
 import Network.Wai.Session (SessionStore, withSession)
 import Prelude hiding (error)
@@ -213,11 +213,15 @@ runDBSession
             Left (Right errorForUser) -> Left $ UTFLBS.toString errorForUser
             Right runSessionResults' -> Right runSessionResults'
 
--- newtype ExceptT e m a = ExceptT (m (Either e a))
---respond' :: (Response -> IO ResponseReceived) -> ExceptT String IO String -> IO ResponseReceived
---respond' respond exceptT = runExceptT exceptT >>= (\case
---    Left error -> respond $ responseLBS H.status400 [] $ UTFLBS.fromString error
---    Right results -> respond $ responseLBS H.status200 [] $ UTFLBS.fromString results)
+
+respond' :: (Response -> IO ResponseReceived) -> Either String UTFLBS.ByteString -> IO ResponseReceived
+respond' respond (Left error) =
+    let status =
+            if error == cantDecodeS
+            then H.status400
+            else H.status404
+    in respond $ responseLBS status [] $ UTFLBS.fromString error
+respond' respond (Right results) = respond $ responseLBS H.status200 [] results
 
 
 --type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
@@ -237,38 +241,8 @@ restAPI loggerH sessionsH dbH waiH request respond =
                         >>= (ExceptT . prerequisitesCheck loggerH sessionsH request)
                             >>= (ExceptT . runDBSession loggerH waiH dbH request)
                 
-                -- >>= respond' respond
-
-            runExceptT exceptTSessionName >>= (\case
-                Left error ->
-                    let status =
-                            if error == cantDecodeS
-                            then H.status400
-                            else H.status404
-                    in respond $ responseLBS status [] $ UTFLBS.fromString error
-                Right results -> respond $ responseLBS H.status200 [] results)
-            )
-
-            --processedResults <-
-            --    let no_output_for_the_user_in_case_of_unhandled_exception = ""
-            --    in (case fst results of
-            --        Right ulbs -> pure ulbs
-            --        _ -> case snd results of
-            --            Just errorForClient -> pure errorForClient
-            --            _ -> L.hError
-            --                    loggerH
-            --                    "\n^^^ unhandled exception has occured with request above^^^\n\n"
-            --                        >> pure no_output_for_the_user_in_case_of_unhandled_exception)
-
-            --let has_unhandled_hasql_session_exception = isLeft (fst results) && isNothing (snd results)
-            --    httpStatus
-            --        | errorOrSessionName == PC.noSuchEndpoint = H.status404
-            --        | results == cantDecode = H.status400
-            --        | fst results == dbError
-            --            || has_unhandled_hasql_session_exception = H.status500
-            --        | otherwise = H.status200
-            --    in respond $ responseLBS httpStatus [] processedResults)
-
+            runExceptT exceptTSessionName >>= respond' respond
+        )
 
 processConfig :: C.Config -> (Port, Settings, ConnectInfo)
 processConfig (C.Config runAtPort dbHost dbPort dbUser dbPassword dbName) =
