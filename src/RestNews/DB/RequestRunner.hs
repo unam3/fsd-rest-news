@@ -3,6 +3,8 @@
 
 module RestNews.DB.RequestRunner
     ( cantDecode
+    , cantDecodeS
+    , cantDecodeBS
     , runSession
     ) where
 
@@ -10,15 +12,22 @@ import qualified RestNews.DB.ProcessRequest as PR
 
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson (decode)
-import Data.ByteString.Lazy.UTF8 (ByteString)
+import Data.ByteString.Lazy.UTF8 (ByteString, fromString)
 import Data.Functor ((<&>))
 import Data.Int (Int32)
 import Hasql.Connection (Connection)
 import qualified Hasql.Session as Session
 import qualified Util
 
+
+cantDecodeS :: String
+cantDecodeS = "Wrong parameters/parameters values"
+
+cantDecodeBS :: ByteString
+cantDecodeBS = fromString cantDecodeS
+
 cantDecode :: PR.HasqlSessionResults a
-cantDecode = PR.H $ Left $ Right "Wrong parameters/parameters values"
+cantDecode = PR.H $ Left $ Right cantDecodeBS
 
 runSession ::
     Connection

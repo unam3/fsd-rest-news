@@ -12,7 +12,7 @@ module RestNews
 import qualified RestNews.Config as C
 import qualified RestNews.DBConnection as DBC
 import qualified RestNews.DB.ProcessRequest as PR
-import RestNews.DB.RequestRunner (cantDecode, runSession)
+import RestNews.DB.RequestRunner (cantDecode, cantDecodeBS, cantDecodeS, runSession)
 import qualified RestNews.Logger as L
 import qualified RestNews.Middleware.Sessions as S
 import qualified RestNews.Requests.PrerequisitesCheck as PC
@@ -240,19 +240,14 @@ restAPI loggerH sessionsH dbH waiH request respond =
                 -- >>= respond' respond
 
             runExceptT exceptTSessionName >>= (\case
-                Left error -> respond $ responseLBS H.status400 [] $ UTFLBS.fromString error
+                Left error ->
+                    let status =
+                            if error == cantDecodeS
+                            then H.status400
+                            else H.status404
+                    in respond $ responseLBS status [] $ UTFLBS.fromString error
                 Right results -> respond $ responseLBS H.status200 [] results)
-
             )
-
-
-
-            --_ <- L.hDebug
-            --    loggerH
-            --    (case fst results of
-            --        Left leftErr -> show (snd results) ++ ", " ++ leftErr
-            --        Right ulbs -> UTFLBS.toString ulbs
-            --    )
 
             --processedResults <-
             --    let no_output_for_the_user_in_case_of_unhandled_exception = ""
