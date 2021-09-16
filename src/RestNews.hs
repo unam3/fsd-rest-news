@@ -12,7 +12,7 @@ module RestNews
 import qualified RestNews.Config as C
 import qualified RestNews.DBConnection as DBC
 import qualified RestNews.DB.ProcessRequest as PR
-import RestNews.DB.RequestRunner (cantDecode, cantDecodeBS, cantDecodeS, runSession)
+import RestNews.DB.RequestRunner (cantDecodeS, runSession)
 import qualified RestNews.Logger as L
 import qualified RestNews.Middleware.Sessions as S
 import qualified RestNews.Requests.PrerequisitesCheck as PC
@@ -25,9 +25,9 @@ import Control.Exception (Exception, bracket_, throw)
 import Control.Monad (void, when)
 import Control.Monad.Except (ExceptT(..), runExceptT)
 import Control.Monad.IO.Class (liftIO)
-import Data.Either (fromRight, isLeft)
+import Data.Either (fromRight)
 import Data.Int (Int32)
-import Data.Maybe (fromMaybe, isJust, isNothing)
+import Data.Maybe (fromMaybe, isJust)
 import Data.String (fromString)
 import qualified Data.Vault.Lazy as Vault
 import Database.PostgreSQL.Simple (ConnectInfo(..), connectPostgreSQL, postgreSQLConnectionString)
