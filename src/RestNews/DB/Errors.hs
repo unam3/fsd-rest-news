@@ -1,15 +1,34 @@
-{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module RestNews.DB.Errors (
     SessionError(..)
+    , eArticleTitleMaxBoundOverflow
+    , eCategoryInUse
+    , eCategoryNameMaxBoundOverflow
+    , eNameAndSurnameMaxBoundOverflow
     , eNegativeOffset
+    , eNoSuchArticle
+    , eNoSuchCategory
+    , eNoSuchComment
+    , eNoSuchTag
+    , eParentCategoryDoesNotExist
+    , eSuchAuthorDoesNotExist
+    , eSuchUserAlreadyAuthor
+    , eSuchUserDoesNotExist
+    , eTagNameMaxBoundOverflow
+    , eTagReferencedByArticle
+    , eTagWithSuchNameAlreadyExist
+    , eUserWithSuchUsernameAlreadyExist
+    , eWrongUsernameOrPassword
     , getError
     , getErrorCode
     ) where
 
 import Data.Aeson (ToJSON, (.=), object, toJSON)
 import Data.ByteString.Internal (unpackChars)
-import Data.Text (Text, pack)
+import Data.Text (Text, append)
+import Prelude hiding (error)
 
 import qualified Hasql.Session as Session
 
@@ -46,43 +65,152 @@ getErrorCode :: Session.QueryError -> Maybe SessionError
 getErrorCode = fmap fst . getError
 
 
--- "\\\"offset\\\" must not be negative\"}"
-
 newtype MustNotBeNegative =
     MustNotBeNegative {error :: Text}
         deriving (Show)
 
 instance ToJSON MustNotBeNegative where
-    toJSON (MustNotBeNegative error)
-        = object ["name" .= error]
+    toJSON (MustNotBeNegative error')
+        = object ["name" .= error']
 
+eNegativeOffset :: MustNotBeNegative
 eNegativeOffset = MustNotBeNegative "\\\"offset\\\" must not be negative"
 
 
---MaxBoundOverflow a
---"article_title length must be 80 characters at most\"}"
---"name and surname field length must be 80 characters at most\"}"
---"category name length must be 80 characters at most\"}"
---"tag_name length must be 80 characters at most\"}"
---
---DoesNotExist a
---"such author does not exist\"}"
---"such user does not exist\"}"
---"parent category does not exist\"}"
---
---AlreadyExists 
---"tag with such name already exists\"}"
---"such user is already an author\"}"
---"user with this username already exists\"}"
---
---(Already ?) in use
---"category is in use\"}"
---
---NoSuchThing a
---"no such article\"}"
---"no such category\"}"
---"no such comment\"}"
---"no such tag\"}"
---
---"tag is referenced by an article\"}"
---
+newtype FieldMaxBoundOverflow =
+    FieldMaxBoundOverflow {error :: Text}
+        deriving (Show)
+
+instance ToJSON FieldMaxBoundOverflow where
+    toJSON (FieldMaxBoundOverflow error')
+        = object ["name" .= error']
+
+makeFieldMaxBoundOverflow :: Text -> FieldMaxBoundOverflow
+makeFieldMaxBoundOverflow fieldName = FieldMaxBoundOverflow
+    $ append fieldName " length must be 80 characters at most\"}"
+
+eArticleTitleMaxBoundOverflow :: FieldMaxBoundOverflow
+eArticleTitleMaxBoundOverflow = makeFieldMaxBoundOverflow ("article_title" :: Text)
+
+eNameAndSurnameMaxBoundOverflow :: FieldMaxBoundOverflow
+eNameAndSurnameMaxBoundOverflow = makeFieldMaxBoundOverflow "name and surname"
+
+eCategoryNameMaxBoundOverflow :: FieldMaxBoundOverflow
+eCategoryNameMaxBoundOverflow = makeFieldMaxBoundOverflow "category name"
+
+eTagNameMaxBoundOverflow :: FieldMaxBoundOverflow
+eTagNameMaxBoundOverflow = makeFieldMaxBoundOverflow "tag_name"
+
+
+newtype DoesNotExist =
+    DoesNotExist {error :: Text}
+        deriving (Show)
+
+instance ToJSON DoesNotExist where
+    toJSON (DoesNotExist error')
+        = object ["name" .= error']
+
+makeDoesNotExist :: Text -> DoesNotExist
+makeDoesNotExist thing = DoesNotExist
+    $ append thing " does not exist"
+
+eSuchAuthorDoesNotExist :: DoesNotExist
+eSuchAuthorDoesNotExist = makeDoesNotExist "such author"
+
+eSuchUserDoesNotExist :: DoesNotExist
+eSuchUserDoesNotExist = makeDoesNotExist "such user"
+
+eParentCategoryDoesNotExist :: DoesNotExist
+eParentCategoryDoesNotExist = makeDoesNotExist "parent category"
+
+
+newtype AlreadyExist =
+    AlreadyExist {error :: Text}
+        deriving (Show)
+
+instance ToJSON AlreadyExist where
+    toJSON (AlreadyExist error')
+        = object ["name" .= error']
+
+makeAlreadyExist :: Text -> AlreadyExist
+makeAlreadyExist thing = AlreadyExist
+    $ append thing " already exist"
+
+eTagWithSuchNameAlreadyExist :: AlreadyExist
+eTagWithSuchNameAlreadyExist = makeAlreadyExist "tag with such name"
+
+eUserWithSuchUsernameAlreadyExist :: AlreadyExist
+eUserWithSuchUsernameAlreadyExist = makeAlreadyExist "user with such username"
+
+
+newtype UserAlreadyAuthor =
+    UserAlreadyAuthor {error :: Text}
+        deriving (Show)
+
+instance ToJSON UserAlreadyAuthor where
+    toJSON (UserAlreadyAuthor error')
+        = object ["name" .= error']
+
+eSuchUserAlreadyAuthor :: UserAlreadyAuthor
+eSuchUserAlreadyAuthor = UserAlreadyAuthor "such user is already an author"
+
+
+newtype CategoryInUse =
+    CategoryInUse {error :: Text}
+        deriving (Show)
+
+instance ToJSON CategoryInUse where
+    toJSON (CategoryInUse error')
+        = object ["name" .= error']
+
+eCategoryInUse :: CategoryInUse
+eCategoryInUse = CategoryInUse "category is in use"
+
+
+newtype NoSuchThing =
+    NoSuchThing {error :: Text}
+        deriving (Show)
+
+instance ToJSON NoSuchThing where
+    toJSON (NoSuchThing error')
+        = object ["name" .= error']
+
+makeNoSuchThing :: Text -> NoSuchThing
+makeNoSuchThing thing = NoSuchThing
+    $ append "no such " thing 
+
+eNoSuchArticle :: NoSuchThing
+eNoSuchArticle = makeNoSuchThing "article"
+
+eNoSuchCategory :: NoSuchThing
+eNoSuchCategory = makeNoSuchThing "category"
+
+eNoSuchComment :: NoSuchThing
+eNoSuchComment = makeNoSuchThing "comment"
+
+eNoSuchTag :: NoSuchThing
+eNoSuchTag = makeNoSuchThing "tag"
+
+
+newtype TagReferencedByArticle =
+    TagReferencedByArticle {error :: Text}
+        deriving (Show)
+
+instance ToJSON TagReferencedByArticle where
+    toJSON (TagReferencedByArticle error')
+        = object ["name" .= error']
+
+eTagReferencedByArticle :: TagReferencedByArticle
+eTagReferencedByArticle = TagReferencedByArticle "tag is referenced by an article"
+
+
+newtype WrongUsernameOrPassword =
+    WrongUsernameOrPassword {error :: Text}
+        deriving (Show)
+
+instance ToJSON WrongUsernameOrPassword where
+    toJSON (WrongUsernameOrPassword error')
+        = object ["name" .= error']
+
+eWrongUsernameOrPassword :: WrongUsernameOrPassword
+eWrongUsernameOrPassword = WrongUsernameOrPassword "wrong username or password"

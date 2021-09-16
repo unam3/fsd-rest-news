@@ -4,6 +4,7 @@ module RestNewsSpec where
 
 import Control.Exception (try)
 import Control.Monad (void)
+import Data.Aeson (encode)
 import Data.ByteString.Lazy.UTF8 (toString)
 import Data.Functor ((<&>))
 import Data.List (find, isPrefixOf, stripPrefix, uncons)
@@ -19,6 +20,7 @@ import Test.Hspec (Spec, afterAll, beforeAll, describe, it, runIO, shouldBe, sho
 
 import RestNews
 import qualified RestNews.Config as C
+import RestNews.DB.Errors
 import RestNews.DB.RequestRunner (cantDecodeBS)
 import qualified RestNews.DBConnection as DBC
 import qualified RestNews.Logger as L
@@ -393,7 +395,7 @@ spec = do
 
         it "return error when wrong creds"
             $ runApllicationWith authMustFail
-                >>= (`shouldBe` "wrong username/password")
+                >>= (`shouldBe` (toString $ encode eWrongUsernameOrPassword))
 
 
     createUserResult <- runIO (runApllicationWith createUser)
@@ -405,7 +407,7 @@ spec = do
 
         it "create user will return error if such user already exists"
             $ runApllicationWith createUser
-            >>= (`shouldBe` "{\"error\": \"user with this username already exists\"}")
+            >>= (`shouldBe` (toString $ encode eUserWithSuchUsernameAlreadyExist))
 
 
     session <- runIO (runApllicationWith getSession)
@@ -438,12 +440,12 @@ spec = do
         it "call with same params returns error"
             $ runApllicationWith
                 (promoteUserToAuthor (concat ["{", userIdJSONSection, ", \"description\": \"blob deccas\"}"]) session)
-                    >>= (`shouldBe` "{\"error\": \"such user is already an author\"}")
+                    >>= (`shouldBe` (toString $ encode eSuchUserAlreadyAuthor))
 
         it "call with non-existent user_id"
              $ runApllicationWith
                 (promoteUserToAuthor "{\"user_id\": 123456, \"description\": \"blob deccas\"}" session)
-                     >>= (`shouldBe` "{\"error\": \"such user does not exist\"}")
+                     >>= (`shouldBe` (toString $ encode eSuchUserDoesNotExist))
 
 
     let authorIdJSONSection = maybe
@@ -460,7 +462,7 @@ spec = do
         it "return error message if no such author"
             $ runApllicationWith
                 (getAuthor "{\"author_id\": 123456, \"description\": \"asd\"}" session)
-                    >>= (`shouldBe` "{\"error\": \"such author does not exist\"}")
+                    >>= (`shouldBe` (toString $ encode eSuchAuthorDoesNotExist))
 
 
     describe "editAuthor" $ do
@@ -472,7 +474,7 @@ spec = do
         it "return error message if no such author"
             $ runApllicationWith
                 (editAuthor "{\"author_id\": 123456, \"description\": \"asd\"}" session)
-                    >>= (`shouldBe` "{\"error\": \"such author does not exist\"}")
+                    >>= (`shouldBe` (toString $ encode eSuchAuthorDoesNotExist))
 
     
     describe "deleteAuthorRole" $ do
@@ -484,7 +486,7 @@ spec = do
         it "return error message if no such author"
             $ runApllicationWith
                 (deleteAuthorRole "{\"author_id\":123456}" session)
-                    >>= (`shouldBe` "{\"error\": \"such author does not exist\"}")
+                    >>= (`shouldBe` (toString $ encode eSuchAuthorDoesNotExist))
 
 
     describe "deleteUser" $ do
@@ -496,7 +498,7 @@ spec = do
         it "returns error on non-existent user"
             $ runApllicationWith
                 (deleteUser userIdJSON session)
-                    >>= (`shouldBe` "{\"error\": \"such user does not exist\"}")
+                    >>= (`shouldBe` (toString $ encode eSuchUserDoesNotExist))
 
 
     createCategoryResult <- runIO (
@@ -516,7 +518,7 @@ spec = do
         it "returns error if non-existent parent category"
             $ runApllicationWith
                 (createCategory "{\"name\": \"pluh\", \"parent_id\": 12345}" session)
-                    >>= (`shouldBe` "{\"error\": \"parent category does not exist\"}")
+                    >>= (`shouldBe` (toString $ encode eParentCategoryDoesNotExist))
 
 
     describe "getCategory" $ do
@@ -528,7 +530,7 @@ spec = do
         it "returns error on non-existent category"
             $ runApllicationWith
                 (getCategory "{\"category_id\": 123456}")
-                    >>= (`shouldBe` "{\"error\": \"no such category\"}")
+                    >>= (`shouldBe` (toString $ encode eNoSuchCategory))
 
 
     describe "updateCategory" $ do
@@ -543,12 +545,12 @@ spec = do
         it "returns error on non-existent category"
             $ runApllicationWith
                 (updateCategory "{\"category_id\": 123456, \"name\": \"pluh_pattched\", \"parent_id\": null}" session)
-                    >>= (`shouldBe` "{\"error\": \"no such category\"}")
+                    >>= (`shouldBe` (toString $ encode eNoSuchCategory))
 
         it "returns error if non-existent parent category"
             $ runApllicationWith
                 (updateCategory (categoryIdJSONSection ++ ", \"name\": \"plusdh\", \"parent_id\": 12345}") session)
-                    >>= (`shouldBe` "{\"error\": \"parent category does not exist\"}")
+                    >>= (`shouldBe` (toString $ encode eParentCategoryDoesNotExist))
 
 
     describe "deleteCategory" $ do
@@ -560,12 +562,12 @@ spec = do
         it "returns error on non-existent category"
             $ runApllicationWith
                 (deleteCategory "{\"category_id\": 123456}" session)
-                    >>= (`shouldBe` "{\"error\": \"no such category\"}")
+                    >>= (`shouldBe` (toString $ encode eNoSuchCategory))
 
         it "returns error if category is referenced in DB"
             $ runApllicationWith
                 (deleteCategory "{\"category_id\": 1}" session)
-                    >>= (`shouldBe` "{\"error\": \"category is in use\"}")
+                    >>= (`shouldBe` (toString $ encode eCategoryInUse))
 
 
     createArticleDraftResult <- runIO
@@ -591,14 +593,14 @@ spec = do
                 (createArticleDraft
                     "{\"article_title\": \"they dont beleive their eyes…\", \"category_id\": 1, \"article_content\": \"article is long enough\", \"tags\": [123344], \"main_photo\": \"http://pl.uh/main\", \"additional_photos\": [\"1\", \"2\", \"3\"]}"
                     session)
-                    >>= (`shouldBe` "{\"error\": \"no such tag\"}")
+                    >>= (`shouldBe` (toString $ encode eNoSuchTag))
 
         it "returns error if no such category"
             $ runApllicationWith
                 (createArticleDraft
                     "{\"article_title\": \"they dont beleive their eyes…\", \"category_id\": 1123, \"article_content\": \"article is long enough\", \"tags\": [], \"main_photo\": \"http://pl.uh/main\", \"additional_photos\": [\"1\", \"2\", \"3\"]}"
                     session)
-                    >>= (`shouldBe` "{\"error\": \"no such category\"}")
+                    >>= (`shouldBe` (toString $ encode eNoSuchCategory))
 
 
     describe "editArticleDraft" $ do
@@ -614,21 +616,21 @@ spec = do
                 (editArticleDraft
                     "{\"article_title\": \"they dont beleive their eyes…\", \"category_id\": 1, \"article_content\": \"article is long enough\", \"tags\": [1], \"main_photo\": \"http://pl.uh/main\", \"additional_photos\": [\"1\", \"2\", \"3\"], \"article_id\": 123445}"
                     session)
-                    >>= (`shouldBe` "{\"error\": \"no such article\"}")
+                    >>= (`shouldBe` (toString $ encode eNoSuchArticle))
 
         it "returns error if no such tags"
             $ runApllicationWith
                 (editArticleDraft
                     ("{\"article_title\": \"they dont beleive their eyes…\", \"category_id\": 1, \"article_content\": \"article is long enough\", \"tags\": [11234], \"main_photo\": \"http://pl.uh/main\", \"additional_photos\": [\"1\", \"2\", \"3\"], " ++ articleIdJSONSection ++ "}")
                     session)
-                    >>= (`shouldBe` "{\"error\": \"no such tag\"}")
+                    >>= (`shouldBe` (toString $ encode eNoSuchTag))
 
         it "returns error if no such category"
             $ runApllicationWith
                 (editArticleDraft
                     ("{\"article_title\": \"they dont beleive their eyes…\", \"category_id\": 11234, \"article_content\": \"article is long enough\", \"tags\": [1], \"main_photo\": \"http://pl.uh/main\", \"additional_photos\": [\"1\", \"2\", \"3\"], " ++ articleIdJSONSection ++ "}")
                     session)
-                        >>= (`shouldBe` "{\"error\": \"no such category\"}")
+                        >>= (`shouldBe` (toString $ encode eNoSuchCategory))
 
 
     describe "getArticleDraft" $ do
@@ -640,7 +642,7 @@ spec = do
         it "returns error if no such article"
             $ runApllicationWith
                 (getArticleDraft "{\"article_id\":123456}" session)
-                    >>= (`shouldStartWith` "{\"error\": \"no such article\"}")
+                    >>= (`shouldStartWith` (toString $ encode eNoSuchArticle))
 
 
     describe "publishArticleDraft" $ do
@@ -652,7 +654,7 @@ spec = do
         it "returns error if no such article"
             $ runApllicationWith
                 (publishArticleDraft "{\"article_id\":123456}" session)
-                    >>= (`shouldBe` "{\"error\": \"no such article\"}")
+                    >>= (`shouldBe` (toString $ encode eNoSuchArticle))
 
 
     createArticleDraftResult1 <- runIO
@@ -678,12 +680,12 @@ spec = do
         it "published article can't be deleted"
             $ runApllicationWith
                 (deleteArticleDraft ("{" ++ articleIdJSONSection ++ "}") session)
-                    >>= (`shouldBe` "{\"error\": \"no such article\"}")
+                    >>= (`shouldBe` (toString $ encode eNoSuchArticle))
 
         it "returns error if no such article"
             $ runApllicationWith
                 (deleteArticleDraft "{\"article_id\":123456}" session)
-                    >>= (`shouldBe` "{\"error\": \"no such article\"}")
+                    >>= (`shouldBe` (toString $ encode eNoSuchArticle))
 
 
     createTagResult <- runIO
@@ -703,7 +705,7 @@ spec = do
         it "returns error if tag already exists"
             $ runApllicationWith
                 (createTag "{\"tag_name\": \"test tag\"}" session)
-                    >>= (`shouldBe` "{\"error\": \"tag with such name already exists\"}")
+                    >>= (`shouldBe` (toString $ encode eTagWithSuchNameAlreadyExist))
 
 
     beforeAll
@@ -718,12 +720,12 @@ spec = do
             it "returns error if tag with such name already exist"
                 $ runApllicationWith
                     (editTag ("{\"tag_name\": \"test tag1\"," ++ tagIdJSONSection) session)
-                        >>= (`shouldBe` "{\"error\": \"tag with such name already exists\"}")
+                        >>= (`shouldBe` (toString $ encode eTagWithSuchNameAlreadyExist))
 
             it "returns error if tag does not exists"
                 $ runApllicationWith
                     (editTag "{\"tag_id\": 12345,\"tag_name\": \"test ta\"}" session)
-                        >>= (`shouldBe` "{\"error\": \"no such tag\"}")
+                        >>= (`shouldBe` (toString $ encode eNoSuchTag))
 
 
     describe "getTag" $ do
@@ -735,7 +737,7 @@ spec = do
         it "returns error if tag does not exists"
             $ runApllicationWith
                 (getTag "{\"tag_id\": 12345}")
-                    >>= (`shouldBe` "{\"error\": \"no such tag\"}")
+                    >>= (`shouldBe` (toString $ encode eNoSuchTag))
 
 
     createTagResult1 <- runIO
@@ -780,12 +782,12 @@ spec = do
                 it "returns error if tag does not exists"
                     $ \_ -> runApllicationWith
                         (deleteTag "{\"tag_id\": 12345}" session)
-                            >>= (`shouldBe` "{\"error\": \"no such tag\"}")
+                            >>= (`shouldBe` (toString $ encode eNoSuchTag))
 
                 it "returns error if tag is referenced by an article"
                     $ \_ -> runApllicationWith
                         (deleteTag ("{\"tag_id\": " ++ tagId ++ "}") session)
-                            >>= (`shouldBe` "{\"error\": \"tag is referenced by an article\"}")
+                            >>= (`shouldBe` (toString $ encode eTagReferencedByArticle))
 
         
     createCommentResult <- runIO
@@ -810,7 +812,7 @@ spec = do
                 (createComment
                     "{\"article_id\": 12345, \"comment_text\": \"bluasd!\"}"
                     session)
-                    >>= (`shouldBe` "{\"error\": \"no such article\"}")
+                    >>= (`shouldBe` (toString $ encode eNoSuchArticle))
 
 
     describe "getArticleComments" $ do
@@ -838,4 +840,4 @@ spec = do
                 (deleteComment
                     "{\"comment_id\": 12345}"
                     session)
-                    >>= (`shouldBe` "{\"error\": \"no such comment\"}")
+                    >>= (`shouldBe` (toString $ encode eNoSuchComment))
