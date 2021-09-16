@@ -90,12 +90,9 @@ createUser sessionRun connection createUserRequest = do
        Left sessionError ->
          case getErrorCode sessionError of
            Just PSQL_STRING_DATA_RIGHT_TRUNCATION ->
-             H . Left $
-             Right
-               "{\"error\": \"name and surname field length must be 80 characters at most\"}"
+             H . Left . Right $ encode eNameAndSurnameMaxBoundOverflow
            Just PSQL_UNIQUE_VIOLATION ->
-             H . Left $
-             Right "{\"error\": \"user with this username already exists\"}"
+             H . Left . Right $ encode eUserWithSuchUsernameAlreadyExist
            _ -> H . Left . Left $ show sessionError)
 
 deleteUser ::
@@ -114,7 +111,7 @@ deleteUser sessionRun connection deleteUserRequest = do
        Left sessionError ->
          case getErrorCode sessionError of
            Just UnexpectedAmountOfRowsOrUnexpectedNull ->
-             H . Left $ Right "{\"error\": \"such user does not exist\"}"
+             H . Left . Right $ encode eSuchUserDoesNotExist
            _ -> H . Left . Left $ show sessionError)
 
 getUser ::
@@ -131,7 +128,7 @@ getUser sessionRun connection userId = do
        Left sessionError ->
          case getErrorCode sessionError of
            Just UnexpectedAmountOfRowsOrUnexpectedNull ->
-             H . Left $ Right "{\"error\": \"such user does not exist\"}"
+             H . Left . Right $ encode eSuchUserDoesNotExist
            _ -> H . Left . Left $ show sessionError)
 
 promoteUserToAuthor ::
@@ -152,9 +149,9 @@ promoteUserToAuthor sessionRun connection promoteUserToAuthorRequest = do
        Left sessionError ->
          case getErrorCode sessionError of
            Just PSQL_FOREIGN_KEY_VIOLATION ->
-             H . Left $ Right "{\"error\": \"such user does not exist\"}"
+             H . Left . Right $ encode eSuchUserDoesNotExist
            Just PSQL_UNIQUE_VIOLATION ->
-             H . Left $ Right "{\"error\": \"such user is already an author\"}"
+             H . Left . Right $ encode eSuchUserAlreadyAuthor
            _ -> H . Left . Left $ show sessionError)
 
 editAuthor ::
@@ -175,11 +172,9 @@ editAuthor sessionRun connection editAuthorRequest = do
        Left sessionError ->
          case getErrorCode sessionError of
            Just PSQL_STRING_DATA_RIGHT_TRUNCATION ->
-             H . Left $
-             Right
-               "{\"error\": \"name and surname field length must be 80 characters at most\"}"
+             H . Left . Right $ encode eNameAndSurnameMaxBoundOverflow
            Just UnexpectedAmountOfRowsOrUnexpectedNull ->
-             H . Left $ Right "{\"error\": \"such author does not exist\"}"
+             H . Left . Right $ encode eSuchAuthorDoesNotExist
            _ -> H . Left . Left $ show sessionError)
 
 getAuthor ::
@@ -198,7 +193,7 @@ getAuthor sessionRun connection authorIdRequest = do
        Left sessionError ->
          case getErrorCode sessionError of
            Just UnexpectedAmountOfRowsOrUnexpectedNull ->
-             H . Left $ Right "{\"error\": \"such author does not exist\"}"
+             H . Left . Right $ encode eSuchAuthorDoesNotExist
            _ -> H . Left . Left $ show sessionError)
 
 deleteAuthorRole ::
@@ -217,7 +212,7 @@ deleteAuthorRole sessionRun connection authorIdRequest = do
        Left sessionError ->
          case getErrorCode sessionError of
            Just UnexpectedAmountOfRowsOrUnexpectedNull ->
-             H . Left $ Right "{\"error\": \"such author does not exist\"}"
+             H . Left . Right $ encode eSuchAuthorDoesNotExist
            _ -> H . Left . Left $ show sessionError)
 
 createCategory ::
@@ -238,11 +233,9 @@ createCategory sessionRun connection createCategoryRequest = do
        Left sessionError ->
          case getErrorCode sessionError of
            Just PSQL_STRING_DATA_RIGHT_TRUNCATION ->
-             H . Left $
-             Right
-               "{\"error\": \"category name length must be 80 characters at most\"}"
+             H . Left . Right $ encode eCategoryNameMaxBoundOverflow
            Just PSQL_FOREIGN_KEY_VIOLATION ->
-             H . Left $ Right "{\"error\": \"parent category does not exist\"}"
+             H . Left . Right $ encode eParentCategoryDoesNotExist
            _ -> H . Left . Left $ show sessionError)
 
 updateCategory ::
@@ -264,13 +257,11 @@ updateCategory sessionRun connection updateCategoryRequest = do
        Left sessionError ->
          case getErrorCode sessionError of
            Just PSQL_STRING_DATA_RIGHT_TRUNCATION ->
-             H . Left $
-             Right
-               "{\"error\": \"category name length must be 80 characters at most\"}"
+             H . Left . Right $ encode eCategoryNameMaxBoundOverflow
            Just PSQL_FOREIGN_KEY_VIOLATION ->
-             H . Left $ Right "{\"error\": \"parent category does not exist\"}"
+             H . Left . Right $ encode eParentCategoryDoesNotExist
            Just UnexpectedAmountOfRowsOrUnexpectedNull ->
-             H . Left $ Right "{\"error\": \"no such category\"}"
+             H . Left . Right $ encode eNoSuchCategory
            _ -> H . Left . Left $ show sessionError)
 
 getCategory ::
@@ -289,7 +280,7 @@ getCategory sessionRun connection categoryIdRequest = do
        Left sessionError ->
          case getErrorCode sessionError of
            Just UnexpectedAmountOfRowsOrUnexpectedNull ->
-             H . Left $ Right "{\"error\": \"no such category\"}"
+             H . Left . Right $ encode eNoSuchCategory
            _ -> H . Left . Left $ show sessionError)
 
 deleteCategory ::
@@ -308,9 +299,9 @@ deleteCategory sessionRun connection categoryIdRequest = do
        Left sessionError ->
          case getErrorCode sessionError of
            Just PSQL_FOREIGN_KEY_VIOLATION ->
-             H . Left $ Right "{\"error\": \"category is in use\"}"
+             H . Left . Right $ encode eCategoryInUse
            Just UnexpectedAmountOfRowsOrUnexpectedNull ->
-             H . Left $ Right "{\"error\": \"no such category\"}"
+             H . Left . Right $ encode eNoSuchCategory
            _ -> H . Left . Left $ show sessionError)
 
 createTag ::
@@ -329,12 +320,9 @@ createTag sessionRun connection createTagRequest = do
        Left sessionError ->
          case getErrorCode sessionError of
            Just PSQL_STRING_DATA_RIGHT_TRUNCATION ->
-             H . Left $
-             Right
-               "{\"error\": \"tag_name length must be 80 characters at most\"}"
+             H . Left . Right $ encode eTagNameMaxBoundOverflow
            Just PSQL_UNIQUE_VIOLATION ->
-             H . Left $
-             Right "{\"error\": \"tag with such name already exists\"}"
+             H . Left . Right $ encode eTagWithSuchNameAlreadyExist
            _ -> H . Left . Left $ show sessionError)
 
 editTag ::
@@ -354,14 +342,11 @@ editTag sessionRun connection editTagRequest = do
        Left sessionError ->
          case getErrorCode sessionError of
            Just PSQL_STRING_DATA_RIGHT_TRUNCATION ->
-             H . Left $
-             Right
-               "{\"error\": \"tag_name length must be 80 characters at most\"}"
+             H . Left . Right $ encode eTagNameMaxBoundOverflow
            Just PSQL_UNIQUE_VIOLATION ->
-             H . Left $
-             Right "{\"error\": \"tag with such name already exists\"}"
+             H . Left . Right $ encode eTagWithSuchNameAlreadyExist
            Just UnexpectedAmountOfRowsOrUnexpectedNull ->
-             H . Left $ Right "{\"error\": \"no such tag\"}"
+             H . Left . Right $ encode eNoSuchTag
            _ -> H . Left . Left $ show sessionError)
 
 deleteTag ::
@@ -380,9 +365,9 @@ deleteTag sessionRun connection deleteTagRequest = do
        Left sessionError ->
          case getErrorCode sessionError of
            Just PSQL_FOREIGN_KEY_VIOLATION ->
-             H . Left $ Right "{\"error\": \"tag is referenced by an article\"}"
+             H . Left . Right $ encode eTagReferencedByArticle
            Just UnexpectedAmountOfRowsOrUnexpectedNull ->
-             H . Left $ Right "{\"error\": \"no such tag\"}"
+             H . Left . Right $ encode eNoSuchTag
            _ -> H . Left . Left $ show sessionError)
 
 getTag ::
@@ -400,7 +385,7 @@ getTag sessionRun connection getTagRequest = do
        Left sessionError ->
          case getErrorCode sessionError of
            Just UnexpectedAmountOfRowsOrUnexpectedNull ->
-             H . Left $ Right "{\"error\": \"no such tag\"}"
+             H . Left . Right $ encode eNoSuchTag
            _ -> H . Left . Left $ show sessionError)
 
 createComment ::
@@ -423,7 +408,7 @@ createComment sessionRun connection createCommentRequest user_id' = do
        Left sessionError ->
          case getErrorCode sessionError of
            Just PSQL_FOREIGN_KEY_VIOLATION ->
-             H . Left $ Right "{\"error\": \"no such article\"}"
+             H . Left . Right $ encode eNoSuchArticle
            _ -> H . Left . Left $ show sessionError)
 
 deleteComment ::
@@ -443,7 +428,7 @@ deleteComment sessionRun connection deleteCommentRequest user_id' = do
        Left sessionError ->
          case getErrorCode sessionError of
            Just UnexpectedAmountOfRowsOrUnexpectedNull ->
-             H . Left $ Right "{\"error\": \"no such comment\"}"
+             H . Left . Right $ encode eNoSuchComment
            _ -> H . Left . Left $ show sessionError)
 
 getArticleComments ::
@@ -493,19 +478,16 @@ createArticleDraft sessionRun connection articleDraftRequest author_id' = do
        Left sessionError ->
          case getError sessionError of
            Just (PSQL_STRING_DATA_RIGHT_TRUNCATION, _) ->
-             H . Left $
-             Right
-               "{\"error\": \"article_title length must be 80 characters at most\"}"
+             H . Left . Right $ encode eArticleTitleMaxBoundOverflow
            Just (PSQL_FOREIGN_KEY_VIOLATION, details) ->
              let detailsPrefix = fmap (take 12) details
               in case detailsPrefix of
-                   Just "Key (tag_id)" ->
-                     H . Left $ Right "{\"error\": \"no such tag\"}"
+                   Just "Key (tag_id)" -> H . Left . Right $ encode eNoSuchTag
                    Just "Key (categor" ->
-                     H . Left $ Right "{\"error\": \"no such category\"}"
+                     H . Left . Right $ encode eNoSuchCategory
                    _ -> error $ show details
            Just (UnexpectedAmountOfRowsOrUnexpectedNull, Nothing) ->
-             H . Left $ Right "{\"error\": \"no such article\"}"
+             H . Left . Right $ encode eNoSuchArticle
            _ -> H . Left . Left $ show sessionError)
 
 publishArticleDraft ::
@@ -527,7 +509,7 @@ publishArticleDraft sessionRun connection articleDraftIdRequest author_id' = do
        Left sessionError ->
          case getErrorCode sessionError of
            Just UnexpectedAmountOfRowsOrUnexpectedNull ->
-             H . Left $ Right "{\"error\": \"no such article\"}"
+             H . Left . Right $ encode eNoSuchArticle
            _ -> H . Left . Left $ show sessionError)
 
 editArticleDraft ::
@@ -555,21 +537,18 @@ editArticleDraft sessionRun connection articleDraftEditRequest author_id' = do
        Left sessionError ->
          case getError sessionError of
            Just (PSQL_STRING_DATA_RIGHT_TRUNCATION, _) ->
-             H . Left $
-             Right
-               "{\"error\": \"article_title length must be 80 characters at most\"}"
+             H . Left . Right $ encode eArticleTitleMaxBoundOverflow
            Just (PSQL_FOREIGN_KEY_VIOLATION, details) ->
              let detailsPrefix = fmap (take 12) details
               in case detailsPrefix of
-                   Just "Key (tag_id)" ->
-                     H . Left $ Right "{\"error\": \"no such tag\"}"
+                   Just "Key (tag_id)" -> H . Left . Right $ encode eNoSuchTag
                    Just "Key (categor" ->
-                     H . Left $ Right "{\"error\": \"no such category\"}"
+                     H . Left . Right $ encode eNoSuchCategory
                    Just "Key (article" ->
-                     H . Left $ Right "{\"error\": \"no such article\"}"
+                     H . Left . Right $ encode eNoSuchArticle
                    _ -> H . Left . Left $ show sessionError
            Just (UnexpectedAmountOfRowsOrUnexpectedNull, Nothing) ->
-             H . Left $ Right "{\"error\": \"no such article\"}"
+             H . Left . Right $ encode eNoSuchArticle
            _ -> H . Left . Left $ show sessionError)
 
 getArticleDraft ::
@@ -591,7 +570,7 @@ getArticleDraft sessionRun connection articleDraftIdRequest author_id' = do
        Left sessionError ->
          case getErrorCode sessionError of
            Just UnexpectedAmountOfRowsOrUnexpectedNull ->
-             H . Left $ Right "{\"error\": \"no such article\"}"
+             H . Left . Right $ encode eNoSuchArticle
            _ -> H . Left . Left $ show sessionError)
 
 deleteArticleDraft ::
@@ -613,7 +592,7 @@ deleteArticleDraft sessionRun connection articleDraftIdRequest author_id' = do
        Left sessionError ->
          case getErrorCode sessionError of
            Just UnexpectedAmountOfRowsOrUnexpectedNull ->
-             H . Left $ Right "{\"error\": \"no such article\"}"
+             H . Left . Right $ encode eNoSuchArticle
            _ -> H . Left . Left $ show sessionError)
 
 getArticlesByCategoryId ::
@@ -636,8 +615,7 @@ getArticlesByCategoryId sessionRun connection articlesByCategoryIdRequest = do
          case getError sessionError of
            Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) ->
              if "OFFSET" `isPrefixOf` msg
-               then H . Left $
-                    Right "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+               then H . Left . Right $ encode eNegativeOffset
                else H . Left . Left $ show sessionError
            _ -> H . Left . Left $ show sessionError)
 
@@ -660,8 +638,7 @@ getArticlesByTagId sessionRun connection tagIdRequestWithOffset = do
          case getError sessionError of
            Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) ->
              if "OFFSET" `isPrefixOf` msg
-               then H . Left $
-                    Right "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+               then H . Left . Right $ encode eNegativeOffset
                else H . Left . Left $ show sessionError
            _ -> H . Left . Left $ show sessionError)
 
@@ -684,8 +661,7 @@ getArticlesByAnyTagId sessionRun connection tagIdsRequest = do
          case getError sessionError of
            Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) ->
              if "OFFSET" `isPrefixOf` msg
-               then H . Left $
-                    Right "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+               then H . Left . Right $ encode eNegativeOffset
                else H . Left . Left $ show sessionError
            _ -> H . Left . Left $ show sessionError)
 
@@ -708,8 +684,7 @@ getArticlesByAllTagId sessionRun connection tagIdsRequest = do
          case getError sessionError of
            Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) ->
              if "OFFSET" `isPrefixOf` msg
-               then H . Left $
-                    Right "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+               then H . Left . Right $ encode eNegativeOffset
                else H . Left . Left $ show sessionError
            _ -> H . Left . Left $ show sessionError)
 
@@ -732,8 +707,7 @@ getArticlesByTitlePart sessionRun connection substringRequest = do
          case getError sessionError of
            Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) ->
              if "OFFSET" `isPrefixOf` msg
-               then H . Left $
-                    Right "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+               then H . Left . Right $ encode eNegativeOffset
                else H . Left . Left $ show sessionError
            _ -> H . Left . Left $ show sessionError)
 
@@ -758,8 +732,7 @@ getArticlesByContentPart sessionRun connection substringRequest = do
          case getError sessionError of
            Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) ->
              if "OFFSET" `isPrefixOf` msg
-               then H . Left $
-                    Right "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+               then H . Left . Right $ encode eNegativeOffset
                else H . Left . Left $ show sessionError
            _ -> H . Left . Left $ show sessionError)
 
@@ -785,8 +758,7 @@ getArticlesByAuthorNamePart sessionRun connection substringRequest = do
          case getError sessionError of
            Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) ->
              if "OFFSET" `isPrefixOf` msg
-               then H . Left $
-                    Right "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+               then H . Left . Right $ encode eNegativeOffset
                else H . Left . Left $ show sessionError
            _ -> H . Left . Left $ show sessionError)
 
@@ -809,8 +781,7 @@ getArticlesSortedByPhotosNumber sessionRun connection request = do
          case getError sessionError of
            Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) ->
              if "OFFSET" `isPrefixOf` msg
-               then H . Left $
-                    Right "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+               then H . Left . Right $ encode eNegativeOffset
                else H . Left . Left $ show sessionError
            _ -> H . Left . Left $ show sessionError)
 
@@ -833,8 +804,7 @@ getArticlesSortedByCreationDate sessionRun connection request = do
          case getError sessionError of
            Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) ->
              if "OFFSET" `isPrefixOf` msg
-               then H . Left $
-                    Right "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+               then H . Left . Right $ encode eNegativeOffset
                else H . Left . Left $ show sessionError
            _ -> H . Left . Left $ show sessionError)
 
@@ -857,8 +827,7 @@ getArticlesSortedByAuthor sessionRun connection request = do
          case getError sessionError of
            Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) ->
              if "OFFSET" `isPrefixOf` msg
-               then H . Left $
-                    Right "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+               then H . Left . Right $ encode eNegativeOffset
                else H . Left . Left $ show sessionError
            _ -> H . Left . Left $ show sessionError)
 
@@ -881,8 +850,7 @@ getArticlesSortedByCategory sessionRun connection request = do
          case getError sessionError of
            Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) ->
              if "OFFSET" `isPrefixOf` msg
-               then H . Left $
-                    Right "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+               then H . Left . Right $ encode eNegativeOffset
                else H . Left . Left $ show sessionError
            _ -> H . Left . Left $ show sessionError)
 
@@ -907,8 +875,7 @@ getArticlesFilteredBy statement sessionRun connection articlesByCreationDateRequ
          case getError sessionError of
            Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) ->
              if "OFFSET" `isPrefixOf` msg
-               then H . Left $
-                    Right "{\"error\": \"\\\"offset\\\" must not be negative\"}"
+               then H . Left . Right $ encode eNegativeOffset
                else H . Left . Left $ show sessionError
            _ -> H . Left . Left $ show sessionError)
 
@@ -959,5 +926,5 @@ getCredentials sessionRun connection authRequest = do
        Left sessionError ->
          case getErrorCode sessionError of
            Just UnexpectedAmountOfRowsOrUnexpectedNull ->
-             H . Left $ Right "wrong username/password"
+             H . Left . Right $ encode eWrongUsernameOrPassword
            _ -> H . Left . Left $ show sessionError)
