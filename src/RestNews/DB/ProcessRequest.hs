@@ -449,7 +449,7 @@ createArticleDraft sessionRun connection articleDraftRequest author_id' =
                         } in case detailsPrefix of
                             Just "Key (tag_id)" -> H . Left . Right $ encode eNoSuchTag
                             Just "Key (categor" -> H . Left . Right $ encode eNoSuchCategory
-                            _ -> error $ show details
+                            _ -> H . Left . Left $ show sessionError
                     Just (UnexpectedAmountOfRowsOrUnexpectedNull, Nothing) -> H . Left . Right $ encode eNoSuchArticle
                     _ -> H . Left . Left $ show sessionError
             )
