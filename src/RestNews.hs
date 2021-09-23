@@ -1,5 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module RestNews
     ( SessionErrorThatNeverOccured(..)
@@ -10,36 +10,38 @@ module RestNews
     ) where
 
 import qualified RestNews.Config as C
-import qualified RestNews.DBConnection as DBC
 import qualified RestNews.DB.ProcessRequest as PR
 import RestNews.DB.RequestRunner (cantDecodeS, runSession)
+import qualified RestNews.DBConnection as DBC
 import qualified RestNews.Logger as L
 import qualified RestNews.Middleware.Sessions as S
+import qualified RestNews.Middleware.Static as Static
 import qualified RestNews.Requests.PrerequisitesCheck as PC
 import RestNews.Requests.SessionName (getSessionName)
-import qualified RestNews.Middleware.Static as Static
 import qualified RestNews.WAI as WAI
 
-import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
 import Control.Exception (Exception, bracket_, throw)
 import Control.Monad (void, when)
-import Control.Monad.Except (ExceptT(..), runExceptT)
+import Control.Monad.Except (ExceptT (..), runExceptT)
 import Control.Monad.IO.Class (liftIO)
+import qualified Data.ByteString.Lazy.UTF8 as UTFLBS
 import Data.Either (fromRight)
 import Data.Int (Int32)
 import Data.Maybe (fromMaybe, isJust)
 import Data.String (fromString)
 import qualified Data.Vault.Lazy as Vault
-import Database.PostgreSQL.Simple (ConnectInfo(..), connectPostgreSQL, postgreSQLConnectionString)
+import Database.PostgreSQL.Simple (ConnectInfo (..), connectPostgreSQL, postgreSQLConnectionString)
 import Hasql.Connection (Settings, acquire, settings)
 import qualified Network.HTTP.Types as H
-import Network.Wai (Application, Response, ResponseReceived, Request, pathInfo, requestMethod, responseLBS, strictRequestBody, vault)
+import Network.Wai (Application, Request, Response, ResponseReceived, pathInfo, requestMethod, responseLBS,
+                    strictRequestBody, vault)
 import Network.Wai.Handler.Warp (Port, run)
 import Network.Wai.Session (SessionStore, withSession)
+import Network.Wai.Session.PostgreSQL (clearSession, dbStore, defaultSettings, fromSimpleConnection, purger,
+                                       storeSettingsLog)
 import Prelude hiding (error)
-import Network.Wai.Session.PostgreSQL (clearSession, dbStore, defaultSettings, fromSimpleConnection, purger, storeSettingsLog)
 import System.Exit (exitFailure)
-import System.Log.Logger (Priority (DEBUG, ERROR), debugM, infoM, errorM, setLevel, traplogging, updateGlobalLogger)
+import System.Log.Logger (Priority (DEBUG, ERROR), debugM, errorM, infoM, setLevel, traplogging, updateGlobalLogger)
 import Web.Cookie (defaultSetCookie)
 
 dbError :: UTFLBS.ByteString
@@ -48,7 +50,7 @@ dbError = "DB connection error"
 getIdString :: Maybe String -> String
 getIdString = fromMaybe "0"
 
-getSessionName' :: 
+getSessionName' ::
     L.Handle a
     -> WAI.Handle a
     -> Request
@@ -82,7 +84,7 @@ data SessionErrorThatNeverOccured = SessionErrorThatNeverOccured deriving Show
 
 instance Exception SessionErrorThatNeverOccured
 
-prerequisitesCheck :: 
+prerequisitesCheck ::
     L.Handle a
     -> S.Handle
     -> Request
@@ -107,7 +109,7 @@ prerequisitesCheck loggerH sessionsH request sessionName' = do
             PC.hasUserId = sessionUserIdString' /= "0",
             PC.hasAuthorId = sessionAuthorIdString' /= "0"
         }
-    
+
     pure . fmap (\sessionNameFromRight -> DBSessionNameAndSessionThings
                     sessionNameFromRight
                     maybeUserId'
@@ -181,7 +183,7 @@ runDBSession
                 eitherConnection <- DBC.hAcquiredConnection dbH
 
                 case eitherConnection of
-                    Left connectionError -> 
+                    Left connectionError ->
                         liftIO $ L.hError loggerH (show connectionError)
                             >> pure (PR.H $ Left $ Right dbError)
                     Right connection ->
@@ -240,7 +242,7 @@ restAPI loggerH sessionsH dbH waiH request respond =
                     ExceptT (getSessionName' loggerH waiH request)
                         >>= (ExceptT . prerequisitesCheck loggerH sessionsH request)
                             >>= (ExceptT . runDBSession loggerH waiH dbH request)
-                
+
             runExceptT exceptTSessionName >>= respond' respond
         )
 
@@ -260,8 +262,8 @@ processConfig (C.Config runAtPort dbHost dbPort dbUser dbPassword dbName) =
 
 
 makeApplication :: L.Handle () -> Settings -> ConnectInfo -> IO Application
-makeApplication loggerH dbConnectionSettings connectInfo =  
-    do  
+makeApplication loggerH dbConnectionSettings connectInfo =
+    do
         let storeSettings = defaultSettings {storeSettingsLog = L.hDebug loggerH}
         vaultKey <- Vault.newKey
         simpleConnection <- connectPostgreSQL (postgreSQLConnectionString connectInfo)
@@ -294,7 +296,7 @@ makeApplication loggerH dbConnectionSettings connectInfo =
                             )
                     )
             )
-            
+
 
 runWarpWithLogger :: IO ()
 runWarpWithLogger =

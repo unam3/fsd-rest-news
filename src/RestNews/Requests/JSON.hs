@@ -1,5 +1,5 @@
-{-# LANGUAGE DuplicateRecordFields  #-}
-{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module RestNews.Requests.JSON (
     CreateUserRequest(..),

@@ -1,9 +1,9 @@
-{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module RestNews.DB.ProcessRequestSpec where
 
-import RestNews.DB.ProcessRequest (SessionError(..))
 import RestNews.DB.Errors (getError)
+import RestNews.DB.ProcessRequest (SessionError (..))
 
 
 import Data.ByteString.Internal (unpackChars)
@@ -40,7 +40,7 @@ ePSQL_STRING_DATA_RIGHT_TRUNCATION =
         )
 
 ePSQL_FOREIGN_KEY_VIOLATION :: QueryError
-ePSQL_FOREIGN_KEY_VIOLATION = 
+ePSQL_FOREIGN_KEY_VIOLATION =
     QueryError
         "WITH delete_results AS (DELETE FROM categories WHERE category_id = $1 :: int4 RETURNING *) SELECT CASE WHEN count(delete_results) = 0 THEN json_build_object('error', 'no such category') ELSE json_build_object('results', 'ook') END :: json FROM delete_results"
         ["1"]
@@ -55,7 +55,7 @@ ePSQL_FOREIGN_KEY_VIOLATION =
         )
 
 ePSQL_UNIQUE_VIOLATION :: QueryError
-ePSQL_UNIQUE_VIOLATION = 
+ePSQL_UNIQUE_VIOLATION =
     QueryError
         "INSERT INTO users (username, password, name, surname, avatar, is_admin) VALUES ($1 :: text, crypt($2 :: text, gen_salt('bf', 8)), $3 :: text, $4 :: text, $5 :: text, FALSE) RETURNING json_build_object('user_id', user_id, 'name', name, 'surname', surname, 'avatar', avatar, 'creation_date', creation_date, 'is_admin', is_admin) :: json"
         ["\"asdq\"","\"check, indeed\"","\"name\"","\"surname\"","\"asd\""]
@@ -71,7 +71,7 @@ ePSQL_UNIQUE_VIOLATION =
 
 
 eUnexpectedAmountOfRows0 :: QueryError
-eUnexpectedAmountOfRows0 = 
+eUnexpectedAmountOfRows0 =
     QueryError
         "SELECT users.user_id :: int4, users.is_admin :: bool, COALESCE (authors.author_id, 0) :: int4 FROM users LEFT JOIN authors ON authors.user_id = users.user_id, (SELECT user_id FROM users WHERE username = lower($1 :: text) AND password = crypt($2 :: text, password)) AS matched_user WHERE users.user_id = matched_user.user_id"
         ["\"usasdername5\"","\"12345\""]

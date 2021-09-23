@@ -1,4 +1,4 @@
-{-# LANGUAGE QuasiQuotes        #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 module RestNews.DB.Request (
     createUser,
@@ -47,7 +47,7 @@ import Data.Text (Text)
 import Data.Vector (Vector)
 import qualified Hasql.TH as TH
 
-import Hasql.Statement (Statement(..))
+import Hasql.Statement (Statement (..))
 
 createUser :: Statement (Text, Text, Text, Text, Text) Value
 createUser =
@@ -85,7 +85,7 @@ deleteUser =
         delete
         from users
         where user_id = $1 :: int4
-        returning json_build_object( 
+        returning json_build_object(
             'results', 'ook'
             )::json
         |]
@@ -93,7 +93,7 @@ deleteUser =
 getUser :: Statement Int32 Value
 getUser =
     [TH.singletonStatement|
-        select 
+        select
             json_build_object(
                 'user_id', user_id,
                 'name', name,
@@ -120,7 +120,7 @@ deleteAuthorRole =
         delete
         from authors
         where author_id = $1 :: int4
-        returning json_build_object( 
+        returning json_build_object(
             'results', 'ook'
             )::json
         |]
@@ -236,7 +236,7 @@ deleteTag =
         delete
         from tags
         where tag_id = $1 :: int4
-        returning json_build_object( 
+        returning json_build_object(
             'results', 'ook'
             ) :: json
         |]
@@ -276,7 +276,7 @@ deleteComment =
         from articles_comments
         where comment_id = $1 :: int4
             and user_id = $2 :: int4
-        returning json_build_object( 
+        returning json_build_object(
             'results', 'ook'
             ) :: json
         |]
@@ -296,7 +296,7 @@ getArticleComments =
             from articles_comments
             where article_id = $1 :: int4
             order by comment_id
-            limit 20    
+            limit 20
             offset $2 :: int4?
         ) as ordered
         |]
@@ -388,7 +388,7 @@ getArticlesByCategoryId =
             where category_id = $1 :: int4
                 and is_published = true
             order by article_id
-            limit 20    
+            limit 20
             offset $2 :: int4?
         ) as select_results
         |]
@@ -415,7 +415,7 @@ getArticlesByTagId =
             where tag_id = $1 :: int4
                 and is_published = true
             order by article_id
-            limit 20    
+            limit 20
             offset $2 :: int4?
         ) as select_results
         |]
@@ -438,7 +438,7 @@ getArticlesByAnyTagId =
                 and is_published = true
             group by articles.article_id
             order by articles.article_id
-            limit 20    
+            limit 20
             offset $2 :: int4?
         ) as select_results
         |]
@@ -463,7 +463,7 @@ getArticlesByAllTagId =
             where id_array @> ($1 :: int4[])
                 and is_published = true
             order by articles.article_id
-            limit 20    
+            limit 20
             offset $2 :: int4?
         ) as select_results
         |]
@@ -485,7 +485,7 @@ getArticlesByTitlePart =
                     '%' || regexp_replace(($1 :: text), '(%|_)', '', 'g') || '%'
                 and is_published = true
             order by articles.article_id
-            limit 20    
+            limit 20
             offset $2 :: int4?
         ) as select_results
         |]
@@ -505,7 +505,7 @@ getArticlesByContentPart =
                     '%' || regexp_replace(($1 :: text), '(%|_)', '', 'g') || '%'
                 and is_published = true
             order by articles.article_id
-            limit 20    
+            limit 20
             offset $2 :: int4?
         ) as select_results
         |]

@@ -26,7 +26,7 @@ module RestNews.DB.Errors (
     , getErrorCode
     ) where
 
-import Data.Aeson (ToJSON, (.=), object, toJSON)
+import Data.Aeson (ToJSON, object, toJSON, (.=))
 import Data.ByteString.Internal (unpackChars)
 import Data.Text (Text, append)
 import Prelude hiding (error)
@@ -161,7 +161,7 @@ newtype NoSuchThing =
 
 makeNoSuchThing :: Text -> NoSuchThing
 makeNoSuchThing thing = NoSuchThing
-    $ append "no such " thing 
+    $ append "no such " thing
 
 eNoSuchArticle :: NoSuchThing
 eNoSuchArticle = makeNoSuchThing "article"

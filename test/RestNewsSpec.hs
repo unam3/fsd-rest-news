@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module RestNewsSpec where
 
@@ -12,8 +12,8 @@ import Data.Maybe (fromMaybe)
 import Database.PostgreSQL.Simple (ConnectInfo)
 import Hasql.Connection (Connection, ConnectionError, Settings)
 import Network.Wai (Application, Middleware, Request, pathInfo, requestMethod, strictRequestBody)
-import Network.Wai.Internal (ResponseReceived(..))
 import Network.Wai.Handler.Warp (Port, testWithApplication, withApplication)
+import Network.Wai.Internal (ResponseReceived (..))
 import System.Log.Logger (Priority (DEBUG))
 import System.Process (readProcess)
 import Test.Hspec (Spec, afterAll, beforeAll, describe, it, runIO, shouldBe, shouldStartWith)
@@ -58,13 +58,13 @@ getSession port =
 curl :: String -> String -> String -> String -> IO String
 curl method session dashDData url =
     let {
-        initialData = 
+        initialData =
             [
                 "-s",
                 "-X", method,
                 url
                 ];
-        dataWithCookies = 
+        dataWithCookies =
             (case session of
                 [] -> initialData
                 _ -> "-H" : ("Cookie: SESSION=" ++ session) : initialData);
@@ -297,7 +297,7 @@ clearSessionStub :: Request -> IO ()
 clearSessionStub _ = pure ()
 
 waiH :: WAI.Handle a
-waiH = 
+waiH =
     WAI.Handle
         requestMethod
         pathInfo
@@ -317,7 +317,7 @@ dbH :: DBC.Handle
 dbH = DBC.Handle acquireStub
 
 withLogger' :: (L.Handle () -> IO a) -> IO a
-withLogger' = L.withLogger 
+withLogger' = L.withLogger
     (L.Config
         DEBUG
         (\ _ -> return ())
@@ -328,12 +328,12 @@ withLogger' = L.withLogger
 processedConfig :: IO (Port, Settings, ConnectInfo)
 processedConfig =
     do
-    Right config <- C.parseConfig "tests-config.ini" 
+    Right config <- C.parseConfig "tests-config.ini"
     pure $ processConfig config
 
 
 makeApplication' :: L.Handle () -> Settings -> ConnectInfo -> IO Application
-makeApplication' loggerH _ _ =  
+makeApplication' loggerH _ _ =
     pure
         . S.hWithSession
             sessionsH
@@ -476,7 +476,7 @@ spec = do
                 (editAuthor "{\"author_id\": 123456, \"description\": \"asd\"}" session)
                     >>= (`shouldBe` (toString $ encode eSuchAuthorDoesNotExist))
 
-    
+
     describe "deleteAuthorRole" $ do
         it "successfully deletes author role"
             $ runApllicationWith
@@ -660,7 +660,7 @@ spec = do
     createArticleDraftResult1 <- runIO
         (runApllicationWith
             $ createArticleDraft
-                "{\"article_title\": \"they dont beleive their eyes…\", \"category_id\": 1, \"article_content\": \"article is long enough\", \"tags\": [], \"main_photo\": \"http://pl.uh/main\", \"additional_photos\": [\"1\", \"2\", \"3\"]}" 
+                "{\"article_title\": \"they dont beleive their eyes…\", \"category_id\": 1, \"article_content\": \"article is long enough\", \"tags\": [], \"main_photo\": \"http://pl.uh/main\", \"additional_photos\": [\"1\", \"2\", \"3\"]}"
                 session
             )
 
@@ -789,7 +789,7 @@ spec = do
                         (deleteTag ("{\"tag_id\": " ++ tagId ++ "}") session)
                             >>= (`shouldBe` (toString $ encode eTagReferencedByArticle))
 
-        
+
     createCommentResult <- runIO
         (runApllicationWith
             $ createComment "{\"article_id\": 1, \"comment_text\": \"bluasd!\"}" session)

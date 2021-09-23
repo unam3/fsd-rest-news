@@ -1,5 +1,5 @@
-{-# LANGUAGE DuplicateRecordFields  #-}
-{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module RestNews.DB.ProcessRequest (
     HasqlSessionResults(..),
@@ -56,8 +56,8 @@ import qualified Hasql.Session as Session
 import Hasql.Statement (Statement)
 
 import RestNews.DB.Errors
-import RestNews.Requests.JSON
 import qualified RestNews.DB.Request as DBR
+import RestNews.Requests.JSON
 
 -- https://hackage.haskell.org/package/hasql-1.4.4
 -- https://github.com/nikita-volkov/hasql-tutorial1
@@ -98,7 +98,7 @@ deleteUser :: MonadIO m =>
     -> Connection
     -> UserIdRequest
     -> m (HasqlSessionResults ByteString)
-deleteUser sessionRun connection deleteUserRequest = 
+deleteUser sessionRun connection deleteUserRequest =
     do
         let params = user_id (deleteUserRequest :: UserIdRequest)
         sessionResults <- sessionRun (Session.statement params DBR.deleteUser) connection
@@ -830,7 +830,7 @@ getArticlesCreatedAfterDate :: MonadIO m =>
 getArticlesCreatedAfterDate = getArticlesFilteredBy DBR.getArticlesCreatedAfterDate
 
 
-getCredentials :: MonadIO m => 
+getCredentials :: MonadIO m =>
     (Session.Session (Int32, Bool, Int32) -> Connection -> m (Either Session.QueryError (Int32, Bool, Int32)))
     -> Connection -> AuthRequest -> m (HasqlSessionResults (Int32, Bool, Int32))
 getCredentials sessionRun connection authRequest =
