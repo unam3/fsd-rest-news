@@ -1,5 +1,6 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module RestNews.DB.Errors (
     SessionError(..)
@@ -80,10 +81,7 @@ eNegativeOffset = MustNotBeNegative "\\\"offset\\\" must not be negative"
 newtype FieldMaxBoundOverflow =
     FieldMaxBoundOverflow {error :: Text}
         deriving (Show)
-
-instance ToJSON FieldMaxBoundOverflow where
-    toJSON (FieldMaxBoundOverflow error')
-        = object ["name" .= error']
+        deriving (ToJSON) via MustNotBeNegative
 
 makeFieldMaxBoundOverflow :: Text -> FieldMaxBoundOverflow
 makeFieldMaxBoundOverflow fieldName = FieldMaxBoundOverflow
@@ -105,10 +103,7 @@ eTagNameMaxBoundOverflow = makeFieldMaxBoundOverflow "tag_name"
 newtype DoesNotExist =
     DoesNotExist {error :: Text}
         deriving (Show)
-
-instance ToJSON DoesNotExist where
-    toJSON (DoesNotExist error')
-        = object ["name" .= error']
+        deriving (ToJSON) via MustNotBeNegative
 
 makeDoesNotExist :: Text -> DoesNotExist
 makeDoesNotExist thing = DoesNotExist
@@ -127,10 +122,7 @@ eParentCategoryDoesNotExist = makeDoesNotExist "parent category"
 newtype AlreadyExist =
     AlreadyExist {error :: Text}
         deriving (Show)
-
-instance ToJSON AlreadyExist where
-    toJSON (AlreadyExist error')
-        = object ["name" .= error']
+        deriving (ToJSON) via MustNotBeNegative
 
 makeAlreadyExist :: Text -> AlreadyExist
 makeAlreadyExist thing = AlreadyExist
@@ -146,10 +138,7 @@ eUserWithSuchUsernameAlreadyExist = makeAlreadyExist "user with such username"
 newtype UserAlreadyAuthor =
     UserAlreadyAuthor {error :: Text}
         deriving (Show)
-
-instance ToJSON UserAlreadyAuthor where
-    toJSON (UserAlreadyAuthor error')
-        = object ["name" .= error']
+        deriving (ToJSON) via MustNotBeNegative
 
 eSuchUserAlreadyAuthor :: UserAlreadyAuthor
 eSuchUserAlreadyAuthor = UserAlreadyAuthor "such user is already an author"
@@ -158,10 +147,7 @@ eSuchUserAlreadyAuthor = UserAlreadyAuthor "such user is already an author"
 newtype CategoryInUse =
     CategoryInUse {error :: Text}
         deriving (Show)
-
-instance ToJSON CategoryInUse where
-    toJSON (CategoryInUse error')
-        = object ["name" .= error']
+        deriving (ToJSON) via MustNotBeNegative
 
 eCategoryInUse :: CategoryInUse
 eCategoryInUse = CategoryInUse "category is in use"
@@ -170,10 +156,8 @@ eCategoryInUse = CategoryInUse "category is in use"
 newtype NoSuchThing =
     NoSuchThing {error :: Text}
         deriving (Show)
+        deriving (ToJSON) via MustNotBeNegative
 
-instance ToJSON NoSuchThing where
-    toJSON (NoSuchThing error')
-        = object ["name" .= error']
 
 makeNoSuchThing :: Text -> NoSuchThing
 makeNoSuchThing thing = NoSuchThing
@@ -195,10 +179,8 @@ eNoSuchTag = makeNoSuchThing "tag"
 newtype TagReferencedByArticle =
     TagReferencedByArticle {error :: Text}
         deriving (Show)
+        deriving (ToJSON) via MustNotBeNegative
 
-instance ToJSON TagReferencedByArticle where
-    toJSON (TagReferencedByArticle error')
-        = object ["name" .= error']
 
 eTagReferencedByArticle :: TagReferencedByArticle
 eTagReferencedByArticle = TagReferencedByArticle "tag is referenced by an article"
@@ -207,10 +189,7 @@ eTagReferencedByArticle = TagReferencedByArticle "tag is referenced by an articl
 newtype WrongUsernameOrPassword =
     WrongUsernameOrPassword {error :: Text}
         deriving (Show)
-
-instance ToJSON WrongUsernameOrPassword where
-    toJSON (WrongUsernameOrPassword error')
-        = object ["name" .= error']
+        deriving (ToJSON) via MustNotBeNegative
 
 eWrongUsernameOrPassword :: WrongUsernameOrPassword
 eWrongUsernameOrPassword = WrongUsernameOrPassword "wrong username or password"
