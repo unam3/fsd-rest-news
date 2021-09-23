@@ -72,7 +72,7 @@ newtype MustNotBeNegative =
 
 instance ToJSON MustNotBeNegative where
     toJSON (MustNotBeNegative error')
-        = object ["name" .= error']
+        = object ["error" .= error']
 
 eNegativeOffset :: MustNotBeNegative
 eNegativeOffset = MustNotBeNegative "\\\"offset\\\" must not be negative"
