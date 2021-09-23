@@ -119,7 +119,7 @@ prerequisitesCheck loggerH sessionsH request sessionName' = do
                 sessionAuthorIdString = sessionAuthorIdString',
                 sessionLookup = sessionLookup',
                 sessionInsert = sessionInsert',
-                clearSessionPartial = (S.hClearSession sessionsH)
+                clearSessionPartial = S.hClearSession sessionsH
             }
         )
             $ PC.prerequisitesCheck params sessionName'
