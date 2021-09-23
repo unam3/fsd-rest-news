@@ -110,14 +110,19 @@ prerequisitesCheck loggerH sessionsH request sessionName' = do
             PC.hasAuthorId = sessionAuthorIdString' /= "0"
         }
 
-    pure . fmap (\sessionNameFromRight -> DBSessionNameAndSessionThings
-                    sessionNameFromRight
-                    maybeUserId'
-                    sessionUserIdString'
-                    sessionAuthorIdString'
-                    sessionLookup'
-                    sessionInsert'
-                    (S.hClearSession sessionsH)) $ PC.prerequisitesCheck params sessionName'
+    pure . fmap
+        (\sessionNameFromRight ->
+            DBSessionNameAndSessionThings {
+                sessionName = sessionNameFromRight,
+                maybeUserId = maybeUserId',
+                sessionUserIdString = sessionUserIdString',
+                sessionAuthorIdString = sessionAuthorIdString',
+                sessionLookup = sessionLookup',
+                sessionInsert = sessionInsert',
+                clearSessionPartial = (S.hClearSession sessionsH)
+            }
+        )
+            $ PC.prerequisitesCheck params sessionName'
 
 
 processCredentials :: Monad m => (String -> m a)
