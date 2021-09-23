@@ -1,4 +1,3 @@
-{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -66,130 +65,88 @@ getErrorCode :: Session.QueryError -> Maybe SessionError
 getErrorCode = fmap fst . getError
 
 
-newtype MustNotBeNegative =
-    MustNotBeNegative {error :: Text}
+newtype Error =
+    Error {error :: Text}
         deriving (Show)
 
-instance ToJSON MustNotBeNegative where
-    toJSON (MustNotBeNegative error')
+instance ToJSON Error where
+    toJSON (Error error')
         = object ["error" .= error']
 
-eNegativeOffset :: MustNotBeNegative
-eNegativeOffset = MustNotBeNegative "\\\"offset\\\" must not be negative"
+eNegativeOffset :: Error
+eNegativeOffset = Error "\\\"offset\\\" must not be negative"
 
 
-newtype FieldMaxBoundOverflow =
-    FieldMaxBoundOverflow {error :: Text}
-        deriving (Show)
-        deriving (ToJSON) via MustNotBeNegative
-
-makeFieldMaxBoundOverflow :: Text -> FieldMaxBoundOverflow
-makeFieldMaxBoundOverflow fieldName = FieldMaxBoundOverflow
+makeFieldMaxBoundOverflow :: Text -> Error
+makeFieldMaxBoundOverflow fieldName = Error
     $ append fieldName " length must be 80 characters at most\"}"
 
-eArticleTitleMaxBoundOverflow :: FieldMaxBoundOverflow
+eArticleTitleMaxBoundOverflow :: Error
 eArticleTitleMaxBoundOverflow = makeFieldMaxBoundOverflow ("article_title" :: Text)
 
-eNameAndSurnameMaxBoundOverflow :: FieldMaxBoundOverflow
+eNameAndSurnameMaxBoundOverflow :: Error
 eNameAndSurnameMaxBoundOverflow = makeFieldMaxBoundOverflow "name and surname"
 
-eCategoryNameMaxBoundOverflow :: FieldMaxBoundOverflow
+eCategoryNameMaxBoundOverflow :: Error
 eCategoryNameMaxBoundOverflow = makeFieldMaxBoundOverflow "category name"
 
-eTagNameMaxBoundOverflow :: FieldMaxBoundOverflow
+eTagNameMaxBoundOverflow :: Error
 eTagNameMaxBoundOverflow = makeFieldMaxBoundOverflow "tag_name"
 
 
-newtype DoesNotExist =
-    DoesNotExist {error :: Text}
-        deriving (Show)
-        deriving (ToJSON) via MustNotBeNegative
-
-makeDoesNotExist :: Text -> DoesNotExist
-makeDoesNotExist thing = DoesNotExist
+makeDoesNotExist :: Text -> Error
+makeDoesNotExist thing = Error
     $ append thing " does not exist"
 
-eSuchAuthorDoesNotExist :: DoesNotExist
+eSuchAuthorDoesNotExist :: Error
 eSuchAuthorDoesNotExist = makeDoesNotExist "such author"
 
-eSuchUserDoesNotExist :: DoesNotExist
+eSuchUserDoesNotExist :: Error
 eSuchUserDoesNotExist = makeDoesNotExist "such user"
 
-eParentCategoryDoesNotExist :: DoesNotExist
+eParentCategoryDoesNotExist :: Error
 eParentCategoryDoesNotExist = makeDoesNotExist "parent category"
 
 
-newtype AlreadyExist =
-    AlreadyExist {error :: Text}
-        deriving (Show)
-        deriving (ToJSON) via MustNotBeNegative
-
-makeAlreadyExist :: Text -> AlreadyExist
-makeAlreadyExist thing = AlreadyExist
+makeAlreadyExist :: Text -> Error
+makeAlreadyExist thing = Error
     $ append thing " already exist"
 
-eTagWithSuchNameAlreadyExist :: AlreadyExist
+eTagWithSuchNameAlreadyExist :: Error
 eTagWithSuchNameAlreadyExist = makeAlreadyExist "tag with such name"
 
-eUserWithSuchUsernameAlreadyExist :: AlreadyExist
+eUserWithSuchUsernameAlreadyExist :: Error
 eUserWithSuchUsernameAlreadyExist = makeAlreadyExist "user with such username"
 
 
-newtype UserAlreadyAuthor =
-    UserAlreadyAuthor {error :: Text}
-        deriving (Show)
-        deriving (ToJSON) via MustNotBeNegative
-
-eSuchUserAlreadyAuthor :: UserAlreadyAuthor
-eSuchUserAlreadyAuthor = UserAlreadyAuthor "such user is already an author"
+eSuchUserAlreadyAuthor :: Error
+eSuchUserAlreadyAuthor = Error "such user is already an author"
 
 
-newtype CategoryInUse =
-    CategoryInUse {error :: Text}
-        deriving (Show)
-        deriving (ToJSON) via MustNotBeNegative
-
-eCategoryInUse :: CategoryInUse
-eCategoryInUse = CategoryInUse "category is in use"
+eCategoryInUse :: Error
+eCategoryInUse = Error "category is in use"
 
 
-newtype NoSuchThing =
-    NoSuchThing {error :: Text}
-        deriving (Show)
-        deriving (ToJSON) via MustNotBeNegative
-
-
-makeNoSuchThing :: Text -> NoSuchThing
-makeNoSuchThing thing = NoSuchThing
+makeNoSuchThing :: Text -> Error
+makeNoSuchThing thing = Error
     $ append "no such " thing
 
-eNoSuchArticle :: NoSuchThing
+eNoSuchArticle :: Error
 eNoSuchArticle = makeNoSuchThing "article"
 
-eNoSuchCategory :: NoSuchThing
+eNoSuchCategory :: Error
 eNoSuchCategory = makeNoSuchThing "category"
 
-eNoSuchComment :: NoSuchThing
+eNoSuchComment :: Error
 eNoSuchComment = makeNoSuchThing "comment"
 
-eNoSuchTag :: NoSuchThing
+eNoSuchTag :: Error
 eNoSuchTag = makeNoSuchThing "tag"
 
 
-newtype TagReferencedByArticle =
-    TagReferencedByArticle {error :: Text}
-        deriving (Show)
-        deriving (ToJSON) via MustNotBeNegative
+eTagReferencedByArticle :: Error
+eTagReferencedByArticle = Error "tag is referenced by an article"
 
 
-eTagReferencedByArticle :: TagReferencedByArticle
-eTagReferencedByArticle = TagReferencedByArticle "tag is referenced by an article"
-
-
-newtype WrongUsernameOrPassword =
-    WrongUsernameOrPassword {error :: Text}
-        deriving (Show)
-        deriving (ToJSON) via MustNotBeNegative
-
-eWrongUsernameOrPassword :: WrongUsernameOrPassword
-eWrongUsernameOrPassword = WrongUsernameOrPassword "wrong username or password"
+eWrongUsernameOrPassword :: Error
+eWrongUsernameOrPassword = Error "wrong username or password"
