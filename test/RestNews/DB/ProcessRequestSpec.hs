@@ -11,8 +11,8 @@ import Hasql.Session
 import Test.Hspec (Spec, describe, it, shouldBe)
 
 
-ePSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE :: QueryError
-ePSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE =
+ePsqlInvalidRowCountInResultOffsetClause :: QueryError
+ePsqlInvalidRowCountInResultOffsetClause =
     QueryError
         "SELECT CASE WHEN count(ordered) = 0 THEN to_json(ARRAY [] :: INT[]) ELSE json_agg(ordered.*) END :: json FROM (SELECT comment_id, comment_text FROM articles_comments WHERE article_id = $1 :: int4 ORDER BY comment_id LIMIT 20 OFFSET $2 :: int4) AS ordered"
         ["2","-1"]
@@ -23,8 +23,8 @@ ePSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE =
         )
 
 
-ePSQL_STRING_DATA_RIGHT_TRUNCATION :: QueryError
-ePSQL_STRING_DATA_RIGHT_TRUNCATION =
+ePsqlStringDataRightTruncation :: QueryError
+ePsqlStringDataRightTruncation =
     QueryError
         "SELECT edit_article_draft($1 :: int4, $2 :: int4, $3 :: int4, $4 :: text, $5 :: text, $6 :: text, $7 :: text[], $8 :: int4[]) :: json"
         ["1","9","2","\"PATCHEDttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt\"","\"PATCHED\"","\"fs\"","[\"9\", \"2\"]","[1, 2]"]
@@ -39,8 +39,8 @@ ePSQL_STRING_DATA_RIGHT_TRUNCATION =
                 )
         )
 
-ePSQL_FOREIGN_KEY_VIOLATION :: QueryError
-ePSQL_FOREIGN_KEY_VIOLATION =
+ePsqlForeignKeyViolation :: QueryError
+ePsqlForeignKeyViolation =
     QueryError
         "WITH delete_results AS (DELETE FROM categories WHERE category_id = $1 :: int4 RETURNING *) SELECT CASE WHEN count(delete_results) = 0 THEN json_build_object('error', 'no such category') ELSE json_build_object('results', 'ook') END :: json FROM delete_results"
         ["1"]
@@ -54,8 +54,8 @@ ePSQL_FOREIGN_KEY_VIOLATION =
             )
         )
 
-ePSQL_UNIQUE_VIOLATION :: QueryError
-ePSQL_UNIQUE_VIOLATION =
+ePsqlUniqueViolation :: QueryError
+ePsqlUniqueViolation =
     QueryError
         "INSERT INTO users (username, password, name, surname, avatar, is_admin) VALUES ($1 :: text, crypt($2 :: text, gen_salt('bf', 8)), $3 :: text, $4 :: text, $5 :: text, FALSE) RETURNING json_build_object('user_id', user_id, 'name', name, 'surname', surname, 'avatar', avatar, 'creation_date', creation_date, 'is_admin', is_admin) :: json"
         ["\"asdq\"","\"check, indeed\"","\"name\"","\"surname\"","\"asd\""]
@@ -99,24 +99,24 @@ spec =
     describe "getError"
         $ do
             it "process psql_string_data_right_truncation"
-                $ shouldBe (getError ePSQL_STRING_DATA_RIGHT_TRUNCATION)
+                $ shouldBe (getError ePsqlStringDataRightTruncation)
                     $ Just (PSQL_STRING_DATA_RIGHT_TRUNCATION, Nothing)
 
             it "process psql_invalid_row_count_in_result_offset_clause"
-                $ shouldBe (getError ePSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE) $ Just (
+                $ shouldBe (getError ePsqlInvalidRowCountInResultOffsetClause) $ Just (
                     PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE,
                     Just "OFFSET must not be negative"
                     )
 
             it "process psql_foreign_key_violation"
-                $ shouldBe (getError ePSQL_FOREIGN_KEY_VIOLATION)
+                $ shouldBe (getError ePsqlForeignKeyViolation)
                     $ Just (
                         PSQL_FOREIGN_KEY_VIOLATION,
                         fmap unpackChars (Just "Key (category_id)=(1) is still referenced from table \"categories\".")
                         )
 
             it "process psql_unique_violation"
-                $ shouldBe (getError ePSQL_UNIQUE_VIOLATION)
+                $ shouldBe (getError ePsqlUniqueViolation)
                     $ Just (
                         PSQL_UNIQUE_VIOLATION,
                         fmap unpackChars (Just "Key (username)=(asdq) already exists.")
