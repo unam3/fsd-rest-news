@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -25,9 +26,10 @@ module RestNews.DB.Errors (
     , getErrorCode
     ) where
 
-import Data.Aeson (ToJSON, object, toJSON, (.=))
+import Data.Aeson (ToJSON)
 import Data.ByteString.Internal (unpackChars)
 import Data.Text (Text, append)
+import GHC.Generics (Generic)
 import Prelude hiding (error)
 
 import qualified Hasql.Session as Session
@@ -67,11 +69,9 @@ getErrorCode = fmap fst . getError
 
 newtype Error =
     Error {error :: Text}
-        deriving (Show)
+        deriving (Generic, Show)
 
-instance ToJSON Error where
-    toJSON (Error error')
-        = object ["error" .= error']
+instance ToJSON Error
 
 eNegativeOffset :: Error
 eNegativeOffset = Error "\\\"offset\\\" must not be negative"
