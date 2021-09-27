@@ -38,8 +38,7 @@ getCookieSession response = getStringStartingWith "Set-Cookie:" response
        <&> takeWhile (/= '\r')
 
 getSession :: Int -> IO String
-getSession port =
-    do
+getSession port = do
     mbSession <- getCookieSession
             <$> readProcess
                 "curl"
@@ -326,8 +325,7 @@ withLogger' = L.withLogger
         (\ _ -> return ()))
 
 processedConfig :: IO (Port, Settings, ConnectInfo)
-processedConfig =
-    do
+processedConfig = do
     Right config <- C.parseConfig "tests-config.ini"
     pure $ processConfig config
 
@@ -340,8 +338,7 @@ makeApplication' loggerH _ _ =
             $ restAPI loggerH sessionsH dbH waiH
 
 runApllicationWith :: (Port -> IO a) -> IO a
-runApllicationWith f =
-    do
+runApllicationWith f = do
     (_, dbConnectionSettings, connectInfo) <- processedConfig
     withApplication
         (withLogger' (\loggerH -> makeApplication loggerH dbConnectionSettings connectInfo))
@@ -383,13 +380,6 @@ spec = do
 
     describe "auth" $ do
         it "recognize existing user credentials"
-            -- $ do
-            --     response <- runApllicationWith
-            --         auth
-
-            --     shouldBe
-            --         response
-            --         "cookies are baked"
             $ runApllicationWith auth
                 >>= (`shouldBe` "cookies are baked")
 
@@ -759,17 +749,16 @@ spec = do
                     ++ "]}")
                 session))
 
-            . afterAll (\createdArticleDraftResponse -> (
-                    do
-                        let maybeCreatedArticleDraftIdSection = takeWhile (/= '\r')
-                                <$> getStringStartingWith
-                                    "\"article_id"
-                                    (replaceComasWithNewlines createdArticleDraftResponse)
-                        void $ case maybeCreatedArticleDraftIdSection of
-                            Nothing -> error "response has no comment_id"
-                            Just section ->
-                                runApllicationWith $ deleteArticleDraft ("{" ++ section ++ "}") session
-                        void . runApllicationWith $ deleteTag ("{\"tag_id\": " ++ tagId ++ "}") session
+            . afterAll (\createdArticleDraftResponse -> ( do
+                    let maybeCreatedArticleDraftIdSection = takeWhile (/= '\r')
+                            <$> getStringStartingWith
+                                "\"article_id"
+                                (replaceComasWithNewlines createdArticleDraftResponse)
+                    void $ case maybeCreatedArticleDraftIdSection of
+                        Nothing -> error "response has no comment_id"
+                        Just section ->
+                            runApllicationWith $ deleteArticleDraft ("{" ++ section ++ "}") session
+                    void . runApllicationWith $ deleteTag ("{\"tag_id\": " ++ tagId ++ "}") session
                 )
             )
 

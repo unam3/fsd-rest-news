@@ -143,11 +143,9 @@ processCredentials
             (user_id, is_admin, author_id) = fromRight (0, False, 0) sessionResults
         -- clearSession will fail if request has no associated session with cookies:
         -- https://github.com/hce/postgresql-session/blob/master/src/Network/Wai/Session/PostgreSQL.hs#L232
-        (do
-            when
-                (isJust maybeUserId')
-                (clearSessionPartial' request)
-            )
+        when
+            (isJust maybeUserId')
+            (clearSessionPartial' request)
         _ <- debug (show ("put into sessions:" :: String, user_id, is_admin, author_id))
         sessionInsert' "is_admin" (show is_admin)
         sessionInsert' "user_id" (show user_id)
@@ -267,68 +265,66 @@ processConfig (C.Config runAtPort dbHost dbPort dbUser dbPassword dbName) =
 
 
 makeApplication :: L.Handle () -> Settings -> ConnectInfo -> IO Application
-makeApplication loggerH dbConnectionSettings connectInfo =
-    do
-        let storeSettings = defaultSettings {storeSettingsLog = L.hDebug loggerH}
-        vaultKey <- Vault.newKey
-        simpleConnection <- connectPostgreSQL (postgreSQLConnectionString connectInfo)
-            >>= fromSimpleConnection
-        store <- dbStore simpleConnection storeSettings :: IO (SessionStore IO String String)
-        void (purger simpleConnection storeSettings)
+makeApplication loggerH dbConnectionSettings connectInfo = do
+    let storeSettings = defaultSettings {storeSettingsLog = L.hDebug loggerH}
+    vaultKey <- Vault.newKey
+    simpleConnection <- connectPostgreSQL (postgreSQLConnectionString connectInfo)
+        >>= fromSimpleConnection
+    store <- dbStore simpleConnection storeSettings :: IO (SessionStore IO String String)
+    void (purger simpleConnection storeSettings)
 
-        pure $ S.withSessions
-            (S.Config
-                (withSession store "SESSION" defaultSetCookie vaultKey)
-                (Vault.lookup vaultKey . vault)
-                (clearSession simpleConnection "SESSION")
-            )
-            (\ sessionsH ->
-                DBC.withDBConnection
-                    (DBC.Config $ acquire dbConnectionSettings)
-                    (\ dbH ->
-                        WAI.withWAI
-                            (WAI.Config
-                                requestMethod
-                                pathInfo
-                                strictRequestBody
-                            )
-                            (\ waiH ->
-                                Static.router (
-                                    S.hWithSession
-                                        sessionsH
-                                        $ restAPI loggerH sessionsH dbH waiH
-                                    )
-                            )
-                    )
-            )
+    pure $ S.withSessions
+        (S.Config
+            (withSession store "SESSION" defaultSetCookie vaultKey)
+            (Vault.lookup vaultKey . vault)
+            (clearSession simpleConnection "SESSION")
+        )
+        (\ sessionsH ->
+            DBC.withDBConnection
+                (DBC.Config $ acquire dbConnectionSettings)
+                (\ dbH ->
+                    WAI.withWAI
+                        (WAI.Config
+                            requestMethod
+                            pathInfo
+                            strictRequestBody
+                        )
+                        (\ waiH ->
+                            Static.router (
+                                S.hWithSession
+                                    sessionsH
+                                    $ restAPI loggerH sessionsH dbH waiH
+                                )
+                        )
+                )
+        )
 
 
 runWarpWithLogger :: IO ()
-runWarpWithLogger =
-    do
-        L.withLogger
-            (L.Config
-                -- use INFO, DEBUG or ERROR here
-                -- (add to System.Log.Logger import items if missed)
-                DEBUG
-                (traplogging
-                    "rest-news"
-                    ERROR
-                    "Unhandled exception occured"
-                    . updateGlobalLogger "rest-news" . setLevel)
-                (debugM "rest-news")
-                (infoM "rest-news")
-                (errorM "rest-news"))
-            (\ loggerH ->
-                C.parseConfig "config.ini"
-                    >>= \ case
-                        Left errorMessage ->
-                            L.hError loggerH errorMessage
-                                >> exitFailure
-                        Right config ->
-                            let (port, dbConnectionSettings, connectInfo) = processConfig config
-                            in makeApplication loggerH dbConnectionSettings connectInfo
-                                >>= run port
-                )
+runWarpWithLogger = do
+    L.withLogger
+        (L.Config
+            -- use INFO, DEBUG or ERROR here
+            -- (add to System.Log.Logger import items if missed)
+            DEBUG
+            (traplogging
+                "rest-news"
+                ERROR
+                "Unhandled exception occured"
+                . updateGlobalLogger "rest-news" . setLevel)
+            (debugM "rest-news")
+            (infoM "rest-news")
+            (errorM "rest-news"))
+        (\ loggerH ->
+            C.parseConfig "config.ini"
+                >>= \ case
+                    Left errorMessage ->
+                        L.hError loggerH errorMessage
+                            >> exitFailure
+                    Right config ->
+                        let (port, dbConnectionSettings, connectInfo) = processConfig config
+                        in makeApplication loggerH dbConnectionSettings connectInfo
+                            >>= run port
+            )
 
-        pure ()
+    pure ()
