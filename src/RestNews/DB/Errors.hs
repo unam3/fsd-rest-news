@@ -12,6 +12,7 @@ module RestNews.DB.Errors (
     , eNoSuchArticle
     , eNoSuchCategory
     , eNoSuchComment
+    , eNoSuchEndpoint
     , eNoSuchTag
     , eParentCategoryDoesNotExist
     , eSuchAuthorDoesNotExist
@@ -72,6 +73,10 @@ newtype Error =
         deriving (Generic, Show)
 
 instance ToJSON Error
+
+eNoSuchEndpoint :: Error
+eNoSuchEndpoint = Error "No such endpoint"
+
 
 eNegativeOffset :: Error
 eNegativeOffset = Error "\\\"offset\\\" must not be negative"

@@ -25,7 +25,6 @@ import RestNews.DB.RequestRunner (cantDecodeBS)
 import qualified RestNews.DBConnection as DBC
 import qualified RestNews.Logger as L
 import qualified RestNews.Middleware.Sessions as S
-import RestNews.Requests.SessionName (noSuchEndpointS)
 import qualified RestNews.WAI as WAI
 
 
@@ -367,11 +366,11 @@ spec = do
 
         it "message when wrong path was requested"
             $ runApllicationWith wrongPathRequest
-                >>= (`shouldBe` noSuchEndpointS)
+                >>= (`shouldBe` (toString $ encode eNoSuchEndpoint))
 
         it "message when wrong credentials"
             $ runApllicationWith wrongCredsRequest
-                >>= (`shouldBe` noSuchEndpointS)
+                >>= (`shouldBe` (toString $ encode eNoSuchEndpoint))
 
         it "message when DB session error"
             $ runApllicationWith dbSessionErrorRequest

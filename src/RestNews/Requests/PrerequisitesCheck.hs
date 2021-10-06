@@ -7,11 +7,14 @@ module RestNews.Requests.PrerequisitesCheck
     noSuchEndpoint,
     ) where
 
-import RestNews.Requests.SessionName (noSuchEndpointS)
+import Data.Aeson (encode)
+import Data.ByteString.Lazy.UTF8 (toString)
+
+import RestNews.DB.Errors (eNoSuchEndpoint)
 
 
 noSuchEndpoint :: Either String String
-noSuchEndpoint = Left noSuchEndpointS
+noSuchEndpoint = Left . toString $ encode eNoSuchEndpoint
 
 passSessionNameIf :: String -> Bool -> Either String String
 passSessionNameIf sessionName condition = if condition
@@ -81,4 +84,4 @@ prerequisitesCheck params sessionName =
     "getArticlesFilteredByCreationDate" -> passWithoutCheck
     "getArticlesCreatedBeforeDate"      -> passWithoutCheck
     "getArticlesCreatedAfterDate"       -> passWithoutCheck
-    _ -> Left noSuchEndpointS -- mb just noSuchEndpoint?
+    _ -> noSuchEndpoint
