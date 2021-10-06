@@ -140,9 +140,9 @@ processCredentials
     sessionInsert'
     wrappedSessionResults = do
         let (PR.H sessionResults) = wrappedSessionResults
-            (user_id, is_admin, author_id) = fromRight (0, False, 0) sessionResults
+            (user_id, is_admin, author_id) = fromRight (0, False, 0) $ fromRight (Left "pluh") sessionResults
         -- clearSession will fail if request has no associated session with cookies:
-        -- https://github.com/hce/postgresql-session/blob/master/src/Network/Wai/Session/PostgreSQL.hs#L232
+        -- https://github.com/hce/postgresql-session/blob/8d41ea2e8b01c81e648a7c74f4915bee79822678/src/Network/Wai/Session/PostgreSQL.hs#L232
         when
             (isJust maybeUserId')
             (clearSessionPartial' request)
@@ -188,7 +188,7 @@ runDBSession
                 case eitherConnection of
                     Left connectionError ->
                         liftIO $ L.hError loggerH (show connectionError)
-                            >> pure (PR.H $ Left $ Right dbError)
+                            >> pure (PR.H . Left $ UTFLBS.toString dbError)
                     Right connection ->
                         let processCredentialsPartial =
                                 processCredentials
@@ -214,9 +214,9 @@ runDBSession
         let (PR.H runSessionResultsUnpacked) = hRunSessionResults
 
         pure $ case runSessionResultsUnpacked of
-            Left (Left unhandledError) -> throw $ HasqlSessionError unhandledError
-            Left (Right errorForUser) -> Left $ UTFLBS.toString errorForUser
-            Right runSessionResults' -> Right runSessionResults'
+            Left unhandledError -> throw $ HasqlSessionError unhandledError
+            Right (Left errorForUser) -> Right errorForUser
+            Right (Right runSessionResults') -> Right runSessionResults'
 
 
 respond' :: (Response -> IO ResponseReceived) -> Either String UTFLBS.ByteString -> IO ResponseReceived

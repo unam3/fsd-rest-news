@@ -27,7 +27,7 @@ cantDecodeBS :: ByteString
 cantDecodeBS = fromString cantDecodeS
 
 cantDecode :: PR.HasqlSessionResults a
-cantDecode = PR.H $ Left $ Right cantDecodeBS
+cantDecode = PR.H . Right $ Left cantDecodeBS
 
 runSession ::
     Connection
@@ -55,7 +55,7 @@ runSession
     } in case sessionName of
         "auth" -> runSessionWithJSON PR.getCredentials
             >>= processCredentialsPartial
-                <&> \(PR.H wrappedEither) -> PR.H $ fmap (const "cookies are baked") wrappedEither
+                <&> \(PR.H wrappedEither) -> PR.H $ (fmap $ fmap (const "cookies are baked")) wrappedEither
         "createUser" -> runSessionWithJSON PR.createUser
         "getUser" -> PR.getUser sessionRun connection sessionUserId
         "deleteUser" -> runSessionWithJSON PR.deleteUser
@@ -93,4 +93,4 @@ runSession
         "getArticlesFilteredByCreationDate" -> runSessionWithJSON PR.getArticlesFilteredByCreationDate
         "getArticlesCreatedBeforeDate" -> runSessionWithJSON PR.getArticlesCreatedBeforeDate
         "getArticlesCreatedAfterDate" -> runSessionWithJSON PR.getArticlesCreatedAfterDate
-        nonMatched -> pure $ PR.H $ Left $ Left nonMatched
+        nonMatched -> pure $ PR.H $ Left nonMatched

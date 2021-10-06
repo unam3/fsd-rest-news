@@ -65,7 +65,7 @@ import RestNews.Requests.JSON
 
 type UnhandledError = String
 type ErrorForUser = ByteString
-newtype HasqlSessionResults successResults = H (Either (Either UnhandledError ErrorForUser) successResults)
+newtype HasqlSessionResults successResults = H (Either UnhandledError (Either ErrorForUser successResults))
     deriving Show
 
 
@@ -85,11 +85,11 @@ createUser sessionRun connection createUserRequest = do
     sessionResults <- sessionRun (Session.statement params DBR.createUser) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getErrorCode sessionError of
-                Just PSQL_STRING_DATA_RIGHT_TRUNCATION -> H . Left . Right $ encode eNameAndSurnameMaxBoundOverflow
-                Just PSQL_UNIQUE_VIOLATION -> H . Left . Right $ encode eUserWithSuchUsernameAlreadyExist
-                _ -> H . Left . Left $ show sessionError
+                Just PSQL_STRING_DATA_RIGHT_TRUNCATION -> H . Right . Left $ encode eNameAndSurnameMaxBoundOverflow
+                Just PSQL_UNIQUE_VIOLATION -> H . Right . Left $ encode eUserWithSuchUsernameAlreadyExist
+                _ -> H . Left $ show sessionError
         )
 
 deleteUser :: MonadIO m =>
@@ -102,10 +102,10 @@ deleteUser sessionRun connection deleteUserRequest = do
     sessionResults <- sessionRun (Session.statement params DBR.deleteUser) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getErrorCode sessionError of
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left . Right $ encode eSuchUserDoesNotExist
-                _ -> H . Left . Left $ show sessionError
+                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Right . Left $ encode eSuchUserDoesNotExist
+                _ -> H . Left $ show sessionError
             )
 
 getUser :: MonadIO m =>
@@ -117,10 +117,10 @@ getUser sessionRun connection userId = do
     sessionResults <- sessionRun (Session.statement userId DBR.getUser) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getErrorCode sessionError of
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left . Right $ encode eSuchUserDoesNotExist
-                _ -> H . Left . Left $ show sessionError
+                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Right . Left $ encode eSuchUserDoesNotExist
+                _ -> H . Left $ show sessionError
             )
 
 
@@ -136,11 +136,11 @@ promoteUserToAuthor sessionRun connection promoteUserToAuthorRequest = do
     sessionResults <- sessionRun (Session.statement params DBR.promoteUserToAuthor) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getErrorCode sessionError of
-                Just PSQL_FOREIGN_KEY_VIOLATION -> H . Left . Right $ encode eSuchUserDoesNotExist
-                Just PSQL_UNIQUE_VIOLATION -> H . Left . Right $ encode eSuchUserAlreadyAuthor
-                _ -> H . Left . Left $ show sessionError
+                Just PSQL_FOREIGN_KEY_VIOLATION -> H . Right . Left $ encode eSuchUserDoesNotExist
+                Just PSQL_UNIQUE_VIOLATION -> H . Right . Left $ encode eSuchUserAlreadyAuthor
+                _ -> H . Left $ show sessionError
         )
 
 editAuthor :: MonadIO m =>
@@ -156,11 +156,11 @@ editAuthor sessionRun connection editAuthorRequest = do
     sessionResults <- sessionRun (Session.statement params DBR.editAuthor) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getErrorCode sessionError of
-                Just PSQL_STRING_DATA_RIGHT_TRUNCATION -> H . Left . Right $ encode eNameAndSurnameMaxBoundOverflow
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left . Right $ encode eSuchAuthorDoesNotExist
-                _ -> H . Left . Left $ show sessionError
+                Just PSQL_STRING_DATA_RIGHT_TRUNCATION -> H . Right . Left $ encode eNameAndSurnameMaxBoundOverflow
+                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Right . Left $ encode eSuchAuthorDoesNotExist
+                _ -> H . Left $ show sessionError
         )
 
 getAuthor :: MonadIO m =>
@@ -173,10 +173,10 @@ getAuthor sessionRun connection authorIdRequest = do
     sessionResults <- sessionRun (Session.statement params DBR.getAuthor) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getErrorCode sessionError of
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left . Right $ encode eSuchAuthorDoesNotExist
-                _ -> H . Left . Left $ show sessionError
+                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Right . Left $ encode eSuchAuthorDoesNotExist
+                _ -> H . Left $ show sessionError
         )
 
 deleteAuthorRole :: MonadIO m =>
@@ -189,10 +189,10 @@ deleteAuthorRole sessionRun connection authorIdRequest = do
     sessionResults <- sessionRun (Session.statement params DBR.deleteAuthorRole) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getErrorCode sessionError of
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left . Right $ encode eSuchAuthorDoesNotExist
-                _ -> H . Left . Left $ show sessionError
+                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Right . Left $ encode eSuchAuthorDoesNotExist
+                _ -> H . Left $ show sessionError
         )
 
 createCategory :: MonadIO m =>
@@ -208,11 +208,11 @@ createCategory sessionRun connection createCategoryRequest = do
     sessionResults <- sessionRun (Session.statement params DBR.createCategory) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getErrorCode sessionError of
-                Just PSQL_STRING_DATA_RIGHT_TRUNCATION -> H . Left . Right $ encode eCategoryNameMaxBoundOverflow
-                Just PSQL_FOREIGN_KEY_VIOLATION -> H . Left . Right $ encode eParentCategoryDoesNotExist
-                _ -> H . Left . Left $ show sessionError
+                Just PSQL_STRING_DATA_RIGHT_TRUNCATION -> H . Right . Left $ encode eCategoryNameMaxBoundOverflow
+                Just PSQL_FOREIGN_KEY_VIOLATION -> H . Right . Left $ encode eParentCategoryDoesNotExist
+                _ -> H . Left $ show sessionError
         )
 
 updateCategory :: MonadIO m =>
@@ -229,12 +229,12 @@ updateCategory sessionRun connection updateCategoryRequest = do
     sessionResults <- sessionRun (Session.statement params DBR.updateCategory) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getErrorCode sessionError of
-                Just PSQL_STRING_DATA_RIGHT_TRUNCATION -> H . Left . Right $ encode eCategoryNameMaxBoundOverflow
-                Just PSQL_FOREIGN_KEY_VIOLATION -> H . Left . Right $ encode eParentCategoryDoesNotExist
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left . Right $ encode eNoSuchCategory
-                _ -> H . Left . Left $ show sessionError
+                Just PSQL_STRING_DATA_RIGHT_TRUNCATION -> H . Right . Left $ encode eCategoryNameMaxBoundOverflow
+                Just PSQL_FOREIGN_KEY_VIOLATION -> H . Right . Left $ encode eParentCategoryDoesNotExist
+                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Right . Left $ encode eNoSuchCategory
+                _ -> H . Left $ show sessionError
         )
 
 getCategory :: MonadIO m =>
@@ -247,10 +247,10 @@ getCategory sessionRun connection categoryIdRequest = do
     sessionResults <- sessionRun (Session.statement params DBR.getCategory) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getErrorCode sessionError of
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left . Right $ encode eNoSuchCategory
-                _ -> H . Left . Left $ show sessionError
+                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Right . Left $ encode eNoSuchCategory
+                _ -> H . Left $ show sessionError
         )
 
 deleteCategory :: MonadIO m =>
@@ -263,11 +263,11 @@ deleteCategory sessionRun connection categoryIdRequest = do
     sessionResults <- sessionRun (Session.statement params DBR.deleteCategory) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getErrorCode sessionError of
-                Just PSQL_FOREIGN_KEY_VIOLATION -> H . Left . Right $ encode eCategoryInUse
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left . Right $ encode eNoSuchCategory
-                _ -> H . Left . Left $ show sessionError
+                Just PSQL_FOREIGN_KEY_VIOLATION -> H . Right . Left $ encode eCategoryInUse
+                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Right . Left $ encode eNoSuchCategory
+                _ -> H . Left $ show sessionError
         )
 
 
@@ -281,11 +281,11 @@ createTag sessionRun connection createTagRequest = do
     sessionResults <- sessionRun (Session.statement params DBR.createTag) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getErrorCode sessionError of
-                Just PSQL_STRING_DATA_RIGHT_TRUNCATION -> H . Left . Right $ encode eTagNameMaxBoundOverflow
-                Just PSQL_UNIQUE_VIOLATION -> H . Left . Right $ encode eTagWithSuchNameAlreadyExist
-                _ -> H . Left . Left $ show sessionError
+                Just PSQL_STRING_DATA_RIGHT_TRUNCATION -> H . Right . Left $ encode eTagNameMaxBoundOverflow
+                Just PSQL_UNIQUE_VIOLATION -> H . Right . Left $ encode eTagWithSuchNameAlreadyExist
+                _ -> H . Left $ show sessionError
         )
 
 editTag :: MonadIO m =>
@@ -298,12 +298,12 @@ editTag sessionRun connection editTagRequest = do
     sessionResults <- sessionRun (Session.statement params DBR.editTag) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getErrorCode sessionError of
-                Just PSQL_STRING_DATA_RIGHT_TRUNCATION -> H . Left . Right $ encode eTagNameMaxBoundOverflow
-                Just PSQL_UNIQUE_VIOLATION -> H . Left . Right $ encode eTagWithSuchNameAlreadyExist
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left . Right $ encode eNoSuchTag
-                _ -> H . Left . Left $ show sessionError
+                Just PSQL_STRING_DATA_RIGHT_TRUNCATION -> H . Right . Left $ encode eTagNameMaxBoundOverflow
+                Just PSQL_UNIQUE_VIOLATION -> H . Right . Left $ encode eTagWithSuchNameAlreadyExist
+                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Right . Left $ encode eNoSuchTag
+                _ -> H . Left $ show sessionError
         )
 
 deleteTag :: MonadIO m =>
@@ -316,11 +316,11 @@ deleteTag sessionRun connection deleteTagRequest = do
     sessionResults <- sessionRun (Session.statement params DBR.deleteTag) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getErrorCode sessionError of
-                Just PSQL_FOREIGN_KEY_VIOLATION -> H . Left . Right $ encode eTagReferencedByArticle
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left . Right $ encode eNoSuchTag
-                _ -> H . Left . Left $ show sessionError
+                Just PSQL_FOREIGN_KEY_VIOLATION -> H . Right . Left $ encode eTagReferencedByArticle
+                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Right . Left $ encode eNoSuchTag
+                _ -> H . Left $ show sessionError
         )
 
 getTag :: MonadIO m =>
@@ -333,10 +333,10 @@ getTag sessionRun connection getTagRequest = do
     sessionResults <- sessionRun (Session.statement params DBR.getTag) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getErrorCode sessionError of
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left . Right $ encode eNoSuchTag
-                _ -> H . Left . Left $ show sessionError
+                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Right . Left $ encode eNoSuchTag
+                _ -> H . Left $ show sessionError
         )
 
 
@@ -355,10 +355,10 @@ createComment sessionRun connection createCommentRequest user_id' = do
     sessionResults <- sessionRun (Session.statement params DBR.createComment) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getErrorCode sessionError of
-                Just PSQL_FOREIGN_KEY_VIOLATION -> H . Left . Right $ encode eNoSuchArticle
-                _ -> H . Left . Left $ show sessionError
+                Just PSQL_FOREIGN_KEY_VIOLATION -> H . Right . Left $ encode eNoSuchArticle
+                _ -> H . Left $ show sessionError
         )
 
 deleteComment :: MonadIO m =>
@@ -375,10 +375,10 @@ deleteComment sessionRun connection deleteCommentRequest user_id' = do
     sessionResults <- sessionRun (Session.statement params DBR.deleteComment) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getErrorCode sessionError of
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left . Right $ encode eNoSuchComment
-                _ -> H . Left . Left $ show sessionError
+                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Right . Left $ encode eNoSuchComment
+                _ -> H . Left $ show sessionError
         )
 
 getArticleComments :: MonadIO m =>
@@ -394,12 +394,12 @@ getArticleComments sessionRun connection articleCommentsRequest = do
     sessionResults <- sessionRun (Session.statement params DBR.getArticleComments) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getError sessionError of
                 Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
-                    then H . Left . Right $ encode eNegativeOffset
-                    else H . Left . Left $ show sessionError
-                _ -> H . Left . Left $ show sessionError
+                    then H . Right . Left $ encode eNegativeOffset
+                    else H . Left $ show sessionError
+                _ -> H . Left $ show sessionError
         )
 
 
@@ -422,18 +422,18 @@ createArticleDraft sessionRun connection articleDraftRequest author_id' = do
     sessionResults <- sessionRun (Session.statement params DBR.createArticleDraft) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getError sessionError of
-                Just (PSQL_STRING_DATA_RIGHT_TRUNCATION, _) -> H . Left . Right $ encode eArticleTitleMaxBoundOverflow
+                Just (PSQL_STRING_DATA_RIGHT_TRUNCATION, _) -> H . Right . Left $ encode eArticleTitleMaxBoundOverflow
                 Just (PSQL_FOREIGN_KEY_VIOLATION, details) ->
                     let {
                         detailsPrefix = fmap (take 12) details;
                     } in case detailsPrefix of
-                        Just "Key (tag_id)" -> H . Left . Right $ encode eNoSuchTag
-                        Just "Key (categor" -> H . Left . Right $ encode eNoSuchCategory
-                        _ -> H . Left . Left $ show sessionError
-                Just (UnexpectedAmountOfRowsOrUnexpectedNull, Nothing) -> H . Left . Right $ encode eNoSuchArticle
-                _ -> H . Left . Left $ show sessionError
+                        Just "Key (tag_id)" -> H . Right . Left $ encode eNoSuchTag
+                        Just "Key (categor" -> H . Right . Left $ encode eNoSuchCategory
+                        _ -> H . Left $ show sessionError
+                Just (UnexpectedAmountOfRowsOrUnexpectedNull, Nothing) -> H . Right . Left $ encode eNoSuchArticle
+                _ -> H . Left $ show sessionError
         )
 
 publishArticleDraft :: MonadIO m =>
@@ -450,10 +450,10 @@ publishArticleDraft sessionRun connection articleDraftIdRequest author_id' = do
     sessionResults <- sessionRun (Session.statement params DBR.publishArticleDraft) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getErrorCode sessionError of
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left . Right $ encode eNoSuchArticle
-                _ -> H . Left . Left $ show sessionError
+                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Right . Left $ encode eNoSuchArticle
+                _ -> H . Left $ show sessionError
         )
 
 editArticleDraft :: MonadIO m =>
@@ -476,19 +476,19 @@ editArticleDraft sessionRun connection articleDraftEditRequest author_id' = do
     sessionResults <- sessionRun (Session.statement params DBR.editArticleDraft) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getError sessionError of
-                Just (PSQL_STRING_DATA_RIGHT_TRUNCATION, _) -> H . Left . Right $ encode eArticleTitleMaxBoundOverflow
+                Just (PSQL_STRING_DATA_RIGHT_TRUNCATION, _) -> H . Right . Left $ encode eArticleTitleMaxBoundOverflow
                 Just (PSQL_FOREIGN_KEY_VIOLATION, details) ->
                     let {
                         detailsPrefix = fmap (take 12) details;
                     } in case detailsPrefix of
-                        Just "Key (tag_id)" -> H . Left . Right $ encode eNoSuchTag
-                        Just "Key (categor" -> H . Left . Right $ encode eNoSuchCategory
-                        Just "Key (article" -> H . Left . Right $ encode eNoSuchArticle
-                        _ -> H . Left . Left $ show sessionError
-                Just (UnexpectedAmountOfRowsOrUnexpectedNull, Nothing) -> H . Left . Right $ encode eNoSuchArticle
-                _ -> H . Left . Left $ show sessionError
+                        Just "Key (tag_id)" -> H . Right . Left $ encode eNoSuchTag
+                        Just "Key (categor" -> H . Right . Left $ encode eNoSuchCategory
+                        Just "Key (article" -> H . Right . Left $ encode eNoSuchArticle
+                        _ -> H . Left $ show sessionError
+                Just (UnexpectedAmountOfRowsOrUnexpectedNull, Nothing) -> H . Right . Left $ encode eNoSuchArticle
+                _ -> H . Left $ show sessionError
         )
 
 getArticleDraft :: MonadIO m =>
@@ -505,10 +505,10 @@ getArticleDraft sessionRun connection articleDraftIdRequest author_id' = do
     sessionResults <- sessionRun (Session.statement params DBR.getArticleDraft) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getErrorCode sessionError of
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left . Right $ encode eNoSuchArticle
-                _ -> H . Left . Left $ show sessionError
+                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Right . Left $ encode eNoSuchArticle
+                _ -> H . Left $ show sessionError
         )
 
 deleteArticleDraft :: MonadIO m =>
@@ -525,10 +525,10 @@ deleteArticleDraft sessionRun connection articleDraftIdRequest author_id' = do
     sessionResults <- sessionRun (Session.statement params DBR.deleteArticleDraft) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getErrorCode sessionError of
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left . Right $ encode eNoSuchArticle
-                _ -> H . Left . Left $ show sessionError
+                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Right . Left $ encode eNoSuchArticle
+                _ -> H . Left $ show sessionError
         )
 
 
@@ -545,12 +545,12 @@ getArticlesByCategoryId sessionRun connection articlesByCategoryIdRequest = do
     sessionResults <- sessionRun (Session.statement params DBR.getArticlesByCategoryId) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getError sessionError of
                 Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
-                    then H . Left . Right $ encode eNegativeOffset
-                    else H . Left . Left $ show sessionError
-                _ -> H . Left . Left $ show sessionError
+                    then H . Right . Left $ encode eNegativeOffset
+                    else H . Left $ show sessionError
+                _ -> H . Left $ show sessionError
         )
 
 getArticlesByTagId :: MonadIO m =>
@@ -566,12 +566,12 @@ getArticlesByTagId sessionRun connection tagIdRequestWithOffset = do
     sessionResults <- sessionRun (Session.statement params DBR.getArticlesByTagId) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getError sessionError of
                 Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
-                    then H . Left . Right $ encode eNegativeOffset
-                    else H . Left . Left $ show sessionError
-                _ -> H . Left . Left $ show sessionError
+                    then H . Right . Left $ encode eNegativeOffset
+                    else H . Left $ show sessionError
+                _ -> H . Left $ show sessionError
         )
 
 
@@ -588,12 +588,12 @@ getArticlesByAnyTagId sessionRun connection tagIdsRequest = do
     sessionResults <- sessionRun (Session.statement params DBR.getArticlesByAnyTagId) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getError sessionError of
                 Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
-                    then H . Left . Right $ encode eNegativeOffset
-                    else H . Left . Left $ show sessionError
-                _ -> H . Left . Left $ show sessionError
+                    then H . Right . Left $ encode eNegativeOffset
+                    else H . Left $ show sessionError
+                _ -> H . Left $ show sessionError
         )
 
 getArticlesByAllTagId :: MonadIO m =>
@@ -609,12 +609,12 @@ getArticlesByAllTagId sessionRun connection tagIdsRequest = do
     sessionResults <- sessionRun (Session.statement params DBR.getArticlesByAllTagId) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getError sessionError of
                 Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
-                    then H . Left . Right $ encode eNegativeOffset
-                    else H . Left . Left $ show sessionError
-                _ -> H . Left . Left $ show sessionError
+                    then H . Right . Left $ encode eNegativeOffset
+                    else H . Left $ show sessionError
+                _ -> H . Left $ show sessionError
         )
 
 getArticlesByTitlePart :: MonadIO m =>
@@ -630,12 +630,12 @@ getArticlesByTitlePart sessionRun connection substringRequest = do
     sessionResults <- sessionRun (Session.statement params DBR.getArticlesByTitlePart) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getError sessionError of
                 Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
-                    then H . Left . Right $ encode eNegativeOffset
-                    else H . Left . Left $ show sessionError
-                _ -> H . Left . Left $ show sessionError
+                    then H . Right . Left $ encode eNegativeOffset
+                    else H . Left $ show sessionError
+                _ -> H . Left $ show sessionError
         )
 
 getArticlesByContentPart :: MonadIO m =>
@@ -651,12 +651,12 @@ getArticlesByContentPart sessionRun connection substringRequest = do
     sessionResults <- sessionRun (Session.statement params DBR.getArticlesByContentPart) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getError sessionError of
                 Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
-                    then H . Left . Right $ encode eNegativeOffset
-                    else H . Left . Left $ show sessionError
-                _ -> H . Left . Left $ show sessionError
+                    then H . Right . Left $ encode eNegativeOffset
+                    else H . Left $ show sessionError
+                _ -> H . Left $ show sessionError
         )
 
 getArticlesByAuthorNamePart :: MonadIO m =>
@@ -672,12 +672,12 @@ getArticlesByAuthorNamePart sessionRun connection substringRequest = do
     sessionResults <- sessionRun (Session.statement params DBR.getArticlesByAuthorNamePart) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getError sessionError of
                 Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
-                    then H . Left . Right $ encode eNegativeOffset
-                    else H . Left . Left $ show sessionError
-                _ -> H . Left . Left $ show sessionError
+                    then H . Right . Left $ encode eNegativeOffset
+                    else H . Left $ show sessionError
+                _ -> H . Left $ show sessionError
         )
 
 getArticlesSortedByPhotosNumber :: MonadIO m =>
@@ -690,12 +690,12 @@ getArticlesSortedByPhotosNumber sessionRun connection request = do
     sessionResults <- sessionRun (Session.statement params DBR.getArticlesSortedByPhotosNumber) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getError sessionError of
                 Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
-                    then H . Left . Right $ encode eNegativeOffset
-                    else H . Left . Left $ show sessionError
-                _ -> H . Left . Left $ show sessionError
+                    then H . Right . Left $ encode eNegativeOffset
+                    else H . Left $ show sessionError
+                _ -> H . Left $ show sessionError
         )
 
 getArticlesSortedByCreationDate :: MonadIO m =>
@@ -708,12 +708,12 @@ getArticlesSortedByCreationDate sessionRun connection request = do
     sessionResults <- sessionRun (Session.statement params DBR.getArticlesSortedByCreationDate) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getError sessionError of
                 Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
-                    then H . Left . Right $ encode eNegativeOffset
-                    else H . Left . Left $ show sessionError
-                _ -> H . Left . Left $ show sessionError
+                    then H . Right . Left $ encode eNegativeOffset
+                    else H . Left $ show sessionError
+                _ -> H . Left $ show sessionError
         )
 
 getArticlesSortedByAuthor :: MonadIO m =>
@@ -726,12 +726,12 @@ getArticlesSortedByAuthor sessionRun connection request = do
     sessionResults <- sessionRun (Session.statement params DBR.getArticlesSortedByAuthor) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getError sessionError of
                 Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
-                    then H . Left . Right $ encode eNegativeOffset
-                    else H . Left . Left $ show sessionError
-                _ -> H . Left . Left $ show sessionError
+                    then H . Right . Left $ encode eNegativeOffset
+                    else H . Left $ show sessionError
+                _ -> H . Left $ show sessionError
         )
 
 getArticlesSortedByCategory :: MonadIO m =>
@@ -744,12 +744,12 @@ getArticlesSortedByCategory sessionRun connection request = do
     sessionResults <- sessionRun (Session.statement params DBR.getArticlesSortedByCategory) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getError sessionError of
                 Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
-                    then H . Left . Right $ encode eNegativeOffset
-                    else H . Left . Left $ show sessionError
-                _ -> H . Left . Left $ show sessionError
+                    then H . Right . Left $ encode eNegativeOffset
+                    else H . Left $ show sessionError
+                _ -> H . Left $ show sessionError
         )
 
 getArticlesFilteredBy :: MonadIO m =>
@@ -766,12 +766,12 @@ getArticlesFilteredBy statement sessionRun connection articlesByCreationDateRequ
     sessionResults <- sessionRun (Session.statement params statement) connection
     pure (
         case sessionResults of
-            Right results -> H . Right $ encode results
+            Right results -> H . Right . Right $ encode results
             Left sessionError -> case getError sessionError of
                 Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
-                    then H . Left . Right $ encode eNegativeOffset
-                    else H . Left . Left $ show sessionError
-                _ -> H . Left . Left $ show sessionError
+                    then H . Right . Left $ encode eNegativeOffset
+                    else H . Left $ show sessionError
+                _ -> H . Left $ show sessionError
         )
 
 getArticlesFilteredByCreationDate :: MonadIO m =>
@@ -807,8 +807,8 @@ getCredentials sessionRun connection authRequest = do
     sessionResults <- sessionRun (Session.statement params DBR.getCredentials) connection
     pure (
         case sessionResults of
-            Right results -> H $ Right results
+            Right results -> H . Right $ Right results
             Left sessionError -> case getErrorCode sessionError of
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Left . Right $ encode eWrongUsernameOrPassword
-                _ -> H . Left . Left $ show sessionError
+                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Right . Left $ encode eWrongUsernameOrPassword
+                _ -> H . Left $ show sessionError
         )
