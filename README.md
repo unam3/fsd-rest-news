@@ -39,7 +39,18 @@ As a definitive guide to parameter values for requests one may use combination o
 
 ## Shell wrapped curl-requests
 
-With hardcoded test data are located at `sh-curl` directory. To run them execute next in terminal from project directory:
+With hardcoded test data are located at `sh-curl` directory. To run them one need to:
+
+1) change `config.ini` (and when tests are done back to initial value if you want to work with production db):
+```
+dbName = rest-news-db
+```
+to
+```
+dbName = rest-news-test
+```
+
+2) execute in terminal from project directory:
 
 ```
 cd sh-curl
