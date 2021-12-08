@@ -41,7 +41,22 @@ As a definitive guide to parameter values for requests one may use combination o
 
 With hardcoded test data are located at `sh-curl` directory. To run them one need to:
 
-1) change `config.ini` (and when tests are done back to initial value if you want to work with production db):
+1) if test db does not exist — create it:
+```
+su
+su postgres
+createdb rest-news-test
+psql rest-news-test -c "CREATE EXTENSION pgcrypto;"
+```
+
+2) do migrations:
+```
+psql -h 0.0.0.0 -W -f schema.psql rest-news-test rest-news-user
+psql -h 0.0.0.0 -W -f tests-fixtures.psql rest-news-test rest-news-user
+
+```
+
+3) change `config.ini` (and when tests are done back to initial value if you want to work with production db):
 ```
 dbName = rest-news-db
 ```
@@ -50,7 +65,12 @@ to
 dbName = rest-news-test
 ```
 
-2) execute in terminal from project directory:
+4) run server:
+```
+stack build && stack exec rest-news-exe
+```
+
+5) execute in terminal from project directory:
 
 ```
 cd sh-curl
@@ -64,7 +84,7 @@ cd sh-curl
 ## Tests
 
 
-To run tests you need to (1) create test db and do migrations, (2) copy tests config file,  (3) **create proper db-structure before each failed tests run** and (4) run stack tests:
+To run tests you need to (1) create test db, (2) copy tests config file,  (3) do migrations: **create proper db-structure before each failed tests run** and (4) run stack tests:
 
 ```
 #1
