@@ -1,1 +1,3 @@
+#!/usr/bin/env bash
+
 curl -i -X POST -d '{"username": "asdq", "password": "check, indeed", "name": "name2", "surname": "surname", "avatar": "asd"}' http://0.0.0.0:8081/users

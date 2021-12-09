@@ -78,7 +78,10 @@ cd sh-curl
 # set environment variables with sessions
 . getCreds
 ```
-… and then run any wrapped request.
+… and then run any wrapped request; for example:
+```
+./users_getUser
+```
 
 
 ## Tests

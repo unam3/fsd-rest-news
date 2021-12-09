@@ -1,1 +1,3 @@
+#!/usr/bin/env bash
+
 curl -i -H 'Cookie: SESSION='${AUTHOR_ADMIN_SESSION} -X POST -d '{"name": "create cat test", "parent_id": null}' http://0.0.0.0:8081/categories

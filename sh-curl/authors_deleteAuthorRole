@@ -1,1 +1,3 @@
+#!/usr/bin/env bash
+
 curl -i -H 'Cookie: SESSION='${AUTHOR_ADMIN_SESSION} -X DELETE -d '{"author_id": 5}' http://0.0.0.0:8081/authors

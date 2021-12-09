@@ -1,1 +1,3 @@
+#!/usr/bin/env bash
+
 curl -i -H 'Cookie: SESSION='${AUTHOR_SESSION} -X POST -d '{"article_title": "they dont beleive their eyes…", "category_id": 1, "article_content": "article is long enough", "tags": [1,2], "main_photo": "http://pl.uh/main", "additional_photos": ["1", "2", "3"]}' http://0.0.0.0:8081/articles

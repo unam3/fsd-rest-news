@@ -1,1 +1,3 @@
+#!/usr/bin/env bash
+
 curl -i -H 'Cookie: SESSION='${AUTHOR_ADMIN_SESSION} -X PATCH -d '{"category_id": 8, "name": "pluh_pattched", "parent_id": null}' http://0.0.0.0:8081/categories

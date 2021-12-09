@@ -1,1 +1,3 @@
+#!/usr/bin/env bash
+
 curl -i -H 'Cookie: SESSION='${AUTHOR_SESSION} -X DELETE -d '{"article_id": 8}' http://0.0.0.0:8081/articles
