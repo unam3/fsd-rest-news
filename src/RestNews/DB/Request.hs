@@ -31,6 +31,7 @@ module RestNews.DB.Request (
     getArticlesByTitlePart,
     getArticlesByContentPart,
     getArticlesByAuthorNamePart,
+    getArticlesBySubstring,
     getArticlesSortedByPhotosNumber,
     getArticlesSortedByCreationDate,
     getArticlesSortedByAuthor,
@@ -539,6 +540,28 @@ getArticlesByAuthorNamePart =
                 on authors.user_id = filtered_user_ids.user_id
             ) as filtered_author_ids
             on author = filtered_author_ids.author_id
+                and is_published = true
+            order by articles.article_id
+            limit 20
+            offset $2 :: int4?
+        ) as select_results
+        |]
+
+getArticlesBySubstring :: Statement (Text, Maybe Int32) Value
+getArticlesBySubstring =
+    [TH.singletonStatement|
+        with pattern as (
+            select '%' || regexp_replace(($1 :: text), '(%|_)', '', 'g') || '%' as string
+        ) select
+            case when count(select_results) = 0
+            then to_json(array[] :: int[])
+            else json_agg(get_article(select_results.article_id))
+            end :: json
+        from (
+            select article_id
+            from articles, pattern
+            where article_title ilike pattern.string
+                or article_content ilike pattern.string
                 and is_published = true
             order by articles.article_id
             limit 20

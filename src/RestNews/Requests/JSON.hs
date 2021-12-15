@@ -26,6 +26,7 @@ module RestNews.Requests.JSON (
     ArticlesByTitlePartRequest(..),
     ArticlesByContentPartRequest(..),
     ArticlesByAuthorNamePartRequest(..),
+    ArticlesByTextContentRequest(..),
     ArticlesByCreationDateRequest(..),
     OffsetRequest(..)
     ) where
@@ -237,6 +238,13 @@ data ArticlesByAuthorNamePartRequest = ArticlesByAuthorNamePartRequest {
 } deriving (Show, Generic)
 
 instance FromJSON ArticlesByAuthorNamePartRequest
+
+data ArticlesByTextContentRequest = ArticlesByTextContentRequest {
+    substring :: Text,
+    offset :: Maybe Int32
+} deriving (Show, Generic)
+
+instance FromJSON ArticlesByTextContentRequest
 
 data ArticlesByCreationDateRequest = ArticlesByCreationDateRequest {
     day :: Day,

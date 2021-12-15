@@ -34,6 +34,7 @@ module RestNews.DB.ProcessRequest (
     getArticlesByTitlePart,
     getArticlesByContentPart,
     getArticlesByAuthorNamePart,
+    getArticlesBySubstring,
     getArticlesSortedByPhotosNumber,
     getArticlesSortedByCreationDate,
     getArticlesSortedByAuthor,
@@ -670,6 +671,27 @@ getArticlesByAuthorNamePart sessionRun connection substringRequest = do
             offset (substringRequest :: ArticlesByAuthorNamePartRequest)
             )
     sessionResults <- sessionRun (Session.statement params DBR.getArticlesByAuthorNamePart) connection
+    pure (
+        case sessionResults of
+            Right results -> H . Right . Right $ encode results
+            Left sessionError -> case getError sessionError of
+                Just (PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE, Just msg) -> if "OFFSET" `isPrefixOf` msg
+                    then H . Right . Left $ encode eNegativeOffset
+                    else H . Left $ show sessionError
+                _ -> H . Left $ show sessionError
+        )
+
+getArticlesBySubstring :: MonadIO m =>
+    (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
+    -> Connection
+    -> ArticlesByTextContentRequest
+    -> m (HasqlSessionResults ByteString)
+getArticlesBySubstring sessionRun connection substringRequest = do
+    let params = (
+            substring (substringRequest :: ArticlesByTextContentRequest),
+            offset (substringRequest :: ArticlesByTextContentRequest)
+            )
+    sessionResults <- sessionRun (Session.statement params DBR.getArticlesBySubstring) connection
     pure (
         case sessionResults of
             Right results -> H . Right . Right $ encode results

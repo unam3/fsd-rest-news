@@ -45,6 +45,7 @@ getSessionName pathAndMethod = case pathAndMethod of
     (["articles", "in__title"], "GET") -> Right "getArticlesByTitlePart"
     (["articles", "in__content"], "GET") -> Right "getArticlesByContentPart"
     (["articles", "in__author_name"], "GET") -> Right "getArticlesByAuthorNamePart"
+    (["articles", "in__text_content"], "GET") -> Right "getArticlesBySubstring"
     (["articles", "byPhotosNumber"], "GET") -> Right "getArticlesSortedByPhotosNumber"
     (["articles", "byCreationDate"], "GET") -> Right "getArticlesSortedByCreationDate"
     (["articles", "sortByAuthor"], "GET") -> Right "getArticlesSortedByAuthor"

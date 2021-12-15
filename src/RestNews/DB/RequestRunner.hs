@@ -86,6 +86,7 @@ runSession
         "getArticlesByTitlePart" -> runSessionWithJSON PR.getArticlesByTitlePart
         "getArticlesByContentPart" -> runSessionWithJSON PR.getArticlesByContentPart
         "getArticlesByAuthorNamePart" -> runSessionWithJSON PR.getArticlesByAuthorNamePart
+        "getArticlesBySubstring" -> runSessionWithJSON PR.getArticlesBySubstring
         "getArticlesSortedByPhotosNumber" -> runSessionWithJSON PR.getArticlesSortedByPhotosNumber
         "getArticlesSortedByCreationDate" -> runSessionWithJSON PR.getArticlesSortedByCreationDate
         "getArticlesSortedByAuthor" -> runSessionWithJSON PR.getArticlesSortedByAuthor

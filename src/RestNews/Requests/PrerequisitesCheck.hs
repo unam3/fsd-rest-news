@@ -77,6 +77,7 @@ prerequisitesCheck params sessionName =
     "getArticlesByTitlePart"            -> passWithoutCheck
     "getArticlesByContentPart"          -> passWithoutCheck
     "getArticlesByAuthorNamePart"       -> passWithoutCheck
+    "getArticlesBySubstring"            -> passWithoutCheck
     "getArticlesSortedByPhotosNumber"   -> passWithoutCheck
     "getArticlesSortedByCreationDate"   -> passWithoutCheck
     "getArticlesSortedByAuthor"         -> passWithoutCheck

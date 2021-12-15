@@ -281,9 +281,6 @@ deleteComment params session port = curl
     ("http://0.0.0.0:" ++ show port ++ "/comments")
 
 
-runStub :: Port -> Application -> IO ()
-runStub _ _ = pure ()
-
 withSessionStub :: Middleware
 --withSessionStub app request respond = app request respond
 withSessionStub app = app
