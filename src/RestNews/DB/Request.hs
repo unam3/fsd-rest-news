@@ -547,37 +547,48 @@ getArticlesByAuthorNamePart =
         ) as select_results
         |]
 
+
 getArticlesBySubstring :: Statement (Text, Maybe Int32) Value
 getArticlesBySubstring =
     [TH.singletonStatement|
             with pattern as (
-                select '%' || regexp_replace('substring', '(%|_)', '', 'g') || '%' as string
+                select '%' || regexp_replace(($1 :: text), '(%|_)', '', 'g') || '%' as string
             )
-            select al.article_id from (
-                (
-                select article_id
-                from articles
-                inner join (
-                    select authors.author_id
-                    from authors
-                    inner join (
-                        select user_id
-                        from users, pattern
-                        where name ilike pattern.string or surname ilike pattern.string
-                    ) as filtered_user_ids
-                on authors.user_id = filtered_user_ids.user_id
-                ) as filtered_author_ids
-                on author = filtered_author_ids.author_id
-                    and is_published = true
-                ) union (select article_id
-                from articles, pattern
-                where articles.article_title ilike pattern.string
-                    or articles.article_content ilike pattern.string
-                    and is_published = true)
-            ) as al
-            order by al.article_id
-            limit 20
-            offset 0
+            select
+                case when count(select_results) = 0
+                then to_json(array[] :: int[])
+                else json_agg(get_article(select_results.article_id))
+                end :: json
+            from (
+                select union_results.article_id from (
+                    (
+                        select article_id
+                        from articles
+                        inner join (
+                            select authors.author_id
+                            from authors
+                            inner join (
+                                select user_id
+                                from users, pattern
+                                where name ilike pattern.string
+                                    or surname ilike pattern.string
+                            ) as filtered_user_ids
+                        on authors.user_id = filtered_user_ids.user_id
+                        ) as filtered_author_ids
+                        on author = filtered_author_ids.author_id
+                            and is_published = true
+                    union
+                        select article_id
+                        from articles, pattern
+                        where articles.article_title ilike pattern.string
+                            or articles.article_content ilike pattern.string
+                            and is_published = true
+                    )
+                ) as union_results
+                order by union_results.article_id
+                limit 20
+                offset $2 :: int4?
+            ) as select_results
         |]
 
 {-
