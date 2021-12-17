@@ -128,6 +128,7 @@ CREATE OR REPLACE FUNCTION public.get_article(art_id integer)
                         author
                     where users.user_id = author.user_id
                 ) as uuser
+            where a.article_id = art_id
         ) as as_row;
     $function$;
 
