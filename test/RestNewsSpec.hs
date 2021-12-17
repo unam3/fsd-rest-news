@@ -16,7 +16,7 @@ import Network.Wai.Handler.Warp (Port, testWithApplication, withApplication)
 import Network.Wai.Internal (ResponseReceived (..))
 import System.Log.Logger (Priority (DEBUG))
 import System.Process (readProcess)
-import Test.Hspec (Spec, afterAll, beforeAll, describe, it, runIO, shouldBe, shouldStartWith)
+import Test.Hspec (Spec, afterAll, beforeAll, describe, it, runIO, shouldBe, shouldContain, shouldStartWith)
 
 import RestNews
 import qualified RestNews.Config as C
@@ -623,7 +623,7 @@ spec = do
         it "get article"
             $ runApllicationWith
                 (getArticleDraft ("{" ++ articleIdJSONSection ++ "}") session)
-                    >>= (`shouldStartWith` "{\"article_content")
+                    >>= (`shouldContain` articleIdJSONSection)
 
         it "returns error if no such article"
             $ runApllicationWith
