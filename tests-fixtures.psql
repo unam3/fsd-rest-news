@@ -4,7 +4,8 @@ INSERT INTO users (username, password, name, surname, avatar, is_admin) VALUES
     ('username', crypt('12345', gen_salt('bf', 8)), 'Scott', 'Adams', 'http://pluh/meh.jpg', true),
     ('username1', crypt('12345', gen_salt('bf', 8)), 'Stephen', 'Diehl', 'http://pluh/monad.jpg', false),
     ('username2', crypt('12345', gen_salt('bf', 8)), 'Sean', ' Carroll', 'https://preposterousuniverse.com/quant.jpg', false),
-    ('username3', crypt('12345', gen_salt('bf', 8)), 'Phil', 'Substring', 'https://daaaa.mn/it.jpg', false),
+    ('username3', crypt('12345', gen_salt('bf', 8)), 'Jill', 'Mill', 'https://daaaa.mn/it.jpg', false),
+    ('username33', crypt('12345', gen_salt('bf', 8)), 'Phil', 'Substring', 'https://daaaa.mn/it.jpg', false),
     ('username4', crypt('12345', gen_salt('bf', 8)), 'Douglas', 'Crockford', 'https://daaaa.mn/it.jpg', false),
     ('username5', crypt('12345', gen_salt('bf', 8)), 'Snoyberg', 'FPComplete', 'http://pluh/kek.jpg', false);
 
@@ -12,7 +13,8 @@ INSERT INTO authors (user_id, description) VALUES
     (1, 'Hey you'),
     (2, 'What I wish I knew'),
     (3, 'Quantum relativity itself'),
-    (4, 'Well duh');
+    (4, 'Well duh'),
+    (5, '-');
 
 INSERT INTO categories (name, parent_id) VALUES
     ('cat1', null),
@@ -21,12 +23,15 @@ INSERT INTO categories (name, parent_id) VALUES
     ('cat4', 2),
     ('cat5', 3),
     ('cat6', 5),
-    ('cat7', 4);
+    ('cat7', 4),
+    ('substring test', 4);
 
 INSERT INTO tags (tag_name) VALUES
     ('tag1'),
     ('tag2'),
-    ('tag3');
+    ('tag3'),
+    ('substring test'),
+    ('another substring test');
 
 INSERT INTO articles (
         author,
@@ -45,9 +50,12 @@ INSERT INTO articles (
     (2, 2, 'Пыщ', 'Еей!', false, '', array['f', 'o', 'u', 'r']::text[]),
     (2, 2, 'Disparaged', 'So', false, 'main', array['thr', 'e', 'e']::text[]),
     (3, 1, 'The Big Picture', 'New book again!', false, 'main', array['f', 'o', 'u', 'r']::text[]),
-    (4, 2, 'getArticlesBySu bstring test', 'in author name', true, 'main', array['thr', 'e', 'e']::text[]),
+    (4, 2, 'getArticlesBySu bstring test', 'getArticlesBySu bstring: in tags name', true, 'main', array['thr', 'e', 'e']::text[]),
+    (4, 8, 'getArticlesBySu bstring test', 'getArticlesBySu bstring: in category name', true, 'main', array['thr', 'e', 'e']::text[]),
+    (5, 2, 'getArticlesBySu bstring test:', 'in author name', true, 'main', array['thr', 'e', 'e']::text[]),
     (4, 2, 'getArticlesBySu bstring test', 'getArticlesBySubstring: in content', true, 'main', array['thr', 'e', 'e']::text[]),
-    (2, 2, 'getArticlesBySubstring', 'test: in title', true, 'main', array['thr', 'e', 'e']::text[]);
+    (2, 2, 'getArticlesBySubstring', 'test: in title', true, 'main', array['thr', 'e', 'e']::text[]),
+    (4, 2, 'getArticlesBySu bstring test', 'getArticlesBySu bstring: in tags name', true, 'main', array['thr', 'e', 'e']::text[]);
 
 update articles
 set creation_date = timestamp '2020-12-09 20:20:20.666628'
@@ -86,7 +94,9 @@ INSERT INTO articles_tags (tag_id, article_id) VALUES
     (2, 1),
     (3, 1),
     (2, 2),
-    (3, 3);
+    (3, 3),
+    (5, 14),
+    (4, 9);
 
 INSERT INTO articles_comments (article_id, user_id, comment_text) VALUES
     (1, 2, 'kek'),

@@ -583,6 +583,29 @@ getArticlesBySubstring =
                         where articles.article_title ilike pattern.string
                             or articles.article_content ilike pattern.string
                             and is_published = true
+                    union
+                        select article_id
+                        from articles, (
+                            select category_id
+                            from categories, pattern
+                            where name ilike pattern.string
+                        ) as categories_with_substring
+                        where articles.category_id = categories_with_substring.category_id
+                            and is_published = true
+                    union
+                        select articles.article_id
+                        from articles
+                        inner join (
+                            select article_id
+                            from articles_tags,(
+                                select tag_id
+                                from tags, pattern
+                                where tag_name ilike pattern.string
+                            ) as tags_with_substring
+                            where articles_tags.tag_id = tags_with_substring.tag_id
+                        ) as atricles_ids_with_substring_in_tag
+                        on articles.article_id = atricles_ids_with_substring_in_tag.article_id
+                        where articles.is_published = true
                     )
                 ) as union_results
                 order by union_results.article_id
