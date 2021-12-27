@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -27,14 +26,12 @@ module RestNews.DB.Errors (
     , getErrorCode
     ) where
 
-import Data.Aeson (ToJSON)
 import Data.ByteString.Internal (unpackChars)
 import Data.Text (Text, append)
-import GHC.Generics (Generic)
-import Prelude hiding (error)
 
 import qualified Hasql.Session as Session
 
+import RestNews.Types (Error (..))
 
 data SessionError = PSQL_STRING_DATA_RIGHT_TRUNCATION
     | PSQL_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE
@@ -67,12 +64,6 @@ getError _ = Nothing
 getErrorCode :: Session.QueryError -> Maybe SessionError
 getErrorCode = fmap fst . getError
 
-
-newtype Error =
-    Error {error :: Text}
-        deriving (Generic, Show)
-
-instance ToJSON Error
 
 eNoSuchEndpoint :: Error
 eNoSuchEndpoint = Error "No such endpoint"

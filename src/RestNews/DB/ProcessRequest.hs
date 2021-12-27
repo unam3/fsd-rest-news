@@ -12,6 +12,7 @@ module RestNews.DB.ProcessRequest (
     getAuthor,
     deleteAuthorRole,
     createCategory,
+    eSameParentId,
     updateCategory,
     getCategory,
     deleteCategory,
@@ -59,6 +60,7 @@ import Hasql.Statement (Statement)
 import RestNews.DB.Errors
 import qualified RestNews.DB.Request as DBR
 import RestNews.Requests.JSON
+import RestNews.Types (Error (..))
 
 -- https://hackage.haskell.org/package/hasql-1.4.4
 -- https://github.com/nikita-volkov/hasql-tutorial1
@@ -216,17 +218,16 @@ createCategory sessionRun connection createCategoryRequest = do
                 _ -> H . Left $ show sessionError
         )
 
-updateCategory :: MonadIO m =>
+
+eSameParentId :: Error
+eSameParentId = Error "\\\"parent_id\\\" must not be different than \\\"category_id\\\""
+
+updateCategory' :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
-    -> UpdateCategoryRequest
+    -> (Int32, Text, Maybe Int32)
     -> m (HasqlSessionResults ByteString)
-updateCategory sessionRun connection updateCategoryRequest = do
-    let params = (
-            category_id (updateCategoryRequest :: UpdateCategoryRequest),
-            name (updateCategoryRequest :: UpdateCategoryRequest),
-            parent_id (updateCategoryRequest :: UpdateCategoryRequest)
-            )
+updateCategory' sessionRun connection params = do
     sessionResults <- sessionRun (Session.statement params DBR.updateCategory) connection
     pure (
         case sessionResults of
@@ -237,6 +238,24 @@ updateCategory sessionRun connection updateCategoryRequest = do
                 Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Right . Left $ encode eNoSuchCategory
                 _ -> H . Left $ show sessionError
         )
+
+updateCategory :: MonadIO m =>
+    (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
+    -> Connection
+    -> UpdateCategoryRequest
+    -> m (HasqlSessionResults ByteString)
+updateCategory sessionRun connection updateCategoryRequest = do
+    let params@(category_id', _, maybe_parent_id') = (
+            category_id (updateCategoryRequest :: UpdateCategoryRequest),
+            name (updateCategoryRequest :: UpdateCategoryRequest),
+            parent_id (updateCategoryRequest :: UpdateCategoryRequest)
+            )
+    case maybe_parent_id' of
+        Just parent_id' ->
+            if category_id' == parent_id'
+                then pure . H . Right . Left $ encode eSameParentId
+                else updateCategory' sessionRun connection params
+        _ -> updateCategory' sessionRun connection params
 
 getCategory :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
