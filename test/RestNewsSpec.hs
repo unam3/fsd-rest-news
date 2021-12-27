@@ -21,6 +21,7 @@ import Test.Hspec (Spec, afterAll, beforeAll, describe, it, runIO, shouldBe, sho
 import RestNews
 import qualified RestNews.Config as C
 import RestNews.DB.Errors
+import RestNews.DB.ProcessRequest (eSameParentId)
 import RestNews.DB.RequestRunner (cantDecodeBS)
 import qualified RestNews.DBConnection as DBC
 import qualified RestNews.Logger as L
@@ -537,6 +538,11 @@ spec = do
             $ runApllicationWith
                 (updateCategory (categoryIdJSONSection ++ ", \"name\": \"plusdh\", \"parent_id\": 12345}") session)
                     >>= (`shouldBe` (toString $ encode eParentCategoryDoesNotExist))
+
+        it "returns error if parent is set to itself"
+            $ runApllicationWith
+                (updateCategory "{\"category_id\": 9, \"name\": \"pluh_pattched\", \"parent_id\": 9}" session)
+                    >>= (`shouldBe` (toString $ encode eSameParentId))
 
 
     describe "deleteCategory" $ do
