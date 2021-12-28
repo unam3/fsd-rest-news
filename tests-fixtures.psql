@@ -25,8 +25,8 @@ INSERT INTO categories (name, parent_id) VALUES
     ('cat6', 5),
     ('cat7', 4),
     ('substring test', 4),
-    ('#24 test id 9', null),
-    ('#24 test id 10', null);
+    ('#24 test id 9 without a parent', null),
+    ('#24 test id 10 with parent_id 9', 9);
 
 INSERT INTO tags (tag_name) VALUES
     ('tag1'),

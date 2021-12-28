@@ -520,6 +520,23 @@ spec = do
                     >>= (`shouldBe` (toString $ encode eNoSuchCategory))
 
 
+    --describe "getCategoryDescendants" $ do
+    --    it "returns error if category does not exist"
+    --        $ runApllicationWith
+    --            (getCategoryDescendants
+    --                "{\"category_id\": 123456}"
+    --                session
+    --                )
+    --                >>= (`shouldStartWith` "{\"category_id\":")
+
+    --    it "get category descendants"
+    --        $ runApllicationWith
+    --            (getCategoryDescendants
+    --                "{\"category_id\": 10}"
+    --                session
+    --                )
+    --                >>= (`shouldStartWith` "{\"category_id\":")
+
     describe "updateCategory" $ do
         it "update category"
             $ runApllicationWith
@@ -543,6 +560,13 @@ spec = do
             $ runApllicationWith
                 (updateCategory "{\"category_id\": 9, \"name\": \"pluh_pattched\", \"parent_id\": 9}" session)
                     >>= (`shouldBe` (toString $ encode eSameParentId))
+
+--        it "returns error if parent is set to category descendant"
+--            $ runApllicationWith
+--                (updateCategory "{\"category_id\": 9, \"name\": \"pluh_pattched\", \"parent_id\": 10}" session)
+--                    >>= (`shouldBe` (toString $ encode eSameParentId))
+
+        
 
 
     describe "deleteCategory" $ do

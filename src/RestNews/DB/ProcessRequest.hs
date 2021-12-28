@@ -13,6 +13,7 @@ module RestNews.DB.ProcessRequest (
     deleteAuthorRole,
     createCategory,
     eSameParentId,
+    --getCategoryDescendants,
     updateCategory,
     getCategory,
     deleteCategory,
@@ -53,6 +54,7 @@ import Data.Int (Int32)
 import Data.List (isPrefixOf)
 import Data.Text (Text, pack)
 import Data.Time.Calendar (showGregorian)
+import Data.Vector (Vector)
 import Hasql.Connection (Connection)
 import qualified Hasql.Session as Session
 import Hasql.Statement (Statement)
@@ -220,7 +222,7 @@ createCategory sessionRun connection createCategoryRequest = do
 
 
 eSameParentId :: Error
-eSameParentId = Error "\\\"parent_id\\\" must not be different than \\\"category_id\\\""
+eSameParentId = Error "\\\"parent_id\\\" must be different than \\\"category_id\\\""
 
 updateCategory' :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
@@ -239,6 +241,27 @@ updateCategory' sessionRun connection params = do
                 _ -> H . Left $ show sessionError
         )
 
+-- isParentIdDescendant
+--getCategoryDescendants :: 
+--    (Session.Session (Maybe (Vector Int32)) -> Connection -> IO (Either Session.QueryError (Maybe (Vector Int32))))
+--    -> Connection
+--    -> Int32
+--    -> Int32
+--    -> IO (HasqlSessionResults Bool)
+--getCategoryDescendants sessionRun connection category_id parent_id = do
+--    
+--    sessionResults <- sessionRun (Session.statement category_id DBR.getCategoryDescendants) connection
+--    
+--    pure (
+--        H . Right $ Right True
+--        --case sessionResults of
+--        --    Right results -> H . Right $ Right "1234"
+--        --    Left sessionError -> case getErrorCode sessionError of
+--        --        Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Right . Left $ encode eNoSuchCategory
+--        --        _ -> H . Left $ show sessionError
+--        )
+
+
 updateCategory :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
@@ -254,7 +277,13 @@ updateCategory sessionRun connection updateCategoryRequest = do
         Just parent_id' ->
             if category_id' == parent_id'
                 then pure . H . Right . Left $ encode eSameParentId
-                else updateCategory' sessionRun connection params
+                --else updateCategory' sessionRun connection params
+                else do
+                    descendants <- sessionRun (Session.statement parent_id' DBR.getCategoryDescendants) connection
+
+                    Prelude.error $ show descendants
+
+                    --updateCategory' sessionRun connection params
         _ -> updateCategory' sessionRun connection params
 
 getCategory :: MonadIO m =>

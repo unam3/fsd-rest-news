@@ -68,6 +68,23 @@ create table articles_comments (
 
 commit;
 
+CREATE OR REPLACE FUNCTION public.get_category_descendants(cat_id integer)
+       RETURNS int[]
+       LANGUAGE sql
+    AS $function$
+        with recursive categories_recursive(category_id, parent_id) AS (
+            select category_id, parent_id
+            from categories
+            where parent_id = cat_id
+            union all
+            select categories.category_id, categories.parent_id
+            from categories_recursive, categories
+            where categories_recursive.category_id = categories.parent_id
+        ) select array_agg(categories_recursive.category_id)
+        from categories_recursive
+        where categories_recursive.category_id != cat_id;
+    $function$;
+
 CREATE OR REPLACE FUNCTION public.get_article(art_id integer)
        RETURNS json
        LANGUAGE sql
