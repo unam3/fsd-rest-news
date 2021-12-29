@@ -47,7 +47,7 @@ module RestNews.DB.ProcessRequest (
     getCredentials
     ) where
 
-import Control.Monad.IO.Class (MonadIO)
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Aeson (Value, encode)
 import Data.ByteString.Lazy.UTF8 (ByteString)
 import Data.Int (Int32)
@@ -262,6 +262,22 @@ updateCategory' sessionRun connection params = do
 --        )
 
 
+--isCategoryExist :: MonadIO m =>
+--    (Session.Session Bool -> Connection -> m (Either Session.QueryError Bool))
+--    -> Connection
+--    -> Int32
+--    -> m (HasqlSessionResults Bool)
+--isCategoryExist sessionRun connection category_id = do
+--
+--    isCategoryExist' <- sessionRun (Session.statement category_id DBR.isCategoryExist) connection
+--
+--    pure . H . Right $ Right isCategoryExist'
+--    case isCategoryExist' of
+--        Left sessionError ->
+--            -- pure . H . Right . Left $ encode eSameParentId
+--            Prelude.error $ show sessionError
+--        Right isCategoryExist'' -> pure . H . Right $ Right isCategoryExist''
+
 updateCategory :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
@@ -279,6 +295,11 @@ updateCategory sessionRun connection updateCategoryRequest = do
                 then pure . H . Right . Left $ encode eSameParentId
                 --else updateCategory' sessionRun connection params
                 else do
+                    _ <- liftIO $ Session.run
+                            (Session.statement parent_id' DBR.isCategoryExist)
+                            connection
+                                >>= Prelude.error . show
+
                     descendants <- sessionRun (Session.statement parent_id' DBR.getCategoryDescendants) connection
 
                     Prelude.error $ show descendants
