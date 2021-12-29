@@ -9,6 +9,7 @@ module RestNews.DB.Request (
     getAuthor,
     deleteAuthorRole,
     createCategory,
+    isCategoryExist,
     getCategoryDescendants,
     updateCategory,
     getCategory,
@@ -172,6 +173,18 @@ createCategory =
             'category_id', category_id,
             'parent_id', parent_id
             )::json
+        |]
+
+isCategoryExist :: Statement Int32 Bool
+isCategoryExist =
+    [TH.singletonStatement|
+        with isCategory as (
+            select count(true) != 0 as exist from categories where category_id = $1 :: int4
+        ) select case when isCategory.exist
+            then true
+            else false
+            end :: bool
+        from isCategory
         |]
 
 getCategoryDescendants :: Statement Int32 Value

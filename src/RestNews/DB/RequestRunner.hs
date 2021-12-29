@@ -17,7 +17,7 @@ import Data.Functor ((<&>))
 import Data.Int (Int32)
 import Hasql.Connection (Connection)
 import qualified Hasql.Session as Session
-import qualified Util
+import Util ((∘∘))
 
 
 cantDecodeS :: String
@@ -47,7 +47,7 @@ runSession
     sessionAuthorId
     sessionName = let {
         -- (Util.∘∘) == (.).(.)
-        sessionRun = (Util.∘∘) liftIO  Session.run;
+        sessionRun = liftIO ∘∘ Session.run;
         runSessionWithJSON session = maybe (pure cantDecode) (session sessionRun connection) (decode requestBody);
         runSessionWithJSONAndArg session arg =
             let partiallyAppliedSession = session sessionRun connection
