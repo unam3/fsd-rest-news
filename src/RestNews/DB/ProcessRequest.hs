@@ -295,14 +295,24 @@ updateCategory sessionRun connection updateCategoryRequest = do
                 then pure . H . Right . Left $ encode eSameParentId
                 --else updateCategory' sessionRun connection params
                 else do
-                    _ <- liftIO $ Session.run
+                    eitherIsParentCategoryExist <- liftIO
+                        $ Session.run
                             (Session.statement parent_id' DBR.isCategoryExist)
                             connection
-                                >>= Prelude.error . show
+                                -- >>= Prelude.error . show
 
-                    descendants <- sessionRun (Session.statement parent_id' DBR.getCategoryDescendants) connection
+                    case eitherIsParentCategoryExist of
+                        Right isParentCategoryExist ->
+                            if isParentCategoryExist
+                                then do
+                                    descendants <-
+                                        sessionRun (Session.statement parent_id' DBR.getCategoryDescendants) connection
 
-                    Prelude.error $ show descendants
+                                    Prelude.error $ show descendants
+
+                                else pure . H . Right . Left $ encode eNoSuchCategory
+
+                        Left sessionError -> Prelude.error $ show sessionError
 
                     --updateCategory' sessionRun connection params
         _ -> updateCategory' sessionRun connection params
