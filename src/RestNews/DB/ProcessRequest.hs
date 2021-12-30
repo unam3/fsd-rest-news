@@ -232,7 +232,7 @@ updateCategory' :: MonadIO m =>
     -> Connection
     -> (Int32, Text, Maybe Int32)
     -> m (HasqlSessionResults ByteString)
-updateCategory' sessionRun connection params = do
+updateCategory' sessionRun connection params@(category_id, _, _) = do
     sessionResults <- sessionRun (Session.statement params DBR.updateCategory) connection
     pure (
         case sessionResults of
@@ -240,7 +240,8 @@ updateCategory' sessionRun connection params = do
             Left sessionError -> case getErrorCode sessionError of
                 Just PSQL_STRING_DATA_RIGHT_TRUNCATION -> H . Right . Left $ encode eCategoryNameMaxBoundOverflow
                 Just PSQL_FOREIGN_KEY_VIOLATION -> H . Right . Left $ encode eParentCategoryDoesNotExist
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Right . Left $ encode eNoSuchCategory
+                Just UnexpectedAmountOfRowsOrUnexpectedNull ->
+                    H . Right . Left . encode . makeNoSuchCategory . pack $ show category_id
                 _ -> H . Left $ show sessionError
         )
 
@@ -302,7 +303,7 @@ updateCategory sessionRun connection updateCategoryRequest = do
                                                 then pure . H . Right . Left $ encode eParentIdIsDescendant
                                                 else updateCategory' sessionRun connection params
 
-                                --else pure . H . Right . Left $ encode eNoSuchCategory
+                                --else pure . H . Right . Left $ encode makeNoSuchCategory
                                 else pure . H . Right . Left $ encode eParentCategoryDoesNotExist
 
 
@@ -321,7 +322,8 @@ getCategory sessionRun connection categoryIdRequest = do
         case sessionResults of
             Right results -> H . Right . Right $ encode results
             Left sessionError -> case getErrorCode sessionError of
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Right . Left $ encode eNoSuchCategory
+                Just UnexpectedAmountOfRowsOrUnexpectedNull ->
+                    H . Right . Left . encode . makeNoSuchCategory . pack $ show params
                 _ -> H . Left $ show sessionError
         )
 
@@ -338,7 +340,8 @@ deleteCategory sessionRun connection categoryIdRequest = do
             Right results -> H . Right . Right $ encode results
             Left sessionError -> case getErrorCode sessionError of
                 Just PSQL_FOREIGN_KEY_VIOLATION -> H . Right . Left $ encode eCategoryInUse
-                Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Right . Left $ encode eNoSuchCategory
+                Just UnexpectedAmountOfRowsOrUnexpectedNull ->
+                    H . Right . Left . encode . makeNoSuchCategory . pack $ show params
                 _ -> H . Left $ show sessionError
         )
 
@@ -482,7 +485,7 @@ createArticleDraft :: MonadIO m =>
     -> Int32
     -> m (HasqlSessionResults ByteString)
 createArticleDraft sessionRun connection articleDraftRequest author_id' = do
-    let params = (
+    let params@(_, category_id', _, _, _, _, _) = (
             author_id',
             category_id (articleDraftRequest :: ArticleDraftRequest),
             article_title (articleDraftRequest :: ArticleDraftRequest),
@@ -502,7 +505,8 @@ createArticleDraft sessionRun connection articleDraftRequest author_id' = do
                         detailsPrefix = fmap (take 12) details;
                     } in case detailsPrefix of
                         Just "Key (tag_id)" -> H . Right . Left $ encode eNoSuchTag
-                        Just "Key (categor" -> H . Right . Left $ encode eNoSuchCategory
+                        Just "Key (categor" ->
+                            H . Right . Left . encode . makeNoSuchCategory . pack $ show category_id'
                         _ -> H . Left $ show sessionError
                 Just (UnexpectedAmountOfRowsOrUnexpectedNull, Nothing) -> H . Right . Left $ encode eNoSuchArticle
                 _ -> H . Left $ show sessionError
@@ -535,7 +539,7 @@ editArticleDraft :: MonadIO m =>
     -> Int32
     -> m (HasqlSessionResults ByteString)
 editArticleDraft sessionRun connection articleDraftEditRequest author_id' = do
-    let params = (
+    let params@(_, _, category_id', _, _, _, _, _) = (
             author_id',
             article_id (articleDraftEditRequest :: ArticleDraftEditRequest),
             category_id (articleDraftEditRequest :: ArticleDraftEditRequest),
@@ -556,7 +560,8 @@ editArticleDraft sessionRun connection articleDraftEditRequest author_id' = do
                         detailsPrefix = fmap (take 12) details;
                     } in case detailsPrefix of
                         Just "Key (tag_id)" -> H . Right . Left $ encode eNoSuchTag
-                        Just "Key (categor" -> H . Right . Left $ encode eNoSuchCategory
+                        Just "Key (categor" ->
+                            H . Right . Left . encode . makeNoSuchCategory . pack $ show category_id'
                         Just "Key (article" -> H . Right . Left $ encode eNoSuchArticle
                         _ -> H . Left $ show sessionError
                 Just (UnexpectedAmountOfRowsOrUnexpectedNull, Nothing) -> H . Right . Left $ encode eNoSuchArticle
