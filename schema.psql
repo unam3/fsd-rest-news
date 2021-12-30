@@ -80,7 +80,7 @@ CREATE OR REPLACE FUNCTION public.get_category_descendants(cat_id integer)
             select categories.category_id, categories.parent_id
             from categories_recursive, categories
             where categories_recursive.category_id = categories.parent_id
-        ) select array_agg(categories_recursive.category_id)
+        ) select coalesce(array_agg(categories_recursive.category_id), array[] :: integer[])
         from categories_recursive
         where categories_recursive.category_id != cat_id;
     $function$;
