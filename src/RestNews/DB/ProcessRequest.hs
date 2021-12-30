@@ -206,7 +206,7 @@ createCategory :: MonadIO m =>
     -> CreateCategoryRequest
     -> m (HasqlSessionResults ByteString)
 createCategory sessionRun connection createCategoryRequest = do
-    let params = (
+    let params@(_, maybe_parent_id') = (
             name (createCategoryRequest :: CreateCategoryRequest),
             parent_id (createCategoryRequest :: CreateCategoryRequest)
             )
@@ -216,7 +216,10 @@ createCategory sessionRun connection createCategoryRequest = do
             Right results -> H . Right . Right $ encode results
             Left sessionError -> case getErrorCode sessionError of
                 Just PSQL_STRING_DATA_RIGHT_TRUNCATION -> H . Right . Left $ encode eCategoryNameMaxBoundOverflow
-                Just PSQL_FOREIGN_KEY_VIOLATION -> H . Right . Left $ encode eParentCategoryDoesNotExist
+                Just PSQL_FOREIGN_KEY_VIOLATION ->
+                    case maybe_parent_id' of
+                        Just parent_id' -> H . Right . Left . encode . makeNoSuchCategory . pack $ show parent_id'
+                        _ ->  H . Left $ show sessionError
                 _ -> H . Left $ show sessionError
         )
 
@@ -232,14 +235,17 @@ updateCategory' :: MonadIO m =>
     -> Connection
     -> (Int32, Text, Maybe Int32)
     -> m (HasqlSessionResults ByteString)
-updateCategory' sessionRun connection params@(category_id, _, _) = do
+updateCategory' sessionRun connection params@(category_id, _, maybe_parent_id') = do
     sessionResults <- sessionRun (Session.statement params DBR.updateCategory) connection
     pure (
         case sessionResults of
             Right results -> H . Right . Right $ encode results
             Left sessionError -> case getErrorCode sessionError of
                 Just PSQL_STRING_DATA_RIGHT_TRUNCATION -> H . Right . Left $ encode eCategoryNameMaxBoundOverflow
-                Just PSQL_FOREIGN_KEY_VIOLATION -> H . Right . Left $ encode eParentCategoryDoesNotExist
+                Just PSQL_FOREIGN_KEY_VIOLATION ->
+                    case maybe_parent_id' of
+                        Just parent_id' -> H . Right . Left . encode . makeNoSuchCategory . pack $ show parent_id'
+                        _ ->  H . Left $ show sessionError
                 Just UnexpectedAmountOfRowsOrUnexpectedNull ->
                     H . Right . Left . encode . makeNoSuchCategory . pack $ show category_id
                 _ -> H . Left $ show sessionError
@@ -278,7 +284,10 @@ updateCategory sessionRun connection updateCategoryRequest = do
             name (updateCategoryRequest :: UpdateCategoryRequest),
             parent_id (updateCategoryRequest :: UpdateCategoryRequest)
             )
+
     case maybe_parent_id' of
+        Nothing -> updateCategory' sessionRun connection params
+
         Just parent_id' ->
             if category_id' == parent_id'
                 then pure . H . Right . Left $ encode eSameParentId
@@ -303,12 +312,8 @@ updateCategory sessionRun connection updateCategoryRequest = do
                                                 then pure . H . Right . Left $ encode eParentIdIsDescendant
                                                 else updateCategory' sessionRun connection params
 
-                                --else pure . H . Right . Left $ encode makeNoSuchCategory
-                                else pure . H . Right . Left $ encode eParentCategoryDoesNotExist
+                                else pure . H . Right . Left . encode . makeNoSuchCategory . pack $ show parent_id'
 
-
-                    --updateCategory' sessionRun connection params
-        _ -> updateCategory' sessionRun connection params
 
 getCategory :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))

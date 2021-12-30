@@ -13,7 +13,6 @@ module RestNews.DB.Errors (
     , eNoSuchComment
     , eNoSuchEndpoint
     , eNoSuchTag
-    , eParentCategoryDoesNotExist
     , eSuchAuthorDoesNotExist
     , eSuchUserAlreadyAuthor
     , eSuchUserDoesNotExist
@@ -100,9 +99,6 @@ eSuchAuthorDoesNotExist = makeDoesNotExist "such author"
 eSuchUserDoesNotExist :: Error
 eSuchUserDoesNotExist = makeDoesNotExist "such user"
 
-eParentCategoryDoesNotExist :: Error
-eParentCategoryDoesNotExist = makeDoesNotExist "parent category"
-
 
 makeAlreadyExist :: Text -> Error
 makeAlreadyExist thing = Error
@@ -131,7 +127,7 @@ eNoSuchArticle :: Error
 eNoSuchArticle = makeNoSuchThing "article"
 
 makeNoSuchCategory :: Text -> Error
-makeNoSuchCategory = makeNoSuchThing . append "category"
+makeNoSuchCategory = makeNoSuchThing . append "category with id="
 
 eNoSuchComment :: Error
 eNoSuchComment = makeNoSuchThing "comment"
