@@ -505,7 +505,7 @@ spec = do
         it "returns error if non-existent parent category"
             $ runApllicationWith
                 (createCategory "{\"name\": \"pluh\", \"parent_id\": 12345}" session)
-                    >>= (`shouldBe` (toString $ encode eParentCategoryDoesNotExist))
+                    >>= (`shouldBe` (toString . encode $ makeNoSuchCategory "12345"))
 
 
     describe "getCategory" $ do
@@ -537,7 +537,7 @@ spec = do
         it "returns error if non-existent parent category"
             $ runApllicationWith
                 (updateCategory ("{\"category_id\": 9, \"name\": \"plusdh\", \"parent_id\": 12345}") session)
-                    >>= (`shouldBe` (toString $ encode eParentCategoryDoesNotExist))
+                    >>= (`shouldBe` (toString . encode $ makeNoSuchCategory "12345"))
 
         it "returns error if parent is set to itself"
             $ runApllicationWith
