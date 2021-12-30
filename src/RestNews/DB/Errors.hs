@@ -9,7 +9,7 @@ module RestNews.DB.Errors (
     , eNameAndSurnameMaxBoundOverflow
     , eNegativeOffset
     , eNoSuchArticle
-    , eNoSuchCategory
+    , makeNoSuchCategory
     , eNoSuchComment
     , eNoSuchEndpoint
     , eNoSuchTag
@@ -130,8 +130,8 @@ makeNoSuchThing thing = Error
 eNoSuchArticle :: Error
 eNoSuchArticle = makeNoSuchThing "article"
 
-eNoSuchCategory :: Error
-eNoSuchCategory = makeNoSuchThing "category"
+makeNoSuchCategory :: Text -> Error
+makeNoSuchCategory = makeNoSuchThing . append "category"
 
 eNoSuchComment :: Error
 eNoSuchComment = makeNoSuchThing "comment"

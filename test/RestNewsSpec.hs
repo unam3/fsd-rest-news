@@ -517,7 +517,7 @@ spec = do
         it "returns error on non-existent category"
             $ runApllicationWith
                 (getCategory "{\"category_id\": 123456}")
-                    >>= (`shouldBe` (toString $ encode eNoSuchCategory))
+                    >>= (`shouldBe` (toString . encode $ makeNoSuchCategory "123456"))
 
 
     describe "updateCategory" $ do
@@ -532,7 +532,7 @@ spec = do
         it "returns error on non-existent category"
             $ runApllicationWith
                 (updateCategory "{\"category_id\": 123456, \"name\": \"pluh_pattched\", \"parent_id\": null}" session)
-                    >>= (`shouldBe` (toString $ encode eNoSuchCategory))
+                    >>= (`shouldBe` (toString . encode $ makeNoSuchCategory "123456"))
 
         it "returns error if non-existent parent category"
             $ runApllicationWith
@@ -561,7 +561,7 @@ spec = do
         it "returns error on non-existent category"
             $ runApllicationWith
                 (deleteCategory "{\"category_id\": 123456}" session)
-                    >>= (`shouldBe` (toString $ encode eNoSuchCategory))
+                    >>= (`shouldBe` (toString . encode $ makeNoSuchCategory "123456"))
 
         it "returns error if category is referenced in DB"
             $ runApllicationWith
@@ -599,7 +599,7 @@ spec = do
                 (createArticleDraft
                     "{\"article_title\": \"they dont beleive their eyes…\", \"category_id\": 1123, \"article_content\": \"article is long enough\", \"tags\": [], \"main_photo\": \"http://pl.uh/main\", \"additional_photos\": [\"1\", \"2\", \"3\"]}"
                     session)
-                    >>= (`shouldBe` (toString $ encode eNoSuchCategory))
+                    >>= (`shouldBe` (toString . encode $ makeNoSuchCategory "1123"))
 
 
     describe "editArticleDraft" $ do
@@ -629,7 +629,7 @@ spec = do
                 (editArticleDraft
                     ("{\"article_title\": \"they dont beleive their eyes…\", \"category_id\": 11234, \"article_content\": \"article is long enough\", \"tags\": [1], \"main_photo\": \"http://pl.uh/main\", \"additional_photos\": [\"1\", \"2\", \"3\"], " ++ articleIdJSONSection ++ "}")
                     session)
-                        >>= (`shouldBe` (toString $ encode eNoSuchCategory))
+                        >>= (`shouldBe` (toString . encode $ makeNoSuchCategory "11234"))
 
 
     describe "getArticleDraft" $ do
