@@ -187,16 +187,10 @@ isCategoryExist =
         from isCategory
         |]
 
-getCategoryDescendants :: Statement Int32 Value
+getCategoryDescendants :: Statement Int32 (Vector Int32)
 getCategoryDescendants =
     [TH.singletonStatement|
-        with isCategory as (
-            select count(true) != 0 as exist from categories where category_id = $1 :: int4
-        ) select case when isCategory.exist
-            then json_build_object('descendants', get_category_descendants($1 :: int4) :: int[])
-            else json_build_object('error', 'no such category')
-            end :: json
-        from isCategory
+        select get_category_descendants($1 :: int4) :: int[]
         |]
 
 updateCategory :: Statement (Int32, Text, Maybe Int32) Value

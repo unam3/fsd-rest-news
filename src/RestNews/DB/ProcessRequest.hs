@@ -13,7 +13,7 @@ module RestNews.DB.ProcessRequest (
     deleteAuthorRole,
     createCategory,
     eSameParentId,
-    --getCategoryDescendants,
+    eParentIdIsDescendant,
     updateCategory,
     getCategory,
     deleteCategory,
@@ -54,7 +54,7 @@ import Data.Int (Int32)
 import Data.List (isPrefixOf)
 import Data.Text (Text, pack)
 import Data.Time.Calendar (showGregorian)
-import Data.Vector (Vector)
+import Data.Vector (Vector, elem)
 import Hasql.Connection (Connection)
 import qualified Hasql.Session as Session
 import Hasql.Statement (Statement)
@@ -224,6 +224,9 @@ createCategory sessionRun connection createCategoryRequest = do
 eSameParentId :: Error
 eSameParentId = Error "\\\"parent_id\\\" must be different than \\\"category_id\\\""
 
+eParentIdIsDescendant :: Error
+eParentIdIsDescendant = Error "parent can't be descendant of category"
+
 updateCategory' :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
@@ -241,27 +244,6 @@ updateCategory' sessionRun connection params = do
                 _ -> H . Left $ show sessionError
         )
 
--- isParentIdDescendant
---getCategoryDescendants :: 
---    (Session.Session (Maybe (Vector Int32)) -> Connection -> IO (Either Session.QueryError (Maybe (Vector Int32))))
---    -> Connection
---    -> Int32
---    -> Int32
---    -> IO (HasqlSessionResults Bool)
---getCategoryDescendants sessionRun connection category_id parent_id = do
---    
---    sessionResults <- sessionRun (Session.statement category_id DBR.getCategoryDescendants) connection
---    
---    pure (
---        H . Right $ Right True
---        --case sessionResults of
---        --    Right results -> H . Right $ Right "1234"
---        --    Left sessionError -> case getErrorCode sessionError of
---        --        Just UnexpectedAmountOfRowsOrUnexpectedNull -> H . Right . Left $ encode eNoSuchCategory
---        --        _ -> H . Left $ show sessionError
---        )
-
-
 isCategoryExist :: MonadIO m =>
     Connection
     -> Int32
@@ -272,6 +254,16 @@ isCategoryExist connection category_id =
     liftIO
         $ Session.run
             (Session.statement category_id DBR.isCategoryExist)
+            connection
+
+getCategoryDescendants :: MonadIO m =>
+    Connection
+    -> Int32
+    -> m (Either Session.QueryError (Vector Int32))
+getCategoryDescendants connection category_id =
+    liftIO
+        $ Session.run
+            (Session.statement category_id DBR.getCategoryDescendants)
             connection
 
 updateCategory :: MonadIO m =>
@@ -289,23 +281,30 @@ updateCategory sessionRun connection updateCategoryRequest = do
         Just parent_id' ->
             if category_id' == parent_id'
                 then pure . H . Right . Left $ encode eSameParentId
-                --else updateCategory' sessionRun connection params
                 else do
                     eitherIsParentCategoryExist <- isCategoryExist connection parent_id'
 
                     case eitherIsParentCategoryExist of
+                        Left sessionError -> pure . H . Left $ show sessionError
+
                         Right isParentCategoryExist ->
                             if isParentCategoryExist
                                 then do
-                                    descendants <-
-                                        sessionRun (Session.statement parent_id' DBR.getCategoryDescendants) connection
+                                    eitherDescendants <- getCategoryDescendants connection category_id'
 
-                                    Prelude.error $ show descendants
+                                    case eitherDescendants of
 
-                                else pure . H . Right . Left $ encode eNoSuchCategory
+                                        Left sessionError -> pure . H . Left $ show sessionError
 
-                        Left sessionError -> Prelude.error $ show sessionError
-                        --Left sessionError -> H . Left $ show sessionError
+                                        Right descendants ->
+                                            let isParentIdDescendant = Data.Vector.elem parent_id' descendants
+                                            in if isParentIdDescendant
+                                                then pure . H . Right . Left $ encode eParentIdIsDescendant
+                                                else updateCategory' sessionRun connection params
+
+                                --else pure . H . Right . Left $ encode eNoSuchCategory
+                                else pure . H . Right . Left $ encode eParentCategoryDoesNotExist
+
 
                     --updateCategory' sessionRun connection params
         _ -> updateCategory' sessionRun connection params
