@@ -262,21 +262,17 @@ updateCategory' sessionRun connection params = do
 --        )
 
 
---isCategoryExist :: MonadIO m =>
---    (Session.Session Bool -> Connection -> m (Either Session.QueryError Bool))
---    -> Connection
---    -> Int32
---    -> m (HasqlSessionResults Bool)
---isCategoryExist sessionRun connection category_id = do
---
---    isCategoryExist' <- sessionRun (Session.statement category_id DBR.isCategoryExist) connection
---
---    pure . H . Right $ Right isCategoryExist'
---    case isCategoryExist' of
---        Left sessionError ->
---            -- pure . H . Right . Left $ encode eSameParentId
---            Prelude.error $ show sessionError
---        Right isCategoryExist'' -> pure . H . Right $ Right isCategoryExist''
+isCategoryExist :: MonadIO m =>
+    Connection
+    -> Int32
+    -- -> (Int32, Text, Maybe Int32)
+    -- -> m (HasqlSessionResults Bool)
+    -> m (Either Session.QueryError Bool)
+isCategoryExist connection category_id =
+    liftIO
+        $ Session.run
+            (Session.statement category_id DBR.isCategoryExist)
+            connection
 
 updateCategory :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
@@ -295,11 +291,7 @@ updateCategory sessionRun connection updateCategoryRequest = do
                 then pure . H . Right . Left $ encode eSameParentId
                 --else updateCategory' sessionRun connection params
                 else do
-                    eitherIsParentCategoryExist <- liftIO
-                        $ Session.run
-                            (Session.statement parent_id' DBR.isCategoryExist)
-                            connection
-                                -- >>= Prelude.error . show
+                    eitherIsParentCategoryExist <- isCategoryExist connection parent_id'
 
                     case eitherIsParentCategoryExist of
                         Right isParentCategoryExist ->
@@ -313,6 +305,7 @@ updateCategory sessionRun connection updateCategoryRequest = do
                                 else pure . H . Right . Left $ encode eNoSuchCategory
 
                         Left sessionError -> Prelude.error $ show sessionError
+                        --Left sessionError -> H . Left $ show sessionError
 
                     --updateCategory' sessionRun connection params
         _ -> updateCategory' sessionRun connection params
