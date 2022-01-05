@@ -47,6 +47,7 @@ module RestNews.DB.ProcessRequest (
     getCredentials
     ) where
 
+import Control.Monad.Except (ExceptT (..), runExceptT)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Aeson (Value, encode)
 import Data.ByteString.Lazy.UTF8 (ByteString)
@@ -235,7 +236,7 @@ updateCategory' :: MonadIO m =>
     -> Connection
     -> (Int32, Text, Maybe Int32)
     -> m (HasqlSessionResults ByteString)
-updateCategory' sessionRun connection params@(category_id, _, maybe_parent_id') = do
+updateCategory' sessionRun connection params@(category_id', _, maybe_parent_id') = do
     sessionResults <- sessionRun (Session.statement params DBR.updateCategory) connection
     pure (
         case sessionResults of
@@ -247,31 +248,83 @@ updateCategory' sessionRun connection params@(category_id, _, maybe_parent_id') 
                         Just parent_id' -> H . Right . Left . encode . makeNoSuchCategory . pack $ show parent_id'
                         _ ->  H . Left $ show sessionError
                 Just UnexpectedAmountOfRowsOrUnexpectedNull ->
-                    H . Right . Left . encode . makeNoSuchCategory . pack $ show category_id
+                    H . Right . Left . encode . makeNoSuchCategory . pack $ show category_id'
                 _ -> H . Left $ show sessionError
         )
 
-isCategoryExist :: MonadIO m =>
-    Connection
-    -> Int32
-    -- -> (Int32, Text, Maybe Int32)
-    -- -> m (HasqlSessionResults Bool)
-    -> m (Either Session.QueryError Bool)
-isCategoryExist connection category_id =
-    liftIO
-        $ Session.run
-            (Session.statement category_id DBR.isCategoryExist)
-            connection
 
 getCategoryDescendants :: MonadIO m =>
     Connection
     -> Int32
     -> m (Either Session.QueryError (Vector Int32))
-getCategoryDescendants connection category_id =
+getCategoryDescendants connection category_id' =
     liftIO
         $ Session.run
-            (Session.statement category_id DBR.getCategoryDescendants)
+            (Session.statement category_id' DBR.getCategoryDescendants)
             connection
+
+
+sameCategoryIdCheck :: --MonadIO m =>
+    Int32
+    -> Int32
+    -- -> m (Either UnhandledError (Either ErrorForUser ()))
+    -> IO (Either UnhandledError (Either ErrorForUser ()))
+sameCategoryIdCheck category_id' parent_id' =
+    if category_id' == parent_id'
+        then pure . Right . Left $ encode eSameParentId
+        else pure . Right $ Right ()
+
+
+isCategoryExist :: MonadIO m =>
+    Connection
+    -> Int32
+    -- -> (Int32, Text, Int32)
+    -- -> m (HasqlSessionResults Bool)
+    -> m (Either Session.QueryError Bool)
+isCategoryExist connection category_id' =
+    liftIO
+        $ Session.run
+            (Session.statement category_id' DBR.isCategoryExist)
+            connection
+
+isParentCategoryExist :: --MonadIO m =>
+    Connection
+    -> Int32
+    -- -> m (Either UnhandledError (Either ErrorForUser Bool))
+    -> IO (Either UnhandledError (Either ErrorForUser Bool))
+isParentCategoryExist connection parent_id' = do
+    
+    sessionResults <- isCategoryExist connection parent_id'
+
+    pure $ case sessionResults of
+        Right results -> Right $ Right results
+        Left sessionError -> Left $ show sessionError
+
+
+dealWithParentCategoryExistence :: --MonadIO m =>
+    Connection
+    -> (Int32, Int32)
+    -> Bool
+    -- -> m (HasqlSessionResults ())
+    -> IO (Either UnhandledError (Either ErrorForUser ()))
+dealWithParentCategoryExistence connection (category_id', parent_id') isParentCategoryExist' =
+    if isParentCategoryExist'
+        then do
+            eitherDescendants <- getCategoryDescendants connection category_id'
+
+            case eitherDescendants of
+
+                Left sessionError -> pure . Left $ show sessionError
+
+                Right descendants ->
+                    let isParentIdDescendant = Data.Vector.elem parent_id' descendants
+                    in if isParentIdDescendant
+                        then pure . Right . Left $ encode eParentIdIsDescendant
+                        -- problems with H?
+                        --else updateCategory' sessionRun connection params
+                        else pure . Right $ Right ()
+
+        else pure . Right . Left . encode . makeNoSuchCategory . pack $ show parent_id'
 
 updateCategory :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
@@ -289,19 +342,30 @@ updateCategory sessionRun connection updateCategoryRequest = do
         Nothing -> updateCategory' sessionRun connection params
 
         Just parent_id' ->
-            if category_id' == parent_id'
+            let wrappedMachinery = ExceptT (sameCategoryIdCheck category_id' parent_id')
+                    >> ExceptT (isParentCategoryExist connection parent_id')
+                        >>= ExceptT (dealWithParentCategoryExistence connection (category_id', parent_id'))
+                checkResults = runExceptT wrappedMachinery
+                --case check results of Right . Right _ -> updateCategory' sessionRun connection params
+
+            -- sameCategoryIdCheck
+            in if category_id' == parent_id'
                 then pure . H . Right . Left $ encode eSameParentId
                 else do
-                    eitherIsParentCategoryExist <- isCategoryExist connection parent_id'
 
-                    case eitherIsParentCategoryExist of
+                    -- isParentCategoryExist
+                    eitherIsParentCategoryExist' <- isCategoryExist connection parent_id'
+
+                    case eitherIsParentCategoryExist' of
                         Left sessionError -> pure . H . Left $ show sessionError
 
                         Right isParentCategoryExist ->
+                            -- dealWithParentCategoryExistence
                             if isParentCategoryExist
                                 then do
                                     eitherDescendants <- getCategoryDescendants connection category_id'
 
+                                    -- 3
                                     case eitherDescendants of
 
                                         Left sessionError -> pure . H . Left $ show sessionError
