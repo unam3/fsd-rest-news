@@ -264,15 +264,14 @@ getCategoryDescendants connection category_id' =
             connection
 
 
-sameCategoryIdCheck :: --MonadIO m =>
+sameCategoryIdCheck :: MonadIO m =>
     Int32
     -> Int32
-    -- -> m (Either UnhandledError (Either ErrorForUser ()))
-    -> IO (Either UnhandledError (Either ErrorForUser ()))
+    -> m (Either ErrorForUser ())
 sameCategoryIdCheck category_id' parent_id' =
     if category_id' == parent_id'
-        then pure . Right . Left $ encode eSameParentId
-        else pure . Right $ Right ()
+        then pure . Left $ encode eSameParentId
+        else pure $ Right ()
 
 
 isCategoryExist :: MonadIO m =>
@@ -287,44 +286,38 @@ isCategoryExist connection category_id' =
             (Session.statement category_id' DBR.isCategoryExist)
             connection
 
-isParentCategoryExist :: --MonadIO m =>
+isParentCategoryExist :: MonadIO m =>
     Connection
     -> Int32
-    -- -> m (Either UnhandledError (Either ErrorForUser Bool))
-    -> IO (Either UnhandledError (Either ErrorForUser Bool))
+    -> m (Either ErrorForUser Bool)
 isParentCategoryExist connection parent_id' = do
     
     sessionResults <- isCategoryExist connection parent_id'
 
     pure $ case sessionResults of
-        Right results -> Right $ Right results
-        Left sessionError -> Left $ show sessionError
+        Right results -> Right results
+        --Left sessionError -> Left $ show sessionError
+        _ -> Left . encode . makeNoSuchCategory . pack $ show parent_id'
 
 
-dealWithParentCategoryExistence :: --MonadIO m =>
+isParentIdDescendant :: MonadIO m =>
     Connection
     -> (Int32, Int32)
-    -> Bool
-    -- -> m (HasqlSessionResults ())
-    -> IO (Either UnhandledError (Either ErrorForUser ()))
-dealWithParentCategoryExistence connection (category_id', parent_id') isParentCategoryExist' =
-    if isParentCategoryExist'
-        then do
-            eitherDescendants <- getCategoryDescendants connection category_id'
+    -> m (Either ErrorForUser ())
+isParentIdDescendant connection (category_id', parent_id') = do
 
-            case eitherDescendants of
+    eitherDescendants <- getCategoryDescendants connection category_id'
 
-                Left sessionError -> pure . Left $ show sessionError
+    case eitherDescendants of
 
-                Right descendants ->
-                    let isParentIdDescendant = Data.Vector.elem parent_id' descendants
-                    in if isParentIdDescendant
-                        then pure . Right . Left $ encode eParentIdIsDescendant
-                        -- problems with H?
-                        --else updateCategory' sessionRun connection params
-                        else pure . Right $ Right ()
+        Left sessionError -> pure . Left $ encode parentIdDescendant
 
-        else pure . Right . Left . encode . makeNoSuchCategory . pack $ show parent_id'
+        Right descendants ->
+            let isParentIdDescendant' = Data.Vector.elem parent_id' descendants
+            in if isParentIdDescendant'
+                then pure . Left $ encode eParentIdIsDescendant
+                else pure $ Right ()
+
 
 updateCategory :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
@@ -341,42 +334,17 @@ updateCategory sessionRun connection updateCategoryRequest = do
     case maybe_parent_id' of
         Nothing -> updateCategory' sessionRun connection params
 
-        Just parent_id' ->
-            let wrappedMachinery = ExceptT (sameCategoryIdCheck category_id' parent_id')
+        Just parent_id' -> do
+
+            let checks = ExceptT (sameCategoryIdCheck category_id' parent_id')
                     >> ExceptT (isParentCategoryExist connection parent_id')
-                        >>= ExceptT (dealWithParentCategoryExistence connection (category_id', parent_id'))
-                checkResults = runExceptT wrappedMachinery
-                --case check results of Right . Right _ -> updateCategory' sessionRun connection params
+                        >> ExceptT (isParentIdDescendant connection (category_id', parent_id'))
 
-            -- sameCategoryIdCheck
-            in if category_id' == parent_id'
-                then pure . H . Right . Left $ encode eSameParentId
-                else do
+            checkResults <- runExceptT checks
 
-                    -- isParentCategoryExist
-                    eitherIsParentCategoryExist' <- isCategoryExist connection parent_id'
-
-                    case eitherIsParentCategoryExist' of
-                        Left sessionError -> pure . H . Left $ show sessionError
-
-                        Right isParentCategoryExist ->
-                            -- dealWithParentCategoryExistence
-                            if isParentCategoryExist
-                                then do
-                                    eitherDescendants <- getCategoryDescendants connection category_id'
-
-                                    -- 3
-                                    case eitherDescendants of
-
-                                        Left sessionError -> pure . H . Left $ show sessionError
-
-                                        Right descendants ->
-                                            let isParentIdDescendant = Data.Vector.elem parent_id' descendants
-                                            in if isParentIdDescendant
-                                                then pure . H . Right . Left $ encode eParentIdIsDescendant
-                                                else updateCategory' sessionRun connection params
-
-                                else pure . H . Right . Left . encode . makeNoSuchCategory . pack $ show parent_id'
+            case checkResults of
+                Right _ -> updateCategory' sessionRun connection params
+                Left sessionError -> pure . H . Left $ show sessionError
 
 
 getCategory :: MonadIO m =>
