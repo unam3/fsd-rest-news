@@ -284,11 +284,11 @@ isCategoryExist connection category_id' =
             (Session.statement category_id' DBR.isCategoryExist)
             connection
 
-isParentCategoryExist :: MonadIO m =>
+parentCategoryExistCheck :: MonadIO m =>
     Connection
     -> Int32
     -> m (Either (Either UnhandledError ErrorForUser) ())
-isParentCategoryExist connection parent_id' = do
+parentCategoryExistCheck connection parent_id' = do
     
     sessionResults <- isCategoryExist connection parent_id'
 
@@ -300,11 +300,11 @@ isParentCategoryExist connection parent_id' = do
         Left sessionError -> Left . Left $ show sessionError
 
 
-isParentIdDescendant :: MonadIO m =>
+parentIdDescendantCheck :: MonadIO m =>
     Connection
     -> (Int32, Int32)
     -> m (Either (Either UnhandledError ErrorForUser) ())
-isParentIdDescendant connection (category_id', parent_id') = do
+parentIdDescendantCheck connection (category_id', parent_id') = do
 
     eitherDescendants <- getCategoryDescendants connection category_id'
 
@@ -313,8 +313,8 @@ isParentIdDescendant connection (category_id', parent_id') = do
         Left sessionError -> pure . Left . Right $ encode parentIdDescendant
 
         Right descendants ->
-            let isParentIdDescendant' = Data.Vector.elem parent_id' descendants
-            in if isParentIdDescendant'
+            let parentIdDescendantCheck' = Data.Vector.elem parent_id' descendants
+            in if parentIdDescendantCheck'
                 then pure . Left . Right $ encode eParentIdIsDescendant
                 else pure $ Right ()
 
@@ -337,8 +337,8 @@ updateCategory sessionRun connection updateCategoryRequest = do
         Just parent_id' -> do
 
             let checks = ExceptT (sameCategoryIdCheck category_id' parent_id')
-                    >> ExceptT (isParentCategoryExist connection parent_id')
-                        >> ExceptT (isParentIdDescendant connection (category_id', parent_id'))
+                    >> ExceptT (parentCategoryExistCheck connection parent_id')
+                        >> ExceptT (parentIdDescendantCheck connection (category_id', parent_id'))
 
             checkResults <- runExceptT checks
 
