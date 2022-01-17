@@ -10,6 +10,8 @@ module RestNews.DB.Errors (
     , eNegativeOffset
     , eNoSuchArticle
     , makeNoSuchCategory
+    , eSameParentId
+    , eParentIdIsDescendant
     , eNoSuchComment
     , eNoSuchEndpoint
     , eNoSuchTag
@@ -128,6 +130,13 @@ eNoSuchArticle = makeNoSuchThing "article"
 
 makeNoSuchCategory :: Text -> Error
 makeNoSuchCategory = makeNoSuchThing . append "category with id="
+
+eSameParentId :: Error
+eSameParentId = Error "\\\"parent_id\\\" must be different than \\\"category_id\\\""
+
+eParentIdIsDescendant :: Error
+eParentIdIsDescendant = Error "parent can't be descendant of category"
+
 
 eNoSuchComment :: Error
 eNoSuchComment = makeNoSuchThing "comment"

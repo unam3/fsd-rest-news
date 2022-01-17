@@ -12,8 +12,6 @@ module RestNews.DB.ProcessRequest (
     getAuthor,
     deleteAuthorRole,
     createCategory,
-    eSameParentId,
-    eParentIdIsDescendant,
     updateCategory,
     getCategory,
     deleteCategory,
@@ -63,7 +61,6 @@ import Hasql.Statement (Statement)
 import RestNews.DB.Errors
 import qualified RestNews.DB.Request as DBR
 import RestNews.Requests.JSON
-import RestNews.Types (Error (..))
 
 -- https://hackage.haskell.org/package/hasql-1.4.4
 -- https://github.com/nikita-volkov/hasql-tutorial1
@@ -224,12 +221,6 @@ createCategory sessionRun connection createCategoryRequest = do
                 _ -> H . Left $ show sessionError
         )
 
-
-eSameParentId :: Error
-eSameParentId = Error "\\\"parent_id\\\" must be different than \\\"category_id\\\""
-
-eParentIdIsDescendant :: Error
-eParentIdIsDescendant = Error "parent can't be descendant of category"
 
 updateCategory' :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))

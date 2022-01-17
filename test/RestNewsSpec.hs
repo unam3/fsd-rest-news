@@ -21,7 +21,6 @@ import Test.Hspec (Spec, afterAll, beforeAll, describe, it, runIO, shouldBe, sho
 import RestNews
 import qualified RestNews.Config as C
 import RestNews.DB.Errors
-import RestNews.DB.ProcessRequest (eParentIdIsDescendant, eSameParentId)
 import RestNews.DB.RequestRunner (cantDecodeBS)
 import qualified RestNews.DBConnection as DBC
 import qualified RestNews.Logger as L
