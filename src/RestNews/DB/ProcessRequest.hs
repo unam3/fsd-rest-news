@@ -287,15 +287,17 @@ isCategoryExist connection category_id' =
 isParentCategoryExist :: MonadIO m =>
     Connection
     -> Int32
-    -> m (Either (Either UnhandledError ErrorForUser) Bool)
+    -> m (Either (Either UnhandledError ErrorForUser) ())
 isParentCategoryExist connection parent_id' = do
     
     sessionResults <- isCategoryExist connection parent_id'
 
     pure $ case sessionResults of
-        Right results -> Right results
-        --Left sessionError -> Left $ show sessionError
-        _ -> Left . Right . encode . makeNoSuchCategory . pack $ show parent_id'
+        Right isCategoryExist' ->
+            if isCategoryExist'
+                then Right ()
+                else Left . Right . encode . makeNoSuchCategory . pack $ show parent_id'
+        Left sessionError -> Left . Left $ show sessionError
 
 
 isParentIdDescendant :: MonadIO m =>
