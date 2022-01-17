@@ -267,18 +267,16 @@ getCategoryDescendants connection category_id' =
 sameCategoryIdCheck :: MonadIO m =>
     Int32
     -> Int32
-    -> m (Either ErrorForUser ())
+    -> m (Either (Either UnhandledError ErrorForUser) ())
 sameCategoryIdCheck category_id' parent_id' =
     if category_id' == parent_id'
-        then pure . Left $ encode eSameParentId
+        then pure . Left . Right $ encode eSameParentId
         else pure $ Right ()
 
 
 isCategoryExist :: MonadIO m =>
     Connection
     -> Int32
-    -- -> (Int32, Text, Int32)
-    -- -> m (HasqlSessionResults Bool)
     -> m (Either Session.QueryError Bool)
 isCategoryExist connection category_id' =
     liftIO
@@ -289,7 +287,7 @@ isCategoryExist connection category_id' =
 isParentCategoryExist :: MonadIO m =>
     Connection
     -> Int32
-    -> m (Either ErrorForUser Bool)
+    -> m (Either (Either UnhandledError ErrorForUser) Bool)
 isParentCategoryExist connection parent_id' = do
     
     sessionResults <- isCategoryExist connection parent_id'
@@ -297,25 +295,25 @@ isParentCategoryExist connection parent_id' = do
     pure $ case sessionResults of
         Right results -> Right results
         --Left sessionError -> Left $ show sessionError
-        _ -> Left . encode . makeNoSuchCategory . pack $ show parent_id'
+        _ -> Left . Right . encode . makeNoSuchCategory . pack $ show parent_id'
 
 
 isParentIdDescendant :: MonadIO m =>
     Connection
     -> (Int32, Int32)
-    -> m (Either ErrorForUser ())
+    -> m (Either (Either UnhandledError ErrorForUser) ())
 isParentIdDescendant connection (category_id', parent_id') = do
 
     eitherDescendants <- getCategoryDescendants connection category_id'
 
     case eitherDescendants of
 
-        Left sessionError -> pure . Left $ encode parentIdDescendant
+        Left sessionError -> pure . Left . Right $ encode parentIdDescendant
 
         Right descendants ->
             let isParentIdDescendant' = Data.Vector.elem parent_id' descendants
             in if isParentIdDescendant'
-                then pure . Left $ encode eParentIdIsDescendant
+                then pure . Left . Right $ encode eParentIdIsDescendant
                 else pure $ Right ()
 
 
@@ -344,7 +342,8 @@ updateCategory sessionRun connection updateCategoryRequest = do
 
             case checkResults of
                 Right _ -> updateCategory' sessionRun connection params
-                Left sessionError -> pure . H . Left $ show sessionError
+                Left (Left sessionError) -> pure . H $ Left sessionError
+                Left (Right errorForUser) -> pure . H . Right $ Left errorForUser
 
 
 getCategory :: MonadIO m =>
