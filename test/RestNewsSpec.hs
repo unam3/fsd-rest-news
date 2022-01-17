@@ -521,7 +521,7 @@ spec = do
 
 
     describe "updateCategory" $ do
-        it "update category"
+        it "updates category"
             $ runApllicationWith
                 (updateCategory
                     (categoryIdJSONSection ++ ", \"name\": \"pluh_pattched\", \"parent_id\": null}")
@@ -534,9 +534,9 @@ spec = do
                 (updateCategory "{\"category_id\": 123456, \"name\": \"pluh_pattched\", \"parent_id\": null}" session)
                     >>= (`shouldBe` (toString . encode $ makeNoSuchCategory "123456"))
 
-        it "returns error if non-existent parent category"
+        it "returns error on non-existent parent category"
             $ runApllicationWith
-                (updateCategory ("{\"category_id\": 9, \"name\": \"plusdh\", \"parent_id\": 12345}") session)
+                (updateCategory "{\"category_id\": 9, \"name\": \"plusdh\", \"parent_id\": 12345}" session)
                     >>= (`shouldBe` (toString . encode $ makeNoSuchCategory "12345"))
 
         it "returns error if parent is set to itself"
