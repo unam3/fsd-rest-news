@@ -253,17 +253,6 @@ updateCategory' sessionRun connection params@(category_id', _, maybe_parent_id')
         )
 
 
-getCategoryDescendants :: MonadIO m =>
-    Connection
-    -> Int32
-    -> m (Either Session.QueryError (Vector Int32))
-getCategoryDescendants connection category_id' =
-    liftIO
-        $ Session.run
-            (Session.statement category_id' DBR.getCategoryDescendants)
-            connection
-
-
 sameCategoryIdCheck :: MonadIO m =>
     Int32
     -> Int32
@@ -300,6 +289,17 @@ parentCategoryExistCheck connection parent_id' = do
         Left sessionError -> Left . Left $ show sessionError
 
 
+getCategoryDescendants :: MonadIO m =>
+    Connection
+    -> Int32
+    -> m (Either Session.QueryError (Vector Int32))
+getCategoryDescendants connection category_id' =
+    liftIO
+        $ Session.run
+            (Session.statement category_id' DBR.getCategoryDescendants)
+            connection
+
+
 parentIdDescendantCheck :: MonadIO m =>
     Connection
     -> (Int32, Int32)
@@ -308,15 +308,15 @@ parentIdDescendantCheck connection (category_id', parent_id') = do
 
     eitherDescendants <- getCategoryDescendants connection category_id'
 
-    case eitherDescendants of
+    pure $ case eitherDescendants of
 
-        Left sessionError -> pure . Left . Right $ encode parentIdDescendant
+        Left sessionError -> Left . Left $ show sessionError
 
         Right descendants ->
             let parentIdDescendantCheck' = Data.Vector.elem parent_id' descendants
             in if parentIdDescendantCheck'
-                then pure . Left . Right $ encode eParentIdIsDescendant
-                else pure $ Right ()
+                then Left . Right $ encode eParentIdIsDescendant
+                else Right ()
 
 
 updateCategory :: MonadIO m =>

@@ -10,7 +10,6 @@ module RestNews.DB.Errors (
     , eNegativeOffset
     , eNoSuchArticle
     , makeNoSuchCategory
-    , parentIdDescendant
     , eNoSuchComment
     , eNoSuchEndpoint
     , eNoSuchTag
@@ -129,9 +128,6 @@ eNoSuchArticle = makeNoSuchThing "article"
 
 makeNoSuchCategory :: Text -> Error
 makeNoSuchCategory = makeNoSuchThing . append "category with id="
-
-parentIdDescendant :: Error
-parentIdDescendant = Error "parent_id is in descenants"
 
 eNoSuchComment :: Error
 eNoSuchComment = makeNoSuchThing "comment"
