@@ -11,7 +11,7 @@ import Data.List (find, isPrefixOf, stripPrefix, uncons)
 import Data.Maybe (fromMaybe)
 import Database.PostgreSQL.Simple (ConnectInfo)
 import Hasql.Connection (Connection, ConnectionError, Settings)
-import Network.Wai (Application, Middleware, Request, pathInfo, requestMethod, strictRequestBody)
+import Network.Wai (Application, Middleware, Request, pathInfo, requestMethod, queryString, strictRequestBody)
 import Network.Wai.Handler.Warp (Port, testWithApplication, withApplication)
 import Network.Wai.Internal (ResponseReceived (..))
 import System.Log.Logger (Priority (DEBUG))
@@ -295,6 +295,7 @@ waiH :: WAI.Handle a
 waiH =
     WAI.Handle
         requestMethod
+        queryString
         pathInfo
         strictRequestBody
 

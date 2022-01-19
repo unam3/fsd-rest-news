@@ -291,9 +291,9 @@ makeApplication loggerH dbConnectionSettings connectInfo = do
                     WAI.withWAI
                         (WAI.Config
                             requestMethod
+                            queryString
                             pathInfo
                             strictRequestBody
-                            queryString
                         )
                         (\ waiH ->
                             Static.router (
