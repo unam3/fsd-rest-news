@@ -17,6 +17,7 @@ import Data.Functor ((<&>))
 import Data.Int (Int32)
 import Hasql.Connection (Connection)
 import qualified Hasql.Session as Session
+import Network.HTTP.Types.URI (Query)
 import qualified Util
 
 
@@ -32,6 +33,7 @@ cantDecode = PR.H . Right $ Left cantDecodeBS
 runSession ::
     Connection
     -> ByteString
+    -> Query
     -> (PR.HasqlSessionResults (Int32, Bool, Int32)
         -> IO (PR.HasqlSessionResults (Int32, Bool, Int32)))
     -> Int32
@@ -42,6 +44,7 @@ runSession ::
 runSession
     connection
     requestBody
+    query
     processCredentialsPartial
     sessionUserId
     sessionAuthorId

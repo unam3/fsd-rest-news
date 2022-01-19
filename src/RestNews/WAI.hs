@@ -6,6 +6,7 @@ module RestNews.WAI
 
 import Data.ByteString.Lazy (ByteString)
 import Data.Text (Text)
+import Network.HTTP.Types.URI (Query)
 import Network.HTTP.Types.Method (Method)
 import Network.Wai (Application, Request)
 
@@ -13,13 +14,15 @@ import Network.Wai (Application, Request)
 data Config a = Config {
     cRequestMethod :: Request -> Method,
     cPathInfo :: Request -> [Text],
-    cStrictRequestBody :: Request -> IO ByteString
+    cStrictRequestBody :: Request -> IO ByteString,
+    cQueryString :: Request -> Query
 }
 
 data Handle a = Handle {
     hRequestMethod :: Request -> Method,
     hPathInfo :: Request -> [Text],
-    hStrictRequestBody :: Request -> IO ByteString
+    hStrictRequestBody :: Request -> IO ByteString,
+    hQueryString :: Request -> Query
 }
 
 withWAI :: Config a -> (Handle a -> Application) -> Application
@@ -29,3 +32,4 @@ withWAI config f =
             (cRequestMethod config)
             (cPathInfo config)
             (cStrictRequestBody config)
+            (cQueryString config)

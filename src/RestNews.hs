@@ -34,7 +34,7 @@ import Database.PostgreSQL.Simple (ConnectInfo (..), connectPostgreSQL, postgreS
 import Hasql.Connection (Settings, acquire, settings)
 import qualified Network.HTTP.Types as H
 import Network.Wai (Application, Request, Response, ResponseReceived, pathInfo, requestMethod, responseLBS,
-                    strictRequestBody, vault)
+                    queryString, strictRequestBody, vault)
 import Network.Wai.Handler.Warp (Port, run)
 import Network.Wai.Session (SessionStore, withSession)
 import Network.Wai.Session.PostgreSQL (clearSession, dbStore, defaultSettings, fromSimpleConnection, purger,
@@ -183,6 +183,10 @@ runDBSession
 
                 _ <- liftIO . L.hInfo loggerH $ show requestBody
 
+                let query = WAI.hQueryString waiH request
+
+                _ <- liftIO . L.hInfo loggerH $ show query
+
                 eitherConnection <- DBC.hAcquiredConnection dbH
 
                 case eitherConnection of
@@ -202,6 +206,7 @@ runDBSession
                         in runSession
                             connection
                             requestBody
+                            query
                             processCredentialsPartial
                             sessionUserId'
                             sessionAuthorId'
@@ -288,6 +293,7 @@ makeApplication loggerH dbConnectionSettings connectInfo = do
                             requestMethod
                             pathInfo
                             strictRequestBody
+                            queryString
                         )
                         (\ waiH ->
                             Static.router (
