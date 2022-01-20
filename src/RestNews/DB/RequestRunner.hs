@@ -12,6 +12,7 @@ import qualified RestNews.DB.ProcessRequest as PR
 
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson (decode)
+import qualified Data.ByteString as B
 import Data.ByteString.Lazy.UTF8 (ByteString, fromString)
 import Data.Functor ((<&>))
 import Data.Int (Int32)
@@ -29,6 +30,22 @@ cantDecodeBS = fromString cantDecodeS
 
 cantDecode :: PR.HasqlSessionResults a
 cantDecode = PR.H . Right $ Left cantDecodeBS
+
+collectFields ::
+    [(B.ByteString, Maybe B.ByteString)]
+    -> [B.ByteString]
+    -> [(B.ByteString, Maybe B.ByteString)]
+    -> Either B.ByteString [(B.ByteString, Maybe B.ByteString)]
+collectFields _ [] [] = Left "Collect no fields"
+collectFields _ [] collected = Right collected
+collectFields query (fieldName:otherFieldsToCollect) collected =
+    case lookup fieldName query of
+    Just fieldValue ->
+        let newQuery = filter ((/=) fieldName . fst) query
+            newCollected = (fieldName, fieldValue) : collected
+        in collectFields newQuery otherFieldsToCollect newCollected
+    Nothing -> Left $ B.append "Query has no required parameter: " fieldName
+
 
 runSession ::
     Connection
