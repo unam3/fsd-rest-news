@@ -10,17 +10,16 @@ module RestNews.DB.RequestRunner
     ) where
 
 import qualified RestNews.DB.ProcessRequest as PR
+import RestNews.Requests.QueryString
 
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson (decode)
-import qualified Data.ByteString as B
 import Data.ByteString.Lazy.UTF8 (ByteString, fromString)
 import Data.Functor ((<&>))
 import Data.Int (Int32)
 import Hasql.Connection (Connection)
 import qualified Hasql.Session as Session
-import Network.HTTP.Types.URI (Query)
-import Text.Read (readMaybe)
+import Network.HTTP.Types.URI (QueryText)
 import qualified Util
 
 
@@ -34,61 +33,10 @@ cantDecode :: PR.HasqlSessionResults a
 cantDecode = PR.H . Right $ Left cantDecodeBS
 
 
-collectFields' ::
-    [(B.ByteString, Maybe B.ByteString)]
-    -> [B.ByteString]
-    -> [(B.ByteString, Maybe B.ByteString)]
-    -> Either B.ByteString [(B.ByteString, Maybe B.ByteString)]
-collectFields' _ [] [] = Left "Collect no fields"
-collectFields' _ [] collected = Right collected
-collectFields' query (fieldName:otherFieldsToCollect) collected =
-    case lookup fieldName query of
-    Just fieldValue ->
-        let newQuery = filter ((/=) fieldName . fst) query
-            newCollected = (fieldName, fieldValue) : collected
-        in collectFields' newQuery otherFieldsToCollect newCollected
-    Nothing -> Left $ B.append "Query has no required parameter: " fieldName
-
-collectFields ::
-    [(B.ByteString, Maybe B.ByteString)]
-    -> [B.ByteString]
-    -> Either B.ByteString [(B.ByteString, Maybe B.ByteString)]
-collectFields query fieldsToCollect = collectFields' query fieldsToCollect []
-
-filterOutNothing :: [(B.ByteString, Maybe B.ByteString)] -> Either B.ByteString [(B.ByteString, Maybe B.ByteString)]
-filterOutNothing fields = case filter ((/=) Nothing . snd) fields of
-    [] -> Left "All fields with Nothing were filtered. No fields with value to return."
-    nonEmptyList -> Right nonEmptyList
-
-class FromQuery a where
-    parseParams :: Query -> Either String a
-
-newtype AuthorIdRequest = AuthorIdRequest {
-    author_id :: Int32
-} deriving (Show)
-
-testQuery :: [(B.ByteString, Maybe B.ByteString)]
-testQuery = ([("author_id", Just "12"), ("abyr", Nothing), ("ad", Nothing), ("abyr", Just "Valg3"), ("meh", Nothing)])
-
-testFieldNames :: [B.ByteString]
-testFieldNames = ["meh", "abyr"]
-
--- (Right . lookup (last testFieldNames)) =<< filterOutNothing =<< collectFields testQuery testFieldNames
-
-instance FromQuery AuthorIdRequest where
-    parseParams query =
-        let fieldsToCollect = ["author_id"]
-        in case ((Right . lookup "author_id") =<< filterOutNothing =<< collectFields query fieldsToCollect) of
-            Right Nothing -> Left "Query has no required parameter with a value: author_id"
-            Right (Just (Just fieldValue)) -> case readMaybe $ show fieldValue of
-                Just author_id -> Right $ AuthorIdRequest author_id
-                Nothing -> Left $ "Wrong author_id value: " ++ show fieldValue
-
-
 runSession ::
     Connection
     -> ByteString
-    -> Query
+    -> QueryText
     -> (PR.HasqlSessionResults (Int32, Bool, Int32)
         -> IO (PR.HasqlSessionResults (Int32, Bool, Int32)))
     -> Int32

@@ -33,6 +33,7 @@ import qualified Data.Vault.Lazy as Vault
 import Database.PostgreSQL.Simple (ConnectInfo (..), connectPostgreSQL, postgreSQLConnectionString)
 import Hasql.Connection (Settings, acquire, settings)
 import qualified Network.HTTP.Types as H
+import Network.HTTP.Types.URI (queryToQueryText)
 import Network.Wai (Application, Request, Response, ResponseReceived, pathInfo, requestMethod, responseLBS,
                     queryString, strictRequestBody, vault)
 import Network.Wai.Handler.Warp (Port, run)
@@ -291,7 +292,7 @@ makeApplication loggerH dbConnectionSettings connectInfo = do
                     WAI.withWAI
                         (WAI.Config
                             requestMethod
-                            queryString
+                            (queryToQueryText . queryString)
                             pathInfo
                             strictRequestBody
                         )
