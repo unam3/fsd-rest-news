@@ -9,26 +9,37 @@ import RestNews.Requests.QueryString
 
 
 queryString :: [(Text, Maybe Text)]
-queryString = ([("author_id", Just "12"), ("abyr", Nothing), ("ad", Nothing), ("abyr", Just "Valg3"), ("meh", Nothing)])
+queryString = ([("author_id", Just "12"), ("author_id", Nothing), ("abyr", Nothing), ("ad", Nothing), ("abyr", Just "Valg3"), ("meh", Nothing)])
 
 fieldNames :: [Text]
 fieldNames = ["meh", "abyr"]
 
 spec :: Spec
 spec = do
-    describe "collectFields" $ do
-        it "collects fields"
+    describe "requiredFold" $ do
+        it "process first encountered required field"
             $ shouldBe
-                (collectFields queryString fieldNames)
-                (Right [("abyr", Nothing), ("meh", Nothing)])
+                (requiredFold
+                    queryString
+                    (Right [])
+                    "author_id"
+                )
+                (Right [("author_id", "12")])
+
+        it "return error if field is without a value (?abyr)"
+            $ shouldBe
+                (requiredFold
+                    queryString
+                    (Right [])
+                    "abyr"
+                )
+                (Left "Query string has no required field or value for it: \"abyr\"")
 
         it "return error if query string has no required field"
             $ shouldBe
-                (collectFields queryString ["name-of-non-existent-field"])
-                (Left "Query has no required parameter: name-of-non-existent-field")
-
-    describe "filterOutNothing" $ do
-        it "filters parameters without values"
-            $ shouldBe
-                (filterOutNothing queryString)
-                (Right [("author_id", Just "12"), ("abyr", Just "Valg3")])
+                (requiredFold
+                    queryString
+                    (Right [])
+                    "field_which_we_dont_have_in_querystring"
+                )
+                (Left "Query string has no required field or value for it: \"field_which_we_dont_have_in_querystring\"")
