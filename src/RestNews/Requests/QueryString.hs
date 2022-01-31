@@ -33,7 +33,7 @@ parseTextOrStringValue :: Read a => Text -> Text -> Either String a
 parseTextOrStringValue key value =
     case readMaybe . (++) "\"" . (++ "\"") $ unpack value of
         Just parsedValue -> Right parsedValue
-        Nothing -> Left $ "Cannot parse value for field " ++ show key
+        Nothing -> Left $ "Cannot parse value for field " ++ show key ++ ": " ++ show value
 
 -- https://discord.com/channels/280033776820813825/505367988166197268/937674122262085672
 

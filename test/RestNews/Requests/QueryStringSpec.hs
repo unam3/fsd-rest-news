@@ -10,7 +10,7 @@ import RestNews.Requests.QueryString
 
 
 queryString :: [(Text, Maybe Text)]
-queryString = [("author_id", Just "12"), ("author_id", Nothing), ("abyr", Nothing), ("ad", Nothing), ("abyr", Just "Valg3"), ("meh", Nothing), ("tags_ids", Just "[1,2,3]"), ("pluh", Just "12"), ("mah", Just "asd")]
+queryString = [("author_id", Just "12"), ("author_id", Nothing), ("abyr", Nothing), ("ad", Nothing), ("abyr", Just "Valg3"), ("meh", Nothing), ("tags_ids", Just "[1,2,3]"), ("pluh", Just "12"), ("mah", Just "as\\\"d")]
 
 data TestQueryStringRequest = TestQueryStringRequest {
     pluh :: Int,
@@ -72,4 +72,4 @@ spec = do
         it "workds for TestQueryStringRequest"
             $ shouldBe
                 (parseParams queryString)
-                (Right $ TestQueryStringRequest 12 "asd" (fromList [1,2,3]))
+                (Right $ TestQueryStringRequest 12 "a\\\"sd" (fromList [1,2,3]))
