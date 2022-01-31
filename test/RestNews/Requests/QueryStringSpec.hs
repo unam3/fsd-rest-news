@@ -10,7 +10,7 @@ import RestNews.Requests.QueryString
 
 
 queryString :: [(Text, Maybe Text)]
-queryString = [("author_id", Just "12"), ("author_id", Nothing), ("abyr", Nothing), ("ad", Nothing), ("abyr", Just "Valg3"), ("meh", Nothing), ("tags_ids", Just "[1,2,3]"), ("pluh", Just "12"), ("mah", Just "12")]
+queryString = [("author_id", Just "12"), ("author_id", Nothing), ("abyr", Nothing), ("ad", Nothing), ("abyr", Just "Valg3"), ("meh", Nothing), ("tags_ids", Just "[1,2,3]"), ("pluh", Just "12"), ("mah", Just "asd")]
 
 data TestQueryStringRequest = TestQueryStringRequest {
     pluh :: Int,
@@ -22,18 +22,20 @@ instance FromQuery TestQueryStringRequest where
     parseParams query =
         do
             let requiredFieldNames = ["pluh", "mah", "tags_ids"]
-            ---- Right [("tags_ids","[1,2,3]"),("mah","12"),("pluh","12")]
-            -- in error . show $ collectRequiredFields requiredFieldNames queryString
+
+            ---- Right [("tags_ids","[1,2,3]"),("mah","asd"),("pluh","12")]
+            -- Right . error . show $ collectRequiredFields requiredFieldNames queryString
 
             nameValueTuples <- collectRequiredFields requiredFieldNames queryString
 
-            parsedPluh <- parseRequiredValue "pluh" (snd $ (!!) nameValueTuples 0)
+            parsedPluh <- parseRequiredValue "pluh" (snd $ (!!) nameValueTuples 2)
             
             paresedMah <- parseRequiredValue "mah" (snd $ (!!) nameValueTuples 1)            
 
-            parsedTagsIds <- parseRequiredValue "tags_ids" (snd $ (!!) nameValueTuples 2)
+            parsedTagsIds <- parseRequiredValue "tags_ids" (snd $ (!!) nameValueTuples 0)
 
             Right $ TestQueryStringRequest parsedPluh paresedMah parsedTagsIds
+
 
 
 spec :: Spec
