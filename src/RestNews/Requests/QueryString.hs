@@ -29,9 +29,9 @@ parseRequiredValue key value =
         Just parsedValue -> Right parsedValue
         Nothing -> Left $ "Cannot parse value for field " ++ show key ++ ": " ++ show value
 
-parseValue :: Read a => Text -> Text -> Either String a
-parseValue key value =
-    case readMaybe $ unpack value of
+parseTextOrStringValue :: Read a => Text -> Text -> Either String a
+parseTextOrStringValue key value =
+    case readMaybe . (++) "\"" . (++ "\"") $ unpack value of
         Just parsedValue -> Right parsedValue
         Nothing -> Left $ "Cannot parse value for field " ++ show key
 

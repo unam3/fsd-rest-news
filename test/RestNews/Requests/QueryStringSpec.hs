@@ -30,7 +30,7 @@ instance FromQuery TestQueryStringRequest where
 
             parsedPluh <- parseRequiredValue "pluh" (snd $ (!!) nameValueTuples 2)
             
-            paresedMah <- parseRequiredValue "mah" (snd $ (!!) nameValueTuples 1)            
+            paresedMah <- parseTextOrStringValue "mah" (snd $ (!!) nameValueTuples 1)            
 
             parsedTagsIds <- parseRequiredValue "tags_ids" (snd $ (!!) nameValueTuples 0)
 
