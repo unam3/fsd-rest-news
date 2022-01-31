@@ -20,18 +20,21 @@ data TestQueryStringRequest = TestQueryStringRequest {
 
 instance FromQuery TestQueryStringRequest where
     parseParams query =
-        let requiredFieldNames = ["pluh", "mah", "tags_ids"]
+        do
+            let requiredFieldNames = ["pluh", "mah", "tags_ids"]
             ---- Right [("tags_ids","[1,2,3]"),("mah","12"),("pluh","12")]
             -- in error . show $ collectRequiredFields requiredFieldNames queryString
-        in (\ nameValueTuples ->
-                (\ partiallyAppliedT ->
-                    (Right . partiallyAppliedT)
-                        =<< parseRequiredValue "tags_ids" (snd $ (!!) nameValueTuples 2))
-                            =<< (\ partiallyAppliedT' -> (Right . partiallyAppliedT')
-                                =<< parseRequiredValue "mah" (snd $ (!!) nameValueTuples 1))
-                                    =<< (Right . TestQueryStringRequest)
-                                        =<< parseRequiredValue "pluh" (snd $ (!!) nameValueTuples 0)
-            ) =<< collectRequiredFields requiredFieldNames queryString
+
+            nameValueTuples <- collectRequiredFields requiredFieldNames queryString
+
+            parsedPluh <- parseRequiredValue "pluh" (snd $ (!!) nameValueTuples 0)
+            
+            paresedMah <- parseRequiredValue "mah" (snd $ (!!) nameValueTuples 1)            
+
+            parsedTagsIds <- parseRequiredValue "tags_ids" (snd $ (!!) nameValueTuples 2)
+
+            Right $ TestQueryStringRequest parsedPluh paresedMah parsedTagsIds
+
 
 spec :: Spec
 spec = do

@@ -35,6 +35,7 @@ parseValue key value =
         Just parsedValue -> Right parsedValue
         Nothing -> Left $ "Cannot parse value for field " ++ show key
 
+-- https://discord.com/channels/280033776820813825/505367988166197268/937674122262085672
 
 class FromQuery a where
     parseParams :: QueryText -> Either String a
