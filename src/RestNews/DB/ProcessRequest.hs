@@ -270,13 +270,11 @@ parentCategoryExistCheck :: MonadIO m =>
     -> m (Either (Either UnhandledError ErrorForUser) ())
 parentCategoryExistCheck connection parent_id' = do
     
-    sessionResults <- isCategoryExist connection parent_id'
+    eitherIsCategoryExist <- isCategoryExist connection parent_id'
 
-    pure $ case sessionResults of
-        Right isCategoryExist' ->
-            if isCategoryExist'
-                then Right ()
-                else Left . Right . encode . makeNoSuchCategory . pack $ show parent_id'
+    pure $ case eitherIsCategoryExist of
+        Right True -> Right ()
+        Right False -> Left . Right . encode . makeNoSuchCategory . pack $ show parent_id'
         Left sessionError -> Left . Left $ show sessionError
 
 
@@ -303,11 +301,9 @@ parentIdDescendantCheck connection (category_id', parent_id') = do
 
         Left sessionError -> Left . Left $ show sessionError
 
-        Right descendants ->
-            let parentIdDescendantCheck' = Data.Vector.elem parent_id' descendants
-            in if parentIdDescendantCheck'
-                then Left . Right $ encode eParentIdIsDescendant
-                else Right ()
+        Right descendants
+            | Data.Vector.elem parent_id' descendants -> Left . Right $ encode eParentIdIsDescendant
+            | otherwise -> Right ()
 
 
 updateCategory :: MonadIO m =>
