@@ -1,4 +1,5 @@
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module RestNews.DB.ProcessRequest (
@@ -225,9 +226,15 @@ createCategory sessionRun connection createCategoryRequest = do
 updateCategory' :: MonadIO m =>
     (Session.Session Value -> Connection -> m (Either Session.QueryError Value))
     -> Connection
-    -> (Int32, Text, Maybe Int32)
+    -> UpdateCategoryRequest
     -> m (HasqlSessionResults ByteString)
-updateCategory' sessionRun connection params@(category_id', _, maybe_parent_id') = do
+updateCategory' sessionRun connection updateCategoryRequest = do
+    let UpdateCategoryRequest {category_id, name, parent_id} = updateCategoryRequest
+    let params = (
+            category_id,
+            name,
+            parent_id
+            )
     sessionResults <- sessionRun (Session.statement params DBR.updateCategory) connection
     pure (
         case sessionResults of
@@ -235,11 +242,11 @@ updateCategory' sessionRun connection params@(category_id', _, maybe_parent_id')
             Left sessionError -> case getErrorCode sessionError of
                 Just PSQL_STRING_DATA_RIGHT_TRUNCATION -> H . Right . Left $ encode eCategoryNameMaxBoundOverflow
                 Just PSQL_FOREIGN_KEY_VIOLATION ->
-                    case maybe_parent_id' of
+                    case parent_id of
                         Just parent_id' -> H . Right . Left . encode . makeNoSuchCategory . pack $ show parent_id'
                         _ ->  H . Left $ show sessionError
                 Just UnexpectedAmountOfRowsOrUnexpectedNull ->
-                    H . Right . Left . encode . makeNoSuchCategory . pack $ show category_id'
+                    H . Right . Left . encode . makeNoSuchCategory . pack $ show category_id
                 _ -> H . Left $ show sessionError
         )
 
@@ -309,25 +316,21 @@ updateCategory :: MonadIO m =>
     -> UpdateCategoryRequest
     -> m (HasqlSessionResults ByteString)
 updateCategory sessionRun connection updateCategoryRequest = do
-    let params@(category_id', _, maybe_parent_id') = (
-            category_id (updateCategoryRequest :: UpdateCategoryRequest),
-            name (updateCategoryRequest :: UpdateCategoryRequest),
-            parent_id (updateCategoryRequest :: UpdateCategoryRequest)
-            )
+    let UpdateCategoryRequest {category_id, parent_id} = updateCategoryRequest
 
-    case maybe_parent_id' of
-        Nothing -> updateCategory' sessionRun connection params
+    case parent_id of
+        Nothing -> updateCategory' sessionRun connection updateCategoryRequest
 
         Just parent_id' -> do
 
-            let checks = ExceptT (sameCategoryIdCheck category_id' parent_id')
+            let checks = ExceptT (sameCategoryIdCheck category_id parent_id')
                     >> ExceptT (parentCategoryExistCheck connection parent_id')
-                        >> ExceptT (parentIdDescendantCheck connection (category_id', parent_id'))
+                        >> ExceptT (parentIdDescendantCheck connection (category_id, parent_id'))
 
             checkResults <- runExceptT checks
 
             case checkResults of
-                Right _ -> updateCategory' sessionRun connection params
+                Right _ -> updateCategory' sessionRun connection updateCategoryRequest
                 Left (Left sessionError) -> pure . H $ Left sessionError
                 Left (Right errorForUser) -> pure . H . Right $ Left errorForUser
 
