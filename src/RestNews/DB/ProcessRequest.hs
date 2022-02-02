@@ -254,23 +254,20 @@ sameCategoryIdCheck category_id' parent_id' =
         else pure $ Right ()
 
 
-isCategoryExist :: MonadIO m =>
-    Connection
-    -> Int32
-    -> m (Either Session.QueryError Bool)
-isCategoryExist connection category_id' =
-    liftIO
-        $ Session.run
-            (Session.statement category_id' DBR.isCategoryExist)
-            connection
-
 parentCategoryExistCheck :: MonadIO m =>
     Connection
     -> Int32
     -> m (Either (Either UnhandledError ErrorForUser) ())
 parentCategoryExistCheck connection parent_id' = do
-    
-    eitherIsCategoryExist <- isCategoryExist connection parent_id'
+    let {
+        isCategoryExist category_id' =
+            liftIO
+                $ Session.run
+                    (Session.statement category_id' DBR.isCategoryExist)
+                    connection
+    }
+
+    eitherIsCategoryExist <- isCategoryExist parent_id'
 
     pure $ case eitherIsCategoryExist of
         Right True -> Right ()
