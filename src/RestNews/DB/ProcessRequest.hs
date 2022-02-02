@@ -266,13 +266,11 @@ parentCategoryExistCheck :: MonadIO m =>
     -> Int32
     -> m (Either (Either UnhandledError ErrorForUser) ())
 parentCategoryExistCheck connection parent_id' = do
-    let {
-        isCategoryExist category_id' =
+    let isCategoryExist category_id' =
             liftIO
                 $ Session.run
                     (Session.statement category_id' DBR.isCategoryExist)
                     connection
-    }
 
     eitherIsCategoryExist <- isCategoryExist parent_id'
 
