@@ -51,17 +51,11 @@ collectOptionalFields optionalFieldNames query =
     foldl (optionalFold query) (Right []) optionalFieldNames
         
 
-parseOptionalValue :: Read a => Text -> Text -> Either String (Maybe a)
-parseOptionalValue key value =
-    case readMaybe $ unpack value of
-        Just parsedValue -> Right $ Just parsedValue
-        Nothing -> Right Nothing
+parseOptionalValue :: Read a => Read a => Text -> Maybe a
+parseOptionalValue = readMaybe . unpack
 
-parseOptionalTextOrStringValue :: Read a => Text -> Text -> Either String (Maybe a)
-parseOptionalTextOrStringValue key value =
-    case readMaybe . (++) "\"" . (++ "\"") $ unpack value of
-        Just parsedValue -> Right $ Just parsedValue
-        Nothing -> Right $ Nothing
+parseOptionalTextOrStringValue :: Read a => Text -> Maybe a
+parseOptionalTextOrStringValue = readMaybe . (++) "\"" . (++ "\"") . unpack
 
 -- https://discord.com/channels/280033776820813825/505367988166197268/937674122262085672
 

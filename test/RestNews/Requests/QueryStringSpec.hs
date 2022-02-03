@@ -3,6 +3,7 @@
 
 module RestNews.Requests.QueryStringSpec where
 
+import Control.Monad (join)
 import Data.Text (Text)
 import Data.Vector (Vector, fromList)
 import Test.Hspec (Spec, describe, it, shouldBe)
@@ -26,9 +27,9 @@ instance FromQuery TestQueryStringRequest where
         let requiredFieldNames = ["pluh", "mah", "tags_ids"]
 
         ---- Right [("tags_ids","[1,2,3]"),("mah","asd"),("pluh","12")]
-        -- Right . error . show $ collectRequiredFields requiredFieldNames queryString
+        -- Right . error . show $ collectRequiredFields requiredFieldNames query
 
-        nameValueTuples <- collectRequiredFields requiredFieldNames queryString
+        nameValueTuples <- collectRequiredFields requiredFieldNames query
 
         parsedPluh <- parseRequiredValue "pluh" (snd $ (!!) nameValueTuples 2)
         
@@ -60,18 +61,16 @@ instance FromQuery TestQueryStringOptionalRequest where
 
         let requiredFieldNames = ["pluh"]
 
-        requiredNameValueTuples <- collectRequiredFields requiredFieldNames queryString
+        requiredNameValueTuples <- collectRequiredFields requiredFieldNames query
 
-        parsedPluh <- parseRequiredValue "pluh" (snd $ (!!) requiredNameValueTuples 2)
+        parsedPluh <- parseRequiredValue "pluh" (snd $ (!!) requiredNameValueTuples 0)
 
 
-        let optionalFieldNames = ["mah", "tags_ids"]
+        --let optionalFieldNames = ["mah", "tags_ids"]
 
-        optionalNameValueTuples <- collectOptionalFields optionalFieldNames queryString
-        
-        paresedMah <- parseOptionalTextOrStringValue "mah" (snd $ (!!) optionalNameValueTuples 1)            
+        paresedMah <-  Right ((join $ lookup "mah" query) >>= parseOptionalTextOrStringValue)
 
-        parsedTagsIds <- parseOptionalValue "tags_ids" (snd $ (!!) optionalNameValueTuples 0)
+        parsedTagsIds <- Right ((join $ lookup "tags_ids" query) >>= parseOptionalValue)
 
 
         Right $ TestQueryStringOptionalRequest parsedPluh paresedMah parsedTagsIds
