@@ -240,13 +240,12 @@ restAPI loggerH sessionsH dbH waiH request respond =
     bracket_
         (L.hDebug loggerH "Allocating scarce resource")
         (L.hDebug loggerH "Cleaning up")
-        (do
-            let exceptTRequestResults =
+        (let exceptTRequestResults =
                     ExceptT (getSessionName' loggerH waiH request)
                         >>= (ExceptT . prerequisitesCheck loggerH sessionsH request)
                             >>= (ExceptT . runDBSession loggerH waiH dbH request)
 
-            runExceptT exceptTRequestResults >>= respond' respond
+            in runExceptT exceptTRequestResults >>= respond' respond
         )
 
 processConfig :: C.Config -> (Port, Settings, ConnectInfo)
